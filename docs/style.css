@@ -669,3 +669,14 @@ button[disabled] {
     grid-column: span 12;
   }
 }
+
+/* Hard theme lock: force a pure black page background and remove red backdrop layers. */
+html,
+body {
+  background: #000000 !important;
+}
+
+.bg-orb,
+.grid-overlay {
+  display: none !important;
+}
