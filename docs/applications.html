@@ -4,9 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bloodline RP | Applications</title>
-  <meta name="description" content="Bloodline RP application routes for police, EMS, staff, and business whitelist." />
-  <meta property="og:url" content="https://nicknubbz1.github.io/Bloodline-RP-Website/applications.html" />
-  <link rel="canonical" href="https://nicknubbz1.github.io/Bloodline-RP-Website/applications.html" />
+  <meta name="description" content="Bloodline RP application routes for factions, staff, and business whitelist." />
+  <meta property="og:url" content="https://bloodlinerp.gg/applications.html" />
+  <link rel="canonical" href="https://bloodlinerp.gg/applications.html" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600;700&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet" />
@@ -19,7 +19,7 @@
 
   <header class="site-header">
     <div class="header-brand">
-      <div class="brand"><img src="https://pub-17704311c9bd4f38a0026e11211f09af.r2.dev/Bloodline%20Banner.png" alt="Bloodline RP" /></div>
+      <div class="brand">Bloodline RP</div>
       <a class="login-chip login-trigger" href="#login">Login</a>
     </div>
     <div class="header-actions">
@@ -29,96 +29,60 @@
         <a href="rules.html">Rules</a>
         <a class="active" href="applications.html">Applications</a>
         <a href="store.html">Store</a>
-        <a href="staff.html" data-staff-only-nav hidden>Staff Panel</a>
       </nav>
     </div>
   </header>
 
+  <div class="dev-badge">DEV LIVE</div>
+
   <main>
-    <section class="hero reveal app-min-hero" id="apply-grid">
-      <p class="eyebrow">Application Directory</p>
-      <h1>One Place For Every Application</h1>
-      <p class="hero-copy">Choose the form you need below and submit directly on-site. Everything is designed to stay simple, readable, and organized.</p>
+    <section class="hero reveal">
+      <p class="eyebrow">Applications</p>
+      <h1>Choose Your Bloodline Path</h1>
+      <p class="hero-copy">Apply for the role that fits your story style. Every accepted application shapes the future of Los Santos.</p>
     </section>
 
-    <section class="app-min-grid reveal" aria-label="Application Categories">
-      <article class="app-min-card">
-        <header>
-          <h2>Server Applications</h2>
-          <span>4 Forms</span>
-        </header>
-        <ul>
-          <li>Moderator Application</li>
-          <li>Staff Application</li>
-          <li>Developer Application</li>
-          <li>Allowlist Application</li>
-        </ul>
+    <section class="cards reveal stagger">
+      <article class="card">
+        <p class="tag">Open</p>
+        <h3>Police Application</h3>
+        <p>Join law enforcement and uphold order through investigations, patrol, and tactical response.</p>
       </article>
-
-      <article class="app-min-card">
-        <header>
-          <h2>Public Safety</h2>
-          <span>3 Forms</span>
-        </header>
-        <ul>
-          <li>LEO Application</li>
-          <li>EMS Application</li>
-          <li>Fire Application</li>
-        </ul>
+      <article class="card">
+        <p class="tag">Open</p>
+        <h3>EMS & Fire Application</h3>
+        <p>Serve the city with emergency response, medical treatment, and rescue operations.</p>
       </article>
-
-      <article class="app-min-card">
-        <header>
-          <h2>City Hall Applications</h2>
-          <span>4 Forms</span>
-        </header>
-        <ul>
-          <li>Mayor Application</li>
-          <li>City Council Application</li>
-          <li>Lawyer Application</li>
-          <li>Judge Application</li>
-        </ul>
+      <article class="card">
+        <p class="tag">Open</p>
+        <h3>Staff Application</h3>
+        <p>Support server quality by moderating scenes and helping players maintain standards.</p>
       </article>
-
-      <article class="app-min-card">
-        <header>
-          <h2>Business And Gang Applications</h2>
-          <span>2 Forms</span>
-        </header>
-        <ul>
-          <li>Business Application</li>
-          <li>Gang Application</li>
-        </ul>
+      <article class="card">
+        <p class="tag">Open</p>
+        <h3>Business Whitelist</h3>
+        <p>Pitch your business concept and create a lasting legal or grey-market empire.</p>
       </article>
     </section>
 
-    <section class="panel reveal app-builder" id="application-builder">
-      <div class="panel-head">
-        <h2>Submit Application On Website</h2>
+    <section class="join reveal">
+      <div>
+        <p class="eyebrow">How To Apply</p>
+        <h2>Submit Through Discord</h2>
+        <p>Open the application ticket, complete the form, and wait for staff review.</p>
       </div>
-      <p class="hero-copy">Pick the exact application form, answer each question here, and submit directly to the Bloodline staff review queue.</p>
-
-      <div class="app-builder-controls">
-        <label for="applicationFormSelect">Select Application Form</label>
-        <select id="applicationFormSelect"></select>
+      <div class="join-actions">
+        <a class="btn btn-primary" href="#">Open Application Hub</a>
+        <a class="btn btn-ghost" href="rules.html">Read Rules First</a>
       </div>
-
-      <form id="applicationBuilderForm" class="app-builder-form" novalidate>
-        <div id="applicationBuilderFields" class="app-builder-fields"></div>
-        <div class="hero-actions">
-          <button class="btn btn-primary" type="submit">Submit Application</button>
-        </div>
-        <p id="applicationBuilderMessage" class="app-builder-message">Link Steam and Discord in your account center before submitting.</p>
-      </form>
     </section>
   </main>
 
   <footer class="site-footer">
-    <p>Bloodline RP � <span id="year"></span>. All rights reserved.</p>
+    <p>Bloodline RP © <span id="year"></span>. All rights reserved.</p>
   </footer>
 
   <script src="auth-config.js"></script>
-  <script src="application-forms.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
