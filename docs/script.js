@@ -329,3 +329,25 @@ renderAccountState();
 if (!handleAuthCallbackPage()) {
   syncAccountFromBackend();
 }
+
+const appTabButtons = document.querySelectorAll("[data-app-tab]");
+const appTabPanels = document.querySelectorAll("[data-app-panel]");
+
+if (appTabButtons.length && appTabPanels.length) {
+  appTabButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const target = button.getAttribute("data-app-tab");
+
+      appTabButtons.forEach((tabButton) => {
+        const isActive = tabButton === button;
+        tabButton.classList.toggle("is-active", isActive);
+        tabButton.setAttribute("aria-selected", String(isActive));
+      });
+
+      appTabPanels.forEach((panel) => {
+        const isMatch = panel.getAttribute("data-app-panel") === target;
+        panel.classList.toggle("is-active", isMatch);
+      });
+    });
+  });
+}

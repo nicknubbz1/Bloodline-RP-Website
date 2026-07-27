@@ -34,66 +34,75 @@
   </header>
 
   <main>
-    <section class="hero reveal app-map-hero" id="apply-grid">
-      <p class="eyebrow">Application Map</p>
-      <h1>Pick A Lane, Find Your Role</h1>
-      <p class="hero-copy">This layout organizes every category into horizontal lanes with compact role chips for a fast, modern scan.</p>
+    <section class="hero reveal app-tabs-hero" id="apply-grid">
+      <p class="eyebrow">Application Directory</p>
+      <h1>Choose A Category To View Open Applications</h1>
+      <p class="hero-copy">This version uses a sidebar and dynamic category panes for a cleaner dashboard feel. Select a category to focus on one application type at a time.</p>
       <div class="app-meta">
         <span>14 Open Applications</span>
-        <span>4 Application Lanes</span>
-        <span>Quick Scan Layout</span>
+        <span>4 Categories</span>
+        <span>Tab View Layout</span>
       </div>
     </section>
 
-    <section class="app-map reveal stagger">
-      <article class="app-lane">
-        <header class="app-lane-head">
-          <h2>Server Applications</h2>
-          <span class="app-lane-count">4</span>
-        </header>
-        <div class="app-lane-track">
-          <div class="app-chip"><strong>Moderator Application</strong><span>Open</span></div>
-          <div class="app-chip"><strong>Staff Application</strong><span>Open</span></div>
-          <div class="app-chip"><strong>Devolper Application</strong><span>Open</span></div>
-          <div class="app-chip"><strong>Allowlist Application</strong><span>Open</span></div>
-        </div>
-      </article>
+    <section class="app-tabs-shell reveal" aria-label="Application Categories">
+      <aside class="app-tabs-nav" role="tablist" aria-label="Application category tabs">
+        <button class="app-tab-btn is-active" type="button" role="tab" aria-selected="true" data-app-tab="server">Server Applications</button>
+        <button class="app-tab-btn" type="button" role="tab" aria-selected="false" data-app-tab="public-safety">Public Safety</button>
+        <button class="app-tab-btn" type="button" role="tab" aria-selected="false" data-app-tab="city-hall">City Hall Applications</button>
+        <button class="app-tab-btn" type="button" role="tab" aria-selected="false" data-app-tab="business-gang">Business And Gang Applications</button>
+      </aside>
 
-      <article class="app-lane">
-        <header class="app-lane-head">
-          <h2>Public Safety</h2>
-          <span class="app-lane-count">3</span>
-        </header>
-        <div class="app-lane-track">
-          <div class="app-chip"><strong>LEO Application</strong><span>Open</span></div>
-          <div class="app-chip"><strong>EMS Application</strong><span>Open</span></div>
-          <div class="app-chip"><strong>Fire Application</strong><span>Open</span></div>
-        </div>
-      </article>
+      <div class="app-tabs-content">
+        <article class="app-tab-panel is-active" data-app-panel="server">
+          <header class="app-tab-head">
+            <h2>Server Applications</h2>
+            <span class="app-tab-count">4 Open</span>
+          </header>
+          <ul class="app-tab-list">
+            <li>Moderator Application <span>Open</span></li>
+            <li>Staff Application <span>Open</span></li>
+            <li>Devolper Application <span>Open</span></li>
+            <li>Allowlist Application <span>Open</span></li>
+          </ul>
+        </article>
 
-      <article class="app-lane">
-        <header class="app-lane-head">
-          <h2>City Hall Applications</h2>
-          <span class="app-lane-count">4</span>
-        </header>
-        <div class="app-lane-track">
-          <div class="app-chip"><strong>Mayor Application</strong><span>Open</span></div>
-          <div class="app-chip"><strong>City Council Application</strong><span>Open</span></div>
-          <div class="app-chip"><strong>Lawyer Application</strong><span>Open</span></div>
-          <div class="app-chip"><strong>Judge Application</strong><span>Open</span></div>
-        </div>
-      </article>
+        <article class="app-tab-panel" data-app-panel="public-safety">
+          <header class="app-tab-head">
+            <h2>Public Safety</h2>
+            <span class="app-tab-count">3 Open</span>
+          </header>
+          <ul class="app-tab-list">
+            <li>LEO Application <span>Open</span></li>
+            <li>EMS Application <span>Open</span></li>
+            <li>Fire Application <span>Open</span></li>
+          </ul>
+        </article>
 
-      <article class="app-lane">
-        <header class="app-lane-head">
-          <h2>Business And Gang Applications</h2>
-          <span class="app-lane-count">2</span>
-        </header>
-        <div class="app-lane-track">
-          <div class="app-chip"><strong>Business Application</strong><span>Open</span></div>
-          <div class="app-chip"><strong>Gang Application</strong><span>Open</span></div>
-        </div>
-      </article>
+        <article class="app-tab-panel" data-app-panel="city-hall">
+          <header class="app-tab-head">
+            <h2>City Hall Applications</h2>
+            <span class="app-tab-count">4 Open</span>
+          </header>
+          <ul class="app-tab-list">
+            <li>Mayor Application <span>Open</span></li>
+            <li>City Council Application <span>Open</span></li>
+            <li>Lawyer Application <span>Open</span></li>
+            <li>Judge Application <span>Open</span></li>
+          </ul>
+        </article>
+
+        <article class="app-tab-panel" data-app-panel="business-gang">
+          <header class="app-tab-head">
+            <h2>Business And Gang Applications</h2>
+            <span class="app-tab-count">2 Open</span>
+          </header>
+          <ul class="app-tab-list">
+            <li>Business Application <span>Open</span></li>
+            <li>Gang Application <span>Open</span></li>
+          </ul>
+        </article>
+      </div>
     </section>
   </main>
 

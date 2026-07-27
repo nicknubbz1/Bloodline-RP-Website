@@ -823,6 +823,118 @@ h1 span,
   background: rgba(255, 39, 73, 0.2);
 }
 
+.app-tabs-hero {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.app-tabs-shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.app-tabs-nav {
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: linear-gradient(170deg, rgba(42, 45, 51, 0.92), rgba(18, 20, 23, 0.96));
+  padding: 0.45rem;
+  display: grid;
+  gap: 0.35rem;
+  position: sticky;
+  top: 5.8rem;
+}
+
+.app-tab-btn {
+  border: 1px solid rgba(255, 67, 97, 0.34);
+  border-radius: 0.62rem;
+  background: rgba(0, 0, 0, 0.3);
+  color: #f3f5f8;
+  padding: 0.58rem 0.64rem;
+  text-align: left;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.app-tab-btn.is-active {
+  border-color: rgba(255, 67, 97, 0.72);
+  background: rgba(255, 39, 73, 0.22);
+  color: #ffe5eb;
+}
+
+.app-tabs-content {
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: linear-gradient(170deg, rgba(42, 45, 51, 0.9), rgba(18, 20, 23, 0.95));
+  padding: 0.75rem;
+}
+
+.app-tab-panel {
+  display: none;
+}
+
+.app-tab-panel.is-active {
+  display: block;
+}
+
+.app-tab-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-bottom: 0.58rem;
+}
+
+.app-tab-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.app-tab-count {
+  border: 1px solid rgba(255, 67, 97, 0.62);
+  border-radius: 999px;
+  padding: 0.15rem 0.48rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #ffdce4;
+  background: rgba(255, 39, 73, 0.2);
+}
+
+.app-tab-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.44rem;
+}
+
+.app-tab-list li {
+  border: 1px solid rgba(255, 67, 97, 0.34);
+  border-radius: 0.62rem;
+  background: rgba(0, 0, 0, 0.34);
+  color: #f4f5f8;
+  font-size: 0.91rem;
+  font-weight: 700;
+  padding: 0.52rem 0.62rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.app-tab-list li span {
+  border: 1px solid rgba(255, 67, 97, 0.6);
+  border-radius: 999px;
+  padding: 0.16rem 0.42rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #ffe0e7;
+  background: rgba(255, 39, 73, 0.2);
+}
+
 .account-flow {
   display: grid;
   gap: 0.85rem;
@@ -1006,6 +1118,15 @@ button[disabled] {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .app-tabs-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .app-tabs-nav {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .cards .card,
   .section-grid .card,
   .rules-grid .card,
@@ -1096,6 +1217,15 @@ button[disabled] {
 
   .app-lane-track {
     grid-template-columns: 1fr;
+  }
+
+  .app-tabs-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .app-tab-list li {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 
