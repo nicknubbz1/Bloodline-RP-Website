@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bloodline RP | Account</title>
+  <meta name="description" content="Bloodline RP account portal for Steam sign-in and Discord linking." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600;700&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-orb orb-one"></div>
+  <div class="bg-orb orb-two"></div>
+  <div class="grid-overlay"></div>
+
+  <header class="site-header">
+    <div class="header-brand">
+      <div class="brand">Bloodline RP</div>
+      <a class="login-chip active login-trigger" href="#login">Login</a>
+    </div>
+    <div class="header-actions">
+      <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">Menu</button>
+      <nav class="nav" id="navMenu">
+        <a href="index.html">Home</a>
+        <a href="rules.html">Rules</a>
+        <a href="applications.html">Applications</a>
+        <a href="store.html">Store</a>
+      </nav>
+    </div>
+  </header>
+
+  <div class="dev-badge">DEV LIVE</div>
+
+  <main>
+    <section class="hero reveal">
+      <p class="eyebrow">Account Access</p>
+      <h1>Login With Steam. Then Connect Discord.</h1>
+      <p class="hero-copy">Your Bloodline account name is your Steam name. After Steam login, the next step is linking Discord so whitelist access, applications, and community permissions stay synced.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="#login-flow">Open Login</a>
+        <a class="btn btn-ghost" href="#account-summary">See Account Status</a>
+      </div>
+    </section>
+
+    <section id="login-flow" class="account-flow reveal">
+      <article class="panel flow-panel">
+        <div class="panel-head">
+          <p class="eyebrow">Step 1</p>
+          <h2>Steam Login</h2>
+        </div>
+        <p>Launch real Steam authentication through the Bloodline auth server. Once Steam returns successfully, your website account name will use your Steam display name.</p>
+        <button class="btn btn-primary auth-btn" type="button" data-auth-provider="steam">Login With Steam</button>
+        <p class="steam-action-note">If you are already signed into Steam, the popup should only need one confirm click.</p>
+      </article>
+
+      <article class="panel flow-panel" id="discord-connect">
+        <div class="panel-head">
+          <p class="eyebrow">Step 2</p>
+          <h2>Connect Discord</h2>
+        </div>
+        <p>After Steam succeeds, launch Discord OAuth to attach the community account used for whitelist roles, support, and application tracking.</p>
+        <button class="btn btn-primary auth-btn" id="discordButton" type="button" data-auth-provider="discord" disabled>Connect Discord</button>
+        <p class="steam-action-note">Discord linking stays locked until Steam authentication has completed.</p>
+      </article>
+    </section>
+
+    <section class="account-grid reveal stagger" id="account-summary">
+      <article class="card">
+        <p class="tag">Account Name</p>
+        <h3 id="accountName">Awaiting Steam Login</h3>
+        <p>Your Bloodline RP account name is pulled from the Steam name entered during login.</p>
+      </article>
+      <article class="card">
+        <p class="tag">Connection Status</p>
+        <h3>Access Status</h3>
+        <div class="auth-status">
+          <span class="status-pill" id="steamStatus">Steam Pending</span>
+          <span class="status-pill" id="discordStatus">Discord Pending</span>
+        </div>
+      </article>
+      <article class="card">
+        <p class="tag">Linked Discord</p>
+        <h3 id="discordDisplay">Not Connected</h3>
+        <p>Once connected, this Discord identity can be used for whitelist, tickets, and community role sync.</p>
+      </article>
+      <article class="card">
+        <p class="tag">Backend Note</p>
+        <h3>Ready For Real Auth</h3>
+        <p>This flow is ready to be connected to real Steam and Discord auth later. For now it provides the exact two-step login UX on the site.</p>
+      </article>
+    </section>
+
+    <section class="panel reveal">
+      <div class="panel-head">
+        <p class="eyebrow">What Unlocks</p>
+        <h2>One Identity Across The City</h2>
+      </div>
+      <p>After account linking is live, your profile can connect whitelist approvals, server bans, Tebex purchases, faction applications, and Discord verification into one Bloodline RP identity.</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Bloodline RP © <span id="year"></span>. All rights reserved.</p>
+  </footer>
+
+  <script src="auth-config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

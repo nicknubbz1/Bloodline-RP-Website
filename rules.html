@@ -18,14 +18,19 @@
   <div class="grid-overlay"></div>
 
   <header class="site-header">
-    <div class="brand">Bloodline RP</div>
-    <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">Menu</button>
-    <nav class="nav" id="navMenu">
-      <a href="index.html">Home</a>
-      <a class="active" href="rules.html">Rules</a>
-      <a href="applications.html">Applications</a>
-      <a href="store.html">Store</a>
-    </nav>
+    <div class="header-brand">
+      <div class="brand">Bloodline RP</div>
+      <a class="login-chip login-trigger" href="#login">Login</a>
+    </div>
+    <div class="header-actions">
+      <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">Menu</button>
+      <nav class="nav" id="navMenu">
+        <a href="index.html">Home</a>
+        <a class="active" href="rules.html">Rules</a>
+        <a href="applications.html">Applications</a>
+        <a href="store.html">Store</a>
+      </nav>
+    </div>
   </header>
 
   <div class="dev-badge">DEV LIVE</div>
@@ -77,6 +82,7 @@
     <p>Bloodline RP © <span id="year"></span>. All rights reserved.</p>
   </footer>
 
+  <script src="auth-config.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
