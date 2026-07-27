@@ -46,6 +46,7 @@ const discordDisplayEl = document.getElementById("discordDisplay");
 const loginTriggers = document.querySelectorAll(".login-trigger");
 const steamAuthButtons = document.querySelectorAll('[data-auth-provider="steam"]');
 const discordAuthButtons = document.querySelectorAll('[data-auth-provider="discord"]');
+const staffOnlyNavLinks = document.querySelectorAll("[data-staff-only-nav]");
 const authCallbackMessageEl = document.getElementById("authCallbackMessage");
 const steamPopupUrl = window.BLOODLINE_STEAM_AUTH_URL || "http://localhost:3000/auth/steam";
 const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3000/auth/discord";
@@ -208,6 +209,11 @@ function renderAccountState() {
   if (discordDisplayEl) {
     discordDisplayEl.textContent = discordName;
   }
+
+  const canSeeStaffPanel = Boolean(state.isStaff);
+  staffOnlyNavLinks.forEach((link) => {
+    link.hidden = !canSeeStaffPanel;
+  });
 }
 
 async function syncAccountFromBackend() {
@@ -585,30 +591,48 @@ async function initStaffPanel() {
     return;
   }
 
+  const currentPage = window.location.pathname.split("/").pop();
+  const shouldRedirectIfUnauthorized = currentPage === "staff.html";
+
   try {
     const response = await fetch(authSessionUrl, {
       credentials: "include",
     });
 
+    if (!response.ok) {
+      if (shouldRedirectIfUnauthorized) {
+        window.location.replace("index.html");
+      }
+      return;
+    }
+
     const payload = await response.json();
     const account = payload.account || null;
 
+    mergeAccountState({
+      steamId: account?.steamId || "",
+      steamName: account?.steamName || "",
+      steamAvatar: account?.steamAvatar || "",
+      discordId: account?.discordId || "",
+      discordName: account?.discordName || "",
+      discordUsername: account?.discordUsername || "",
+      discordAvatar: account?.discordAvatar || "",
+      isStaff: Boolean(account?.isStaff),
+      staffRoleError: account?.staffRoleError || "",
+    });
+    renderAccountState();
+
     if (!account?.steamId || !account?.discordId) {
-      staffPanelGateEl.hidden = false;
-      staffPanelAppEl.hidden = true;
-      setStaffPanelStatus("Link Steam and Discord first to continue.", true);
+      if (shouldRedirectIfUnauthorized) {
+        window.location.replace("index.html");
+      }
       return;
     }
 
     if (!account.isStaff) {
-      staffPanelGateEl.hidden = false;
-      staffPanelAppEl.hidden = true;
-      const reason = account.staffRoleError || "Your Discord account does not currently have the configured staff role.";
-      const gateMessage = staffPanelGateEl.querySelector("p");
-      if (gateMessage) {
-        gateMessage.textContent = reason;
+      if (shouldRedirectIfUnauthorized) {
+        window.location.replace("index.html");
       }
-      setStaffPanelStatus(reason, true);
       return;
     }
 
@@ -616,9 +640,10 @@ async function initStaffPanel() {
     staffPanelAppEl.hidden = false;
     await loadStaffApplications();
   } catch {
-    staffPanelGateEl.hidden = false;
-    staffPanelAppEl.hidden = true;
-    setStaffPanelStatus("Could not verify session. Ensure the auth backend is running.", true);
+    if (shouldRedirectIfUnauthorized) {
+      window.location.replace("index.html");
+    }
+    return;
   }
 
   if (staffPanelTypeFilterEl) {
