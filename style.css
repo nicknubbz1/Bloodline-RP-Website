@@ -447,6 +447,73 @@ h1 span,
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.rules-hero {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.rules-manual {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.rules-rule {
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: linear-gradient(170deg, rgba(50, 54, 61, 0.9), rgba(20, 22, 26, 0.95));
+  padding: 0.95rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.rules-rule h2 {
+  margin: 0;
+  font-size: clamp(1.1rem, 3vw, 1.4rem);
+}
+
+.rules-rule h3 {
+  margin: 0.15rem 0 0;
+  font-size: 0.95rem;
+  color: #ffd5de;
+}
+
+.rules-rule p {
+  margin: 0;
+  color: #d8dce5;
+  line-height: 1.65;
+}
+
+.rules-rule ul {
+  margin: 0.1rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.42rem;
+}
+
+.rules-rule li {
+  border: 1px solid rgba(255, 67, 97, 0.28);
+  border-radius: 0.62rem;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.55rem 0.62rem;
+  color: #edf0f5;
+  line-height: 1.55;
+  display: flex;
+  gap: 0.48rem;
+  align-items: flex-start;
+}
+
+.rules-rule li::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--accent-strong);
+  margin-top: 0.5rem;
+  flex: 0 0 8px;
+  box-shadow: 0 0 0 4px rgba(255, 39, 73, 0.2);
+}
+
 .applications-hero {
   display: grid;
   gap: 0.75rem;
