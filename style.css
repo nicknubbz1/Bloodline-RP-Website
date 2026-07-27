@@ -80,10 +80,17 @@ body.modal-open {
 }
 
 .brand {
-  font-family: "Antonio", sans-serif;
-  font-size: 1.45rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.brand img {
+  display: block;
+  width: auto;
+  height: 34px;
+  max-width: 240px;
+  object-fit: contain;
 }
 
 .header-actions {
@@ -1558,7 +1565,12 @@ button[disabled] {
   }
 
   .brand {
-    font-size: 1.25rem;
+    max-width: 46vw;
+  }
+
+  .brand img {
+    height: 28px;
+    max-width: 180px;
   }
 
   h1 {
