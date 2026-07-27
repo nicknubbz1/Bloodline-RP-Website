@@ -77,19 +77,23 @@ body.modal-open {
   display: flex;
   align-items: center;
   gap: 0.7rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .brand {
   display: inline-flex;
   align-items: center;
   line-height: 1;
+  flex: 1;
+  min-width: 0;
 }
 
 .brand img {
   display: block;
-  width: auto;
-  height: 72px;
-  max-width: 520px;
+  width: clamp(340px, 46vw, 760px);
+  height: auto;
+  max-height: 88px;
   object-fit: contain;
 }
 
@@ -97,6 +101,7 @@ body.modal-open {
   display: flex;
   align-items: center;
   gap: 0.8rem;
+  flex-shrink: 0;
 }
 
 .nav {
@@ -1565,12 +1570,12 @@ button[disabled] {
   }
 
   .brand {
-    max-width: 70vw;
+    max-width: 72vw;
   }
 
   .brand img {
-    height: 56px;
-    max-width: 78vw;
+    width: min(72vw, 460px);
+    max-height: 64px;
   }
 
   h1 {
