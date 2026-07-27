@@ -514,6 +514,94 @@ h1 span,
   box-shadow: 0 0 0 4px rgba(255, 39, 73, 0.2);
 }
 
+.store-hero {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.store-tier-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.store-tier-card {
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: linear-gradient(170deg, rgba(50, 54, 61, 0.9), rgba(20, 22, 26, 0.95));
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.store-tier-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.tier-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 67, 97, 0.42);
+  display: grid;
+  place-items: center;
+  background: rgba(255, 39, 73, 0.2);
+  font-size: 1rem;
+}
+
+.store-tier-card h3 {
+  margin: 0;
+  font-size: 1.55rem;
+  color: #ffffff;
+}
+
+.store-tier-card h3 span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #c8cfdb;
+}
+
+.store-tier-card .btn {
+  width: 100%;
+}
+
+.tier-bronze .tier-icon {
+  background: rgba(205, 127, 50, 0.24);
+  border-color: rgba(205, 127, 50, 0.55);
+}
+
+.tier-silver .tier-icon {
+  background: rgba(192, 192, 192, 0.22);
+  border-color: rgba(203, 203, 203, 0.5);
+}
+
+.tier-gold .tier-icon {
+  background: rgba(255, 215, 0, 0.24);
+  border-color: rgba(255, 215, 0, 0.58);
+}
+
+.tier-platinum .tier-icon {
+  background: rgba(169, 196, 255, 0.24);
+  border-color: rgba(169, 196, 255, 0.6);
+}
+
+.tier-emerald .tier-icon {
+  background: rgba(0, 195, 125, 0.24);
+  border-color: rgba(0, 195, 125, 0.58);
+}
+
+.tier-diamond .tier-icon {
+  background: rgba(116, 221, 255, 0.24);
+  border-color: rgba(116, 221, 255, 0.58);
+}
+
+.tier-bloodline .tier-icon {
+  background: rgba(255, 39, 73, 0.24);
+  border-color: rgba(255, 39, 73, 0.62);
+}
+
 .applications-hero {
   display: grid;
   gap: 0.75rem;
@@ -1552,6 +1640,10 @@ button[disabled] {
     grid-template-columns: 1fr;
   }
 
+  .store-tier-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .app-min-grid {
     grid-template-columns: 1fr;
   }
@@ -1690,6 +1782,10 @@ button[disabled] {
   .app-tab-list li {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .store-tier-grid {
+    grid-template-columns: 1fr;
   }
 
   .staff-search-row {
