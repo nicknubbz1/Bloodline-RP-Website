@@ -50,6 +50,7 @@ const authCallbackMessageEl = document.getElementById("authCallbackMessage");
 const steamPopupUrl = window.BLOODLINE_STEAM_AUTH_URL || "http://localhost:3000/auth/steam";
 const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3000/auth/discord";
 const authSessionUrl = window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
+const apiBaseUrl = window.BLOODLINE_API_BASE_URL || "http://localhost:3000/api";
 let steamLoginModal = null;
 
 function openAuthPopup(url, popupName) {
@@ -168,6 +169,15 @@ function mergeAccountState(nextPartialState) {
   return nextState;
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function renderAccountState() {
   const state = readAccountState();
   const steamName = state.steamName || "Awaiting Steam Login";
@@ -223,6 +233,8 @@ async function syncAccountFromBackend() {
       discordName: payload.account.discordName,
       discordUsername: payload.account.discordUsername,
       discordAvatar: payload.account.discordAvatar,
+      isStaff: Boolean(payload.account.isStaff),
+      staffRoleError: payload.account.staffRoleError || "",
     });
     renderAccountState();
   } catch {
@@ -256,6 +268,7 @@ function handleAuthCallbackPage() {
         discordName: params.get("discordName") || params.get("discordUsername") || "Discord User",
         discordUsername: params.get("discordUsername") || "",
         discordAvatar: params.get("discordAvatar") || "",
+        isStaff: params.get("isStaff") === "1",
       });
     }
   }
@@ -329,6 +342,338 @@ renderAccountState();
 if (!handleAuthCallbackPage()) {
   syncAccountFromBackend();
 }
+
+const staffPanelGateEl = document.getElementById("staffPanelGate");
+const staffPanelAppEl = document.getElementById("staffPanelApp");
+const staffPanelListEl = document.getElementById("staffApplicationList");
+const staffPanelTypeFilterEl = document.getElementById("staffTypeFilter");
+const staffPanelStatusFilterEl = document.getElementById("staffStatusFilter");
+const staffPanelRefreshEl = document.getElementById("staffRefresh");
+const staffPanelSearchEl = document.getElementById("staffSearch");
+const staffPanelSearchButtonEl = document.getElementById("staffSearchButton");
+const staffPanelDetailEl = document.getElementById("staffApplicationDetail");
+const staffPanelReplyBoxEl = document.getElementById("staffReplyBox");
+const staffPanelSendReplyEl = document.getElementById("staffSendReply");
+const staffPanelAcceptEl = document.getElementById("staffAccept");
+const staffPanelDenyEl = document.getElementById("staffDeny");
+const staffPanelStatusMessageEl = document.getElementById("staffStatusMessage");
+
+let staffApplicationCache = [];
+let activeStaffApplicationId = "";
+
+function setStaffPanelStatus(message, isError = false) {
+  if (!staffPanelStatusMessageEl) {
+    return;
+  }
+
+  staffPanelStatusMessageEl.textContent = message;
+  staffPanelStatusMessageEl.classList.toggle("error", isError);
+}
+
+function getAppTypeLabel(type) {
+  const labels = {
+    server: "Server Applications",
+    "public-safety": "Public Safety",
+    "city-hall": "City Hall Applications",
+    "business-gang": "Business And Gang Applications",
+  };
+  return labels[type] || type;
+}
+
+function renderStaffApplicationList() {
+  if (!staffPanelListEl) {
+    return;
+  }
+
+  if (!staffApplicationCache.length) {
+    staffPanelListEl.innerHTML = '<p class="staff-empty">No applications match the current filters.</p>';
+    return;
+  }
+
+  staffPanelListEl.innerHTML = staffApplicationCache
+    .map((application) => {
+      const isActive = application.id === activeStaffApplicationId;
+      return `
+        <button class="staff-app-item${isActive ? " is-active" : ""}" type="button" data-staff-app-id="${escapeHtml(application.id)}">
+          <strong>${escapeHtml(application.title)}</strong>
+          <span>${escapeHtml(getAppTypeLabel(application.type))}</span>
+          <span class="status-pill">${escapeHtml(application.status)}</span>
+        </button>
+      `;
+    })
+    .join("");
+
+  staffPanelListEl.querySelectorAll("[data-staff-app-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeStaffApplicationId = button.getAttribute("data-staff-app-id") || "";
+      renderStaffApplicationList();
+      renderStaffApplicationDetail();
+    });
+  });
+}
+
+function renderStaffApplicationDetail() {
+  if (!staffPanelDetailEl) {
+    return;
+  }
+
+  const application = staffApplicationCache.find((entry) => entry.id === activeStaffApplicationId);
+  if (!application) {
+    staffPanelDetailEl.innerHTML = '<p class="staff-empty">Select an application from the list to view details.</p>';
+    return;
+  }
+
+  const replies = Array.isArray(application.replies) ? application.replies : [];
+  const repliesMarkup = replies.length
+    ? replies
+      .map((reply) => `
+        <article class="staff-reply">
+          <header>
+            <strong>${escapeHtml(reply.authorName || "Staff")}</strong>
+            <span>${escapeHtml(new Date(reply.createdAt).toLocaleString())}</span>
+          </header>
+          <p>${escapeHtml(reply.message || "")}</p>
+        </article>
+      `)
+      .join("")
+    : '<p class="staff-empty">No replies yet.</p>';
+
+  const reviewedBy = application.reviewedBy
+    ? `<p><strong>Last decision:</strong> ${escapeHtml(application.status)} by ${escapeHtml(application.reviewedBy.name || "Staff")}</p>`
+    : "";
+
+  staffPanelDetailEl.innerHTML = `
+    <article class="staff-detail-card">
+      <header>
+        <h3>${escapeHtml(application.title)}</h3>
+        <span class="status-pill">${escapeHtml(application.status)}</span>
+      </header>
+      <p><strong>Category:</strong> ${escapeHtml(getAppTypeLabel(application.type))}</p>
+      <p><strong>Applicant:</strong> ${escapeHtml(application.applicant?.steamName || "Unknown")} (${escapeHtml(application.applicant?.discordName || "No Discord")})</p>
+      <p><strong>Submitted:</strong> ${escapeHtml(new Date(application.createdAt).toLocaleString())}</p>
+      <p class="staff-body">${escapeHtml(application.body || "")}</p>
+      ${reviewedBy}
+      <section class="staff-replies">
+        <h4>Staff Replies</h4>
+        ${repliesMarkup}
+      </section>
+    </article>
+  `;
+}
+
+async function loadStaffApplications() {
+  if (!staffPanelListEl) {
+    return;
+  }
+
+  const params = new URLSearchParams();
+  const selectedType = staffPanelTypeFilterEl?.value || "all";
+  const selectedStatus = staffPanelStatusFilterEl?.value || "all";
+  const searchQuery = (staffPanelSearchEl?.value || "").trim();
+
+  if (selectedType !== "all") {
+    params.set("type", selectedType);
+  }
+  if (selectedStatus !== "all") {
+    params.set("status", selectedStatus);
+  }
+  if (searchQuery) {
+    params.set("search", searchQuery);
+  }
+
+  setStaffPanelStatus("Loading applications...");
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/staff/applications?${params.toString()}`, {
+      credentials: "include",
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      setStaffPanelStatus(payload.error || "Could not load staff applications.", true);
+      return;
+    }
+
+    staffApplicationCache = Array.isArray(payload.applications) ? payload.applications : [];
+    if (!staffApplicationCache.find((entry) => entry.id === activeStaffApplicationId)) {
+      activeStaffApplicationId = staffApplicationCache[0]?.id || "";
+    }
+
+    renderStaffApplicationList();
+    renderStaffApplicationDetail();
+    setStaffPanelStatus(`Loaded ${staffApplicationCache.length} application(s).`);
+  } catch {
+    setStaffPanelStatus("Staff API is unavailable. Start the auth server and try again.", true);
+  }
+}
+
+async function sendStaffReply() {
+  const message = (staffPanelReplyBoxEl?.value || "").trim();
+  if (!activeStaffApplicationId) {
+    setStaffPanelStatus("Select an application before sending a reply.", true);
+    return;
+  }
+
+  if (!message) {
+    setStaffPanelStatus("Reply message cannot be empty.", true);
+    return;
+  }
+
+  setStaffPanelStatus("Sending reply...");
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/staff/applications/${encodeURIComponent(activeStaffApplicationId)}/replies`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ message }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      setStaffPanelStatus(payload.error || "Reply could not be sent.", true);
+      return;
+    }
+
+    if (staffPanelReplyBoxEl) {
+      staffPanelReplyBoxEl.value = "";
+    }
+
+    setStaffPanelStatus("Reply posted.");
+    await loadStaffApplications();
+  } catch {
+    setStaffPanelStatus("Reply failed. Staff API may be unavailable.", true);
+  }
+}
+
+async function decideApplication(decision) {
+  if (!activeStaffApplicationId) {
+    setStaffPanelStatus("Select an application before updating status.", true);
+    return;
+  }
+
+  const note = (staffPanelReplyBoxEl?.value || "").trim();
+  setStaffPanelStatus(`Marking as ${decision}...`);
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/staff/applications/${encodeURIComponent(activeStaffApplicationId)}/decision`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({ decision, note }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      setStaffPanelStatus(payload.error || "Decision could not be saved.", true);
+      return;
+    }
+
+    setStaffPanelStatus(`Application marked as ${decision}.`);
+    await loadStaffApplications();
+  } catch {
+    setStaffPanelStatus("Decision request failed. Staff API may be unavailable.", true);
+  }
+}
+
+async function initStaffPanel() {
+  if (!staffPanelGateEl || !staffPanelAppEl) {
+    return;
+  }
+
+  try {
+    const response = await fetch(authSessionUrl, {
+      credentials: "include",
+    });
+
+    const payload = await response.json();
+    const account = payload.account || null;
+
+    if (!account?.steamId || !account?.discordId) {
+      staffPanelGateEl.hidden = false;
+      staffPanelAppEl.hidden = true;
+      setStaffPanelStatus("Link Steam and Discord first to continue.", true);
+      return;
+    }
+
+    if (!account.isStaff) {
+      staffPanelGateEl.hidden = false;
+      staffPanelAppEl.hidden = true;
+      const reason = account.staffRoleError || "Your Discord account does not currently have the configured staff role.";
+      const gateMessage = staffPanelGateEl.querySelector("p");
+      if (gateMessage) {
+        gateMessage.textContent = reason;
+      }
+      setStaffPanelStatus(reason, true);
+      return;
+    }
+
+    staffPanelGateEl.hidden = true;
+    staffPanelAppEl.hidden = false;
+    await loadStaffApplications();
+  } catch {
+    staffPanelGateEl.hidden = false;
+    staffPanelAppEl.hidden = true;
+    setStaffPanelStatus("Could not verify session. Ensure the auth backend is running.", true);
+  }
+
+  if (staffPanelTypeFilterEl) {
+    staffPanelTypeFilterEl.addEventListener("change", () => {
+      loadStaffApplications();
+    });
+  }
+
+  if (staffPanelStatusFilterEl) {
+    staffPanelStatusFilterEl.addEventListener("change", () => {
+      loadStaffApplications();
+    });
+  }
+
+  if (staffPanelRefreshEl) {
+    staffPanelRefreshEl.addEventListener("click", () => {
+      loadStaffApplications();
+    });
+  }
+
+  if (staffPanelSearchButtonEl) {
+    staffPanelSearchButtonEl.addEventListener("click", () => {
+      loadStaffApplications();
+    });
+  }
+
+  if (staffPanelSearchEl) {
+    staffPanelSearchEl.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        loadStaffApplications();
+      }
+    });
+  }
+
+  if (staffPanelSendReplyEl) {
+    staffPanelSendReplyEl.addEventListener("click", () => {
+      sendStaffReply();
+    });
+  }
+
+  if (staffPanelAcceptEl) {
+    staffPanelAcceptEl.addEventListener("click", () => {
+      decideApplication("accepted");
+    });
+  }
+
+  if (staffPanelDenyEl) {
+    staffPanelDenyEl.addEventListener("click", () => {
+      decideApplication("denied");
+    });
+  }
+}
+
+initStaffPanel();
 
 const appTabButtons = document.querySelectorAll("[data-app-tab]");
 const appTabPanels = document.querySelectorAll("[data-app-panel]");

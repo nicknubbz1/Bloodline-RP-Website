@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bloodline RP | Staff Panel</title>
+  <meta name="description" content="Bloodline RP staff moderation panel for reviewing and managing applications." />
+  <meta property="og:url" content="https://nicknubbz1.github.io/Bloodline-RP-Website/staff.html" />
+  <link rel="canonical" href="https://nicknubbz1.github.io/Bloodline-RP-Website/staff.html" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600;700&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-orb orb-one"></div>
+  <div class="bg-orb orb-two"></div>
+  <div class="grid-overlay"></div>
+
+  <header class="site-header">
+    <div class="header-brand">
+      <div class="brand">Bloodline RP</div>
+      <a class="login-chip login-trigger" href="#login">Login</a>
+    </div>
+    <div class="header-actions">
+      <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">Menu</button>
+      <nav class="nav" id="navMenu">
+        <a href="index.html">Home</a>
+        <a href="rules.html">Rules</a>
+        <a href="applications.html">Applications</a>
+        <a href="store.html">Store</a>
+        <a class="active" href="staff.html">Staff Panel</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero reveal">
+      <p class="eyebrow">Staff Operations</p>
+      <h1>Application Review And Decisions</h1>
+      <p class="hero-copy">This panel is role-gated by your Discord staff role. Filter incoming applications, leave review notes, and approve or deny each submission.</p>
+      <div class="app-meta">
+        <span>Discord Role Gate</span>
+        <span>Type Filters</span>
+        <span>Accept Or Deny</span>
+      </div>
+    </section>
+
+    <section class="panel reveal" id="staffPanelGate" hidden>
+      <div class="panel-head">
+        <h2>Access Restricted</h2>
+      </div>
+      <p>Only linked accounts with the configured Discord staff role can use this panel.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="account.html">Open Account Center</a>
+      </div>
+    </section>
+
+    <section class="staff-panel reveal" id="staffPanelApp" hidden>
+      <aside class="staff-sidebar">
+        <div class="staff-filters">
+          <label for="staffTypeFilter">Filter By Type</label>
+          <select id="staffTypeFilter">
+            <option value="all">All Types</option>
+            <option value="server">Server Applications</option>
+            <option value="public-safety">Public Safety</option>
+            <option value="city-hall">City Hall Applications</option>
+            <option value="business-gang">Business And Gang Applications</option>
+          </select>
+
+          <label for="staffStatusFilter">Filter By Status</label>
+          <select id="staffStatusFilter">
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="accepted">Accepted</option>
+            <option value="denied">Denied</option>
+          </select>
+
+          <label for="staffSearch">Search</label>
+          <div class="staff-search-row">
+            <input id="staffSearch" type="text" placeholder="Applicant, title, or content" />
+            <button class="btn btn-ghost" id="staffSearchButton" type="button">Search</button>
+          </div>
+          <button class="btn btn-primary" id="staffRefresh" type="button">Refresh List</button>
+        </div>
+
+        <div id="staffApplicationList" class="staff-app-list">
+          <p class="staff-empty">Loading applications...</p>
+        </div>
+      </aside>
+
+      <div class="staff-main">
+        <div id="staffApplicationDetail" class="panel">
+          <p class="staff-empty">Select an application from the list to view details.</p>
+        </div>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Staff Response</h2>
+          </div>
+          <textarea id="staffReplyBox" class="staff-reply-box" rows="5" placeholder="Write a staff reply or optional decision note..."></textarea>
+          <div class="hero-actions">
+            <button class="btn btn-ghost" id="staffSendReply" type="button">Post Reply</button>
+            <button class="btn btn-primary" id="staffAccept" type="button">Accept</button>
+            <button class="btn btn-primary staff-deny" id="staffDeny" type="button">Deny</button>
+          </div>
+          <p id="staffStatusMessage" class="staff-status-message">Ready.</p>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>Bloodline RP | <span id="year"></span>. All rights reserved.</p>
+  </footer>
+
+  <script src="auth-config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
