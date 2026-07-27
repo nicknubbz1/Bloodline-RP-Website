@@ -52,7 +52,10 @@ const steamPopupUrl = window.BLOODLINE_STEAM_AUTH_URL || "http://localhost:3000/
 const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3000/auth/discord";
 const authSessionUrl = window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
 const apiBaseUrl = window.BLOODLINE_API_BASE_URL || "http://localhost:3000/api";
+const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
+const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
 let steamLoginModal = null;
+let accountDropdownState = null;
 
 function openAuthPopup(url, popupName) {
   const popupWidth = 520;
@@ -179,6 +182,213 @@ function escapeHtml(value) {
     .replace(/'/g, "&#39;");
 }
 
+function readSubscriptionState() {
+  try {
+    return JSON.parse(localStorage.getItem("bloodline-subscription")) || {};
+  } catch {
+    return {};
+  }
+}
+
+function formatDateValue(dateValue) {
+  if (!dateValue) {
+    return "Not scheduled";
+  }
+
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Not scheduled";
+  }
+
+  return parsed.toLocaleDateString();
+}
+
+function createAccountDropdown() {
+  const headerActions = document.querySelector(".header-actions");
+  if (!headerActions || document.getElementById("headerAccountDropdown")) {
+    return null;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "header-account-menu";
+  wrapper.innerHTML = `
+    <button class="header-account-trigger" id="headerAccountTrigger" type="button" aria-expanded="false">Account</button>
+    <div class="header-account-dropdown" id="headerAccountDropdown" aria-hidden="true">
+      <section class="account-dropdown-block">
+        <h4>Account</h4>
+        <p>Steam: <span id="headerSteamLinkStatus" class="status-unlinked">Unlinked</span></p>
+        <p>Discord: <span id="headerDiscordLinkStatus" class="status-unlinked">Unlinked</span></p>
+      </section>
+      <section class="account-dropdown-block">
+        <h4>Application Status</h4>
+        <p id="headerApplicationStatus">Link Steam + Discord to load your applications.</p>
+        <div class="account-dropdown-inline-actions">
+          <a class="btn btn-ghost" href="applications.html">View Applications</a>
+        </div>
+      </section>
+      <section class="account-dropdown-block">
+        <h4>Manage Subscription</h4>
+        <p id="headerSubscriptionTier">No current subscription</p>
+        <p id="headerSubscriptionRenewal">Auto renew: Not scheduled</p>
+        <p id="headerSubscriptionNextPayment">Next payment: Not scheduled</p>
+        <div class="account-dropdown-inline-actions">
+          <a class="btn btn-primary" href="store.html?manage=upgrade">Upgrade</a>
+          <a class="btn btn-ghost" href="store.html?manage=downgrade">Downgrade</a>
+          <a class="btn btn-ghost" href="store.html?manage=cancel">Cancel</a>
+        </div>
+      </section>
+    </div>
+  `;
+
+  headerActions.appendChild(wrapper);
+
+  const trigger = wrapper.querySelector("#headerAccountTrigger");
+  const dropdown = wrapper.querySelector("#headerAccountDropdown");
+  if (!trigger || !dropdown) {
+    return null;
+  }
+
+  trigger.addEventListener("click", () => {
+    const isOpen = dropdown.classList.toggle("is-open");
+    trigger.setAttribute("aria-expanded", String(isOpen));
+    dropdown.setAttribute("aria-hidden", String(!isOpen));
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!wrapper.contains(event.target)) {
+      dropdown.classList.remove("is-open");
+      trigger.setAttribute("aria-expanded", "false");
+      dropdown.setAttribute("aria-hidden", "true");
+    }
+  });
+
+  return {
+    steamStatusEl: wrapper.querySelector("#headerSteamLinkStatus"),
+    discordStatusEl: wrapper.querySelector("#headerDiscordLinkStatus"),
+    appStatusEl: wrapper.querySelector("#headerApplicationStatus"),
+    subTierEl: wrapper.querySelector("#headerSubscriptionTier"),
+    subRenewalEl: wrapper.querySelector("#headerSubscriptionRenewal"),
+    subNextPaymentEl: wrapper.querySelector("#headerSubscriptionNextPayment"),
+  };
+}
+
+async function updateAccountDropdownDetails() {
+  if (!accountDropdownState) {
+    return;
+  }
+
+  const state = readAccountState();
+  const hasSteam = Boolean(state.steamId || state.steamName);
+  const hasDiscord = Boolean(state.discordId || state.discordName);
+
+  if (accountDropdownState.steamStatusEl) {
+    accountDropdownState.steamStatusEl.textContent = hasSteam ? "Linked" : "Unlinked";
+    accountDropdownState.steamStatusEl.className = hasSteam ? "status-linked" : "status-unlinked";
+  }
+
+  if (accountDropdownState.discordStatusEl) {
+    accountDropdownState.discordStatusEl.textContent = hasDiscord ? "Linked" : "Unlinked";
+    accountDropdownState.discordStatusEl.className = hasDiscord ? "status-linked" : "status-unlinked";
+  }
+
+  const subscription = readSubscriptionState();
+  if (accountDropdownState.subTierEl) {
+    accountDropdownState.subTierEl.textContent = subscription.tier
+      ? `Current tier: ${subscription.tier}`
+      : "No current subscription";
+  }
+
+  if (accountDropdownState.subRenewalEl) {
+    accountDropdownState.subRenewalEl.textContent = `Auto renew: ${formatDateValue(subscription.renewsAt)}`;
+  }
+
+  if (accountDropdownState.subNextPaymentEl) {
+    accountDropdownState.subNextPaymentEl.textContent = `Next payment: ${formatDateValue(subscription.nextPaymentAt)}`;
+  }
+
+  if (!hasSteam || !hasDiscord) {
+    if (accountDropdownState.appStatusEl) {
+      accountDropdownState.appStatusEl.textContent = "Link Steam + Discord to load your applications.";
+    }
+    return;
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/my-applications`, {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      if (accountDropdownState.appStatusEl) {
+        accountDropdownState.appStatusEl.textContent = "Could not load application statuses right now.";
+      }
+      return;
+    }
+
+    const payload = await response.json();
+    const applications = Array.isArray(payload.applications) ? payload.applications : [];
+    const pending = applications.filter((entry) => entry.status === "pending").length;
+    const accepted = applications.filter((entry) => entry.status === "accepted").length;
+    const denied = applications.filter((entry) => entry.status === "denied").length;
+
+    if (accountDropdownState.appStatusEl) {
+      accountDropdownState.appStatusEl.textContent = `Pending: ${pending} | Accepted: ${accepted} | Denied: ${denied}`;
+    }
+  } catch {
+    if (accountDropdownState.appStatusEl) {
+      accountDropdownState.appStatusEl.textContent = "Could not load application statuses right now.";
+    }
+  }
+}
+
+function initConnectPanel() {
+  const connectButton = document.getElementById("connectQueueButton");
+  const populationEl = document.getElementById("serverPopulation");
+  const queueEl = document.getElementById("serverQueueCount");
+  const statusEl = document.getElementById("serverStatusText");
+
+  if (!connectButton || !populationEl || !queueEl || !statusEl) {
+    return;
+  }
+
+  if (queueJoinUrl) {
+    connectButton.setAttribute("href", queueJoinUrl);
+    connectButton.removeAttribute("aria-disabled");
+  } else {
+    connectButton.setAttribute("href", "#");
+    connectButton.setAttribute("aria-disabled", "true");
+    statusEl.textContent = "Queue URL is not configured yet.";
+  }
+
+  if (!serverStatusUrl) {
+    populationEl.textContent = "Unavailable";
+    queueEl.textContent = "Unavailable";
+    return;
+  }
+
+  fetch(serverStatusUrl)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("status-unavailable");
+      }
+      return response.json();
+    })
+    .then((payload) => {
+      const players = payload.players ?? payload.online ?? payload.population ?? 0;
+      const maxPlayers = payload.maxPlayers ?? payload.max ?? payload.capacity ?? "?";
+      const queue = payload.queue ?? payload.queued ?? payload.queueCount ?? 0;
+
+      populationEl.textContent = `${players}/${maxPlayers}`;
+      queueEl.textContent = String(queue);
+      statusEl.textContent = "Live status updated.";
+    })
+    .catch(() => {
+      populationEl.textContent = "Unavailable";
+      queueEl.textContent = "Unavailable";
+      statusEl.textContent = "Could not reach live status endpoint.";
+    });
+}
+
 function renderAccountState() {
   const state = readAccountState();
   const steamName = state.steamName || "Awaiting Steam Login";
@@ -243,6 +453,7 @@ async function syncAccountFromBackend() {
       staffRoleError: payload.account.staffRoleError || "",
     });
     renderAccountState();
+    updateAccountDropdownDetails();
   } catch {
     // Ignore backend sync issues when the auth server is not running.
   }
@@ -329,6 +540,7 @@ discordAuthButtons.forEach((button) => {
 window.addEventListener("storage", (event) => {
   if (event.key === accountStorageKey) {
     renderAccountState();
+    updateAccountDropdownDetails();
   }
 });
 
@@ -340,10 +552,14 @@ window.addEventListener("message", (event) => {
   if (event.data?.type === "bloodline-auth-updated") {
     syncAccountFromBackend();
     renderAccountState();
+    updateAccountDropdownDetails();
   }
 });
 
 renderAccountState();
+accountDropdownState = createAccountDropdown();
+updateAccountDropdownDetails();
+initConnectPanel();
 
 if (!handleAuthCallbackPage()) {
   syncAccountFromBackend();

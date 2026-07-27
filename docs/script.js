@@ -46,13 +46,14 @@ const discordDisplayEl = document.getElementById("discordDisplay");
 const loginTriggers = document.querySelectorAll(".login-trigger");
 const steamAuthButtons = document.querySelectorAll('[data-auth-provider="steam"]');
 const discordAuthButtons = document.querySelectorAll('[data-auth-provider="discord"]');
-const staffOnlyNavLinks = document.querySelectorAll("[data-staff-only-nav]");
 const authCallbackMessageEl = document.getElementById("authCallbackMessage");
 const steamPopupUrl = window.BLOODLINE_STEAM_AUTH_URL || "http://localhost:3000/auth/steam";
 const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3000/auth/discord";
 const authSessionUrl = window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
-const apiBaseUrl = window.BLOODLINE_API_BASE_URL || "http://localhost:3000/api";
+const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
+const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
 let steamLoginModal = null;
+let accountDropdownState = null;
 
 function openAuthPopup(url, popupName) {
   const popupWidth = 520;
@@ -170,15 +171,6 @@ function mergeAccountState(nextPartialState) {
   return nextState;
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 function renderAccountState() {
   const state = readAccountState();
   const steamName = state.steamName || "Awaiting Steam Login";
@@ -209,11 +201,213 @@ function renderAccountState() {
   if (discordDisplayEl) {
     discordDisplayEl.textContent = discordName;
   }
+}
 
-  const canSeeStaffPanel = Boolean(state.isStaff);
-  staffOnlyNavLinks.forEach((link) => {
-    link.hidden = !canSeeStaffPanel;
+function readSubscriptionState() {
+  try {
+    return JSON.parse(localStorage.getItem("bloodline-subscription")) || {};
+  } catch {
+    return {};
+  }
+}
+
+function formatDateValue(dateValue) {
+  if (!dateValue) {
+    return "Not scheduled";
+  }
+
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Not scheduled";
+  }
+
+  return parsed.toLocaleDateString();
+}
+
+function createAccountDropdown() {
+  const headerActions = document.querySelector(".header-actions");
+  if (!headerActions || document.getElementById("headerAccountDropdown")) {
+    return null;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "header-account-menu";
+  wrapper.innerHTML = `
+    <button class="header-account-trigger" id="headerAccountTrigger" type="button" aria-expanded="false">Account</button>
+    <div class="header-account-dropdown" id="headerAccountDropdown" aria-hidden="true">
+      <section class="account-dropdown-block">
+        <h4>Account</h4>
+        <p>Steam: <span id="headerSteamLinkStatus" class="status-unlinked">Unlinked</span></p>
+        <p>Discord: <span id="headerDiscordLinkStatus" class="status-unlinked">Unlinked</span></p>
+      </section>
+      <section class="account-dropdown-block">
+        <h4>Application Status</h4>
+        <p id="headerApplicationStatus">Link Steam + Discord to load your applications.</p>
+        <div class="account-dropdown-inline-actions">
+          <a class="btn btn-ghost" href="applications.html">View Applications</a>
+        </div>
+      </section>
+      <section class="account-dropdown-block">
+        <h4>Manage Subscription</h4>
+        <p id="headerSubscriptionTier">No current subscription</p>
+        <p id="headerSubscriptionRenewal">Auto renew: Not scheduled</p>
+        <p id="headerSubscriptionNextPayment">Next payment: Not scheduled</p>
+        <div class="account-dropdown-inline-actions">
+          <a class="btn btn-primary" href="store.html?manage=upgrade">Upgrade</a>
+          <a class="btn btn-ghost" href="store.html?manage=downgrade">Downgrade</a>
+          <a class="btn btn-ghost" href="store.html?manage=cancel">Cancel</a>
+        </div>
+      </section>
+    </div>
+  `;
+
+  headerActions.appendChild(wrapper);
+
+  const trigger = wrapper.querySelector("#headerAccountTrigger");
+  const dropdown = wrapper.querySelector("#headerAccountDropdown");
+  if (!trigger || !dropdown) {
+    return null;
+  }
+
+  trigger.addEventListener("click", () => {
+    const isOpen = dropdown.classList.toggle("is-open");
+    trigger.setAttribute("aria-expanded", String(isOpen));
+    dropdown.setAttribute("aria-hidden", String(!isOpen));
   });
+
+  document.addEventListener("click", (event) => {
+    if (!wrapper.contains(event.target)) {
+      dropdown.classList.remove("is-open");
+      trigger.setAttribute("aria-expanded", "false");
+      dropdown.setAttribute("aria-hidden", "true");
+    }
+  });
+
+  return {
+    steamStatusEl: wrapper.querySelector("#headerSteamLinkStatus"),
+    discordStatusEl: wrapper.querySelector("#headerDiscordLinkStatus"),
+    appStatusEl: wrapper.querySelector("#headerApplicationStatus"),
+    subTierEl: wrapper.querySelector("#headerSubscriptionTier"),
+    subRenewalEl: wrapper.querySelector("#headerSubscriptionRenewal"),
+    subNextPaymentEl: wrapper.querySelector("#headerSubscriptionNextPayment"),
+  };
+}
+
+async function updateAccountDropdownDetails() {
+  if (!accountDropdownState) {
+    return;
+  }
+
+  const state = readAccountState();
+  const hasSteam = Boolean(state.steamId || state.steamName);
+  const hasDiscord = Boolean(state.discordId || state.discordName);
+
+  if (accountDropdownState.steamStatusEl) {
+    accountDropdownState.steamStatusEl.textContent = hasSteam ? "Linked" : "Unlinked";
+    accountDropdownState.steamStatusEl.className = hasSteam ? "status-linked" : "status-unlinked";
+  }
+
+  if (accountDropdownState.discordStatusEl) {
+    accountDropdownState.discordStatusEl.textContent = hasDiscord ? "Linked" : "Unlinked";
+    accountDropdownState.discordStatusEl.className = hasDiscord ? "status-linked" : "status-unlinked";
+  }
+
+  const subscription = readSubscriptionState();
+  if (accountDropdownState.subTierEl) {
+    accountDropdownState.subTierEl.textContent = subscription.tier
+      ? `Current tier: ${subscription.tier}`
+      : "No current subscription";
+  }
+
+  if (accountDropdownState.subRenewalEl) {
+    accountDropdownState.subRenewalEl.textContent = `Auto renew: ${formatDateValue(subscription.renewsAt)}`;
+  }
+
+  if (accountDropdownState.subNextPaymentEl) {
+    accountDropdownState.subNextPaymentEl.textContent = `Next payment: ${formatDateValue(subscription.nextPaymentAt)}`;
+  }
+
+  if (!hasSteam || !hasDiscord) {
+    if (accountDropdownState.appStatusEl) {
+      accountDropdownState.appStatusEl.textContent = "Link Steam + Discord to load your applications.";
+    }
+    return;
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/my-applications`, {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      if (accountDropdownState.appStatusEl) {
+        accountDropdownState.appStatusEl.textContent = "Could not load application statuses right now.";
+      }
+      return;
+    }
+
+    const payload = await response.json();
+    const applications = Array.isArray(payload.applications) ? payload.applications : [];
+    const pending = applications.filter((entry) => entry.status === "pending").length;
+    const accepted = applications.filter((entry) => entry.status === "accepted").length;
+    const denied = applications.filter((entry) => entry.status === "denied").length;
+
+    if (accountDropdownState.appStatusEl) {
+      accountDropdownState.appStatusEl.textContent = `Pending: ${pending} | Accepted: ${accepted} | Denied: ${denied}`;
+    }
+  } catch {
+    if (accountDropdownState.appStatusEl) {
+      accountDropdownState.appStatusEl.textContent = "Could not load application statuses right now.";
+    }
+  }
+}
+
+function initConnectPanel() {
+  const connectButton = document.getElementById("connectQueueButton");
+  const populationEl = document.getElementById("serverPopulation");
+  const queueEl = document.getElementById("serverQueueCount");
+  const statusEl = document.getElementById("serverStatusText");
+
+  if (!connectButton || !populationEl || !queueEl || !statusEl) {
+    return;
+  }
+
+  if (queueJoinUrl) {
+    connectButton.setAttribute("href", queueJoinUrl);
+    connectButton.removeAttribute("aria-disabled");
+  } else {
+    connectButton.setAttribute("href", "#");
+    connectButton.setAttribute("aria-disabled", "true");
+    statusEl.textContent = "Queue URL is not configured yet.";
+  }
+
+  if (!serverStatusUrl) {
+    populationEl.textContent = "Unavailable";
+    queueEl.textContent = "Unavailable";
+    return;
+  }
+
+  fetch(serverStatusUrl)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("status-unavailable");
+      }
+      return response.json();
+    })
+    .then((payload) => {
+      const players = payload.players ?? payload.online ?? payload.population ?? 0;
+      const maxPlayers = payload.maxPlayers ?? payload.max ?? payload.capacity ?? "?";
+      const queue = payload.queue ?? payload.queued ?? payload.queueCount ?? 0;
+
+      populationEl.textContent = `${players}/${maxPlayers}`;
+      queueEl.textContent = String(queue);
+      statusEl.textContent = "Live status updated.";
+    })
+    .catch(() => {
+      populationEl.textContent = "Unavailable";
+      queueEl.textContent = "Unavailable";
+      statusEl.textContent = "Could not reach live status endpoint.";
+    });
 }
 
 async function syncAccountFromBackend() {
@@ -239,10 +433,9 @@ async function syncAccountFromBackend() {
       discordName: payload.account.discordName,
       discordUsername: payload.account.discordUsername,
       discordAvatar: payload.account.discordAvatar,
-      isStaff: Boolean(payload.account.isStaff),
-      staffRoleError: payload.account.staffRoleError || "",
     });
     renderAccountState();
+    updateAccountDropdownDetails();
   } catch {
     // Ignore backend sync issues when the auth server is not running.
   }
@@ -274,7 +467,6 @@ function handleAuthCallbackPage() {
         discordName: params.get("discordName") || params.get("discordUsername") || "Discord User",
         discordUsername: params.get("discordUsername") || "",
         discordAvatar: params.get("discordAvatar") || "",
-        isStaff: params.get("isStaff") === "1",
       });
     }
   }
@@ -329,6 +521,7 @@ discordAuthButtons.forEach((button) => {
 window.addEventListener("storage", (event) => {
   if (event.key === accountStorageKey) {
     renderAccountState();
+    updateAccountDropdownDetails();
   }
 });
 
@@ -340,689 +533,15 @@ window.addEventListener("message", (event) => {
   if (event.data?.type === "bloodline-auth-updated") {
     syncAccountFromBackend();
     renderAccountState();
+    updateAccountDropdownDetails();
   }
 });
 
 renderAccountState();
+accountDropdownState = createAccountDropdown();
+updateAccountDropdownDetails();
+initConnectPanel();
 
 if (!handleAuthCallbackPage()) {
   syncAccountFromBackend();
-}
-
-const staffPanelGateEl = document.getElementById("staffPanelGate");
-const staffPanelAppEl = document.getElementById("staffPanelApp");
-const staffPanelListEl = document.getElementById("staffApplicationList");
-const staffPanelTypeFilterEl = document.getElementById("staffTypeFilter");
-const staffPanelStatusFilterEl = document.getElementById("staffStatusFilter");
-const staffPanelRefreshEl = document.getElementById("staffRefresh");
-const staffPanelSearchEl = document.getElementById("staffSearch");
-const staffPanelSearchButtonEl = document.getElementById("staffSearchButton");
-const staffPanelDetailEl = document.getElementById("staffApplicationDetail");
-const staffPanelReplyBoxEl = document.getElementById("staffReplyBox");
-const staffPanelSendReplyEl = document.getElementById("staffSendReply");
-const staffPanelAcceptEl = document.getElementById("staffAccept");
-const staffPanelDenyEl = document.getElementById("staffDeny");
-const staffPanelStatusMessageEl = document.getElementById("staffStatusMessage");
-const applicationFormSelectEl = document.getElementById("applicationFormSelect");
-const applicationBuilderFormEl = document.getElementById("applicationBuilderForm");
-const applicationBuilderFieldsEl = document.getElementById("applicationBuilderFields");
-const applicationBuilderMessageEl = document.getElementById("applicationBuilderMessage");
-const storeSubscribeButtons = document.querySelectorAll(".store-subscribe-btn");
-const storeCheckoutModal = document.getElementById("storeCheckoutModal");
-const storeCheckoutClose = document.getElementById("storeCheckoutClose");
-const storeCheckoutTier = document.getElementById("storeCheckoutTier");
-const storeCheckoutPrice = document.getElementById("storeCheckoutPrice");
-const storeCheckoutHelp = document.getElementById("storeCheckoutHelp");
-const storePayWithStripe = document.getElementById("storePayWithStripe");
-const storePayWithPaypal = document.getElementById("storePayWithPaypal");
-const storePayWithCashapp = document.getElementById("storePayWithCashapp");
-const unifiedCheckoutUrl = window.BLOODLINE_UNIFIED_CHECKOUT_URL || "";
-const stripeCheckoutUrl = window.BLOODLINE_STRIPE_CHECKOUT_URL || "";
-const paypalCheckoutUrl = window.BLOODLINE_PAYPAL_CHECKOUT_URL || "";
-const cashappCheckoutUrl = window.BLOODLINE_CASHAPP_CHECKOUT_URL || "";
-
-let staffApplicationCache = [];
-let activeStaffApplicationId = "";
-const applicationFormDefinitions = Array.isArray(window.BLOODLINE_APPLICATION_FORMS)
-  ? window.BLOODLINE_APPLICATION_FORMS
-  : [];
-
-function setStaffPanelStatus(message, isError = false) {
-  if (!staffPanelStatusMessageEl) {
-    return;
-  }
-
-  staffPanelStatusMessageEl.textContent = message;
-  staffPanelStatusMessageEl.classList.toggle("error", isError);
-}
-
-function getAppTypeLabel(type) {
-  const labels = {
-    server: "Server Applications",
-    "public-safety": "Public Safety",
-    "city-hall": "City Hall Applications",
-    "business-gang": "Business And Gang Applications",
-  };
-  return labels[type] || type;
-}
-
-function setApplicationBuilderMessage(message, kind = "") {
-  if (!applicationBuilderMessageEl) {
-    return;
-  }
-
-  applicationBuilderMessageEl.textContent = message;
-  applicationBuilderMessageEl.classList.remove("error", "success");
-  if (kind) {
-    applicationBuilderMessageEl.classList.add(kind);
-  }
-}
-
-function setPaymentLink(element, baseUrl, tier, price) {
-  if (!element) {
-    return;
-  }
-
-  if (!baseUrl) {
-    element.setAttribute("href", "#");
-    element.setAttribute("aria-disabled", "true");
-    return;
-  }
-
-  element.removeAttribute("aria-disabled");
-
-  try {
-    const url = new URL(baseUrl);
-    url.searchParams.set("tier", tier);
-    url.searchParams.set("price", price);
-    element.setAttribute("href", url.toString());
-  } catch {
-    element.setAttribute("href", baseUrl);
-  }
-}
-
-function openStoreCheckoutModal(tier, price) {
-  if (!storeCheckoutModal) {
-    return;
-  }
-
-  if (storeCheckoutTier) {
-    storeCheckoutTier.textContent = tier;
-  }
-
-  if (storeCheckoutPrice) {
-    storeCheckoutPrice.textContent = price;
-  }
-
-  const stripeUrl = unifiedCheckoutUrl || stripeCheckoutUrl;
-  const paypalUrl = unifiedCheckoutUrl || paypalCheckoutUrl;
-  const cashappUrl = unifiedCheckoutUrl || cashappCheckoutUrl;
-
-  setPaymentLink(storePayWithStripe, stripeUrl, tier, price);
-  setPaymentLink(storePayWithPaypal, paypalUrl, tier, price);
-  setPaymentLink(storePayWithCashapp, cashappUrl, tier, price);
-
-  if (storeCheckoutHelp) {
-    const hasAnyLink = Boolean(unifiedCheckoutUrl || stripeCheckoutUrl || paypalCheckoutUrl || cashappCheckoutUrl);
-    storeCheckoutHelp.textContent = hasAnyLink
-      ? (unifiedCheckoutUrl
-        ? "All methods route into the same checkout destination account."
-        : "Select a payment method to continue your subscription.")
-      : "No payment links are configured yet. Add them in auth-config.js.";
-  }
-
-  storeCheckoutModal.classList.add("is-open");
-  storeCheckoutModal.setAttribute("aria-hidden", "false");
-  document.body.classList.add("modal-open");
-}
-
-function closeStoreCheckoutModal() {
-  if (!storeCheckoutModal) {
-    return;
-  }
-
-  storeCheckoutModal.classList.remove("is-open");
-  storeCheckoutModal.setAttribute("aria-hidden", "true");
-  document.body.classList.remove("modal-open");
-}
-
-function initStoreCheckout() {
-  if (!storeSubscribeButtons.length || !storeCheckoutModal) {
-    return;
-  }
-
-  storeSubscribeButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const tier = button.getAttribute("data-tier") || "Supporter Tier";
-      const price = button.getAttribute("data-price") || "Custom Price";
-      openStoreCheckoutModal(tier, price);
-    });
-  });
-
-  if (storeCheckoutClose) {
-    storeCheckoutClose.addEventListener("click", () => {
-      closeStoreCheckoutModal();
-    });
-  }
-
-  storeCheckoutModal.addEventListener("click", (event) => {
-    if (event.target === storeCheckoutModal) {
-      closeStoreCheckoutModal();
-    }
-  });
-}
-
-function formatResponseValue(value) {
-  if (typeof value !== "string") {
-    return "";
-  }
-  return value.trim();
-}
-
-function renderStaffApplicationList() {
-  if (!staffPanelListEl) {
-    return;
-  }
-
-  if (!staffApplicationCache.length) {
-    staffPanelListEl.innerHTML = '<p class="staff-empty">No applications match the current filters.</p>';
-    return;
-  }
-
-  staffPanelListEl.innerHTML = staffApplicationCache
-    .map((application) => {
-      const isActive = application.id === activeStaffApplicationId;
-      return `
-        <button class="staff-app-item${isActive ? " is-active" : ""}" type="button" data-staff-app-id="${escapeHtml(application.id)}">
-          <strong>${escapeHtml(application.title)}</strong>
-          <span>${escapeHtml(getAppTypeLabel(application.type))}</span>
-          <span class="status-pill">${escapeHtml(application.status)}</span>
-        </button>
-      `;
-    })
-    .join("");
-
-  staffPanelListEl.querySelectorAll("[data-staff-app-id]").forEach((button) => {
-    button.addEventListener("click", () => {
-      activeStaffApplicationId = button.getAttribute("data-staff-app-id") || "";
-      renderStaffApplicationList();
-      renderStaffApplicationDetail();
-    });
-  });
-}
-
-function renderStaffApplicationDetail() {
-  if (!staffPanelDetailEl) {
-    return;
-  }
-
-  const application = staffApplicationCache.find((entry) => entry.id === activeStaffApplicationId);
-  if (!application) {
-    staffPanelDetailEl.innerHTML = '<p class="staff-empty">Select an application from the list to view details.</p>';
-    return;
-  }
-
-  const replies = Array.isArray(application.replies) ? application.replies : [];
-  const repliesMarkup = replies.length
-    ? replies
-      .map((reply) => `
-        <article class="staff-reply">
-          <header>
-            <strong>${escapeHtml(reply.authorName || "Staff")}</strong>
-            <span>${escapeHtml(new Date(reply.createdAt).toLocaleString())}</span>
-          </header>
-          <p>${escapeHtml(reply.message || "")}</p>
-        </article>
-      `)
-      .join("")
-    : '<p class="staff-empty">No replies yet.</p>';
-
-  const reviewedBy = application.reviewedBy
-    ? `<p><strong>Last decision:</strong> ${escapeHtml(application.status)} by ${escapeHtml(application.reviewedBy.name || "Staff")}</p>`
-    : "";
-
-  const responseList = Array.isArray(application.responses) ? application.responses : [];
-  const responseMarkup = responseList.length
-    ? `
-      <section class="staff-responses">
-        <h4>Application Answers</h4>
-        ${responseList.map((responseItem) => `
-          <article class="staff-response-item">
-            <strong>${escapeHtml(responseItem.label || "Question")}</strong>
-            <p>${escapeHtml(responseItem.answer || "")}</p>
-          </article>
-        `).join("")}
-      </section>
-    `
-    : `<p class="staff-body">${escapeHtml(application.body || "")}</p>`;
-
-  staffPanelDetailEl.innerHTML = `
-    <article class="staff-detail-card">
-      <header>
-        <h3>${escapeHtml(application.title)}</h3>
-        <span class="status-pill">${escapeHtml(application.status)}</span>
-      </header>
-      <p><strong>Category:</strong> ${escapeHtml(getAppTypeLabel(application.type))}</p>
-      <p><strong>Applicant:</strong> ${escapeHtml(application.applicant?.steamName || "Unknown")} (${escapeHtml(application.applicant?.discordName || "No Discord")})</p>
-      <p><strong>Submitted:</strong> ${escapeHtml(new Date(application.createdAt).toLocaleString())}</p>
-      ${responseMarkup}
-      ${reviewedBy}
-      <section class="staff-replies">
-        <h4>Staff Replies</h4>
-        ${repliesMarkup}
-      </section>
-    </article>
-  `;
-}
-
-function renderApplicationBuilderFields() {
-  if (!applicationFormSelectEl || !applicationBuilderFieldsEl) {
-    return;
-  }
-
-  const selectedKey = applicationFormSelectEl.value;
-  const selectedForm = applicationFormDefinitions.find((form) => form.key === selectedKey);
-
-  if (!selectedForm) {
-    applicationBuilderFieldsEl.innerHTML = "";
-    return;
-  }
-
-  const fieldsMarkup = selectedForm.questions
-    .map((question, index) => {
-      const fieldId = `app-q-${question.id}-${index}`;
-      const requiredMarker = question.required ? '<span class="app-required">*</span>' : "";
-      const requiredAttribute = question.required ? "required" : "";
-
-      if (question.kind === "textarea") {
-        return `
-          <div class="app-builder-field">
-            <label for="${escapeHtml(fieldId)}">${escapeHtml(question.label)}${requiredMarker}</label>
-            <textarea id="${escapeHtml(fieldId)}" name="${escapeHtml(question.id)}" data-question-label="${escapeHtml(question.label)}" rows="5" ${requiredAttribute}></textarea>
-          </div>
-        `;
-      }
-
-      if (question.kind === "yesno") {
-        return `
-          <div class="app-builder-field">
-            <label for="${escapeHtml(fieldId)}">${escapeHtml(question.label)}${requiredMarker}</label>
-            <select id="${escapeHtml(fieldId)}" name="${escapeHtml(question.id)}" data-question-label="${escapeHtml(question.label)}" ${requiredAttribute}>
-              <option value="">Select one</option>
-              <option value="Yes">Yes</option>
-              <option value="No">No</option>
-            </select>
-          </div>
-        `;
-      }
-
-      return `
-        <div class="app-builder-field">
-          <label for="${escapeHtml(fieldId)}">${escapeHtml(question.label)}${requiredMarker}</label>
-          <input id="${escapeHtml(fieldId)}" name="${escapeHtml(question.id)}" data-question-label="${escapeHtml(question.label)}" type="text" ${requiredAttribute} />
-        </div>
-      `;
-    })
-    .join("");
-
-  applicationBuilderFieldsEl.innerHTML = fieldsMarkup;
-}
-
-async function submitApplicationBuilder(event) {
-  event.preventDefault();
-
-  if (!applicationFormSelectEl || !applicationBuilderFormEl || !applicationBuilderFieldsEl) {
-    return;
-  }
-
-  const selectedForm = applicationFormDefinitions.find((form) => form.key === applicationFormSelectEl.value);
-  if (!selectedForm) {
-    setApplicationBuilderMessage("Select a valid application form first.", "error");
-    return;
-  }
-
-  const state = readAccountState();
-  if (!state.steamId || !state.discordId) {
-    setApplicationBuilderMessage("Link Steam and Discord in Account Center before submitting.", "error");
-    return;
-  }
-
-  const responses = [];
-  let firstInvalidField = null;
-
-  const fields = applicationBuilderFieldsEl.querySelectorAll("input, textarea, select");
-  fields.forEach((field) => {
-    const questionLabel = field.getAttribute("data-question-label") || field.name;
-    const answer = formatResponseValue(field.value);
-    const required = field.hasAttribute("required");
-
-    if (required && !answer && !firstInvalidField) {
-      firstInvalidField = field;
-      return;
-    }
-
-    responses.push({
-      id: field.name,
-      label: questionLabel,
-      answer,
-    });
-  });
-
-  if (firstInvalidField) {
-    firstInvalidField.focus();
-    setApplicationBuilderMessage("Please complete all required fields.", "error");
-    return;
-  }
-
-  setApplicationBuilderMessage("Submitting application...");
-
-  try {
-    const response = await fetch(`${apiBaseUrl}/applications`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({
-        type: selectedForm.type,
-        title: selectedForm.title,
-        body: `${selectedForm.title} submitted through website form builder.`,
-        formKey: selectedForm.key,
-        responses,
-      }),
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      setApplicationBuilderMessage(payload.error || "Application could not be submitted.", "error");
-      return;
-    }
-
-    applicationBuilderFormEl.reset();
-    renderApplicationBuilderFields();
-    setApplicationBuilderMessage("Application submitted successfully. Staff can now review it in the staff panel.", "success");
-  } catch {
-    setApplicationBuilderMessage("Submission failed. Ensure the auth backend is online.", "error");
-  }
-}
-
-function initApplicationBuilder() {
-  if (!applicationFormSelectEl || !applicationBuilderFormEl || !applicationBuilderFieldsEl) {
-    return;
-  }
-
-  if (!applicationFormDefinitions.length) {
-    setApplicationBuilderMessage("No application forms are currently configured.", "error");
-    return;
-  }
-
-  applicationFormSelectEl.innerHTML = applicationFormDefinitions
-    .map((form) => `<option value="${escapeHtml(form.key)}">${escapeHtml(form.title)}</option>`)
-    .join("");
-
-  renderApplicationBuilderFields();
-
-  applicationFormSelectEl.addEventListener("change", () => {
-    renderApplicationBuilderFields();
-  });
-
-  applicationBuilderFormEl.addEventListener("submit", submitApplicationBuilder);
-  setApplicationBuilderMessage("Complete all required fields, then submit directly from the website.");
-}
-
-async function loadStaffApplications() {
-  if (!staffPanelListEl) {
-    return;
-  }
-
-  const params = new URLSearchParams();
-  const selectedType = staffPanelTypeFilterEl?.value || "all";
-  const selectedStatus = staffPanelStatusFilterEl?.value || "all";
-  const searchQuery = (staffPanelSearchEl?.value || "").trim();
-
-  if (selectedType !== "all") {
-    params.set("type", selectedType);
-  }
-  if (selectedStatus !== "all") {
-    params.set("status", selectedStatus);
-  }
-  if (searchQuery) {
-    params.set("search", searchQuery);
-  }
-
-  setStaffPanelStatus("Loading applications...");
-
-  try {
-    const response = await fetch(`${apiBaseUrl}/staff/applications?${params.toString()}`, {
-      credentials: "include",
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      setStaffPanelStatus(payload.error || "Could not load staff applications.", true);
-      return;
-    }
-
-    staffApplicationCache = Array.isArray(payload.applications) ? payload.applications : [];
-    if (!staffApplicationCache.find((entry) => entry.id === activeStaffApplicationId)) {
-      activeStaffApplicationId = staffApplicationCache[0]?.id || "";
-    }
-
-    renderStaffApplicationList();
-    renderStaffApplicationDetail();
-    setStaffPanelStatus(`Loaded ${staffApplicationCache.length} application(s).`);
-  } catch {
-    setStaffPanelStatus("Staff API is unavailable. Start the auth server and try again.", true);
-  }
-}
-
-async function sendStaffReply() {
-  const message = (staffPanelReplyBoxEl?.value || "").trim();
-  if (!activeStaffApplicationId) {
-    setStaffPanelStatus("Select an application before sending a reply.", true);
-    return;
-  }
-
-  if (!message) {
-    setStaffPanelStatus("Reply message cannot be empty.", true);
-    return;
-  }
-
-  setStaffPanelStatus("Sending reply...");
-
-  try {
-    const response = await fetch(`${apiBaseUrl}/staff/applications/${encodeURIComponent(activeStaffApplicationId)}/replies`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ message }),
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      setStaffPanelStatus(payload.error || "Reply could not be sent.", true);
-      return;
-    }
-
-    if (staffPanelReplyBoxEl) {
-      staffPanelReplyBoxEl.value = "";
-    }
-
-    setStaffPanelStatus("Reply posted.");
-    await loadStaffApplications();
-  } catch {
-    setStaffPanelStatus("Reply failed. Staff API may be unavailable.", true);
-  }
-}
-
-async function decideApplication(decision) {
-  if (!activeStaffApplicationId) {
-    setStaffPanelStatus("Select an application before updating status.", true);
-    return;
-  }
-
-  const note = (staffPanelReplyBoxEl?.value || "").trim();
-  setStaffPanelStatus(`Marking as ${decision}...`);
-
-  try {
-    const response = await fetch(`${apiBaseUrl}/staff/applications/${encodeURIComponent(activeStaffApplicationId)}/decision`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      credentials: "include",
-      body: JSON.stringify({ decision, note }),
-    });
-
-    const payload = await response.json();
-    if (!response.ok) {
-      setStaffPanelStatus(payload.error || "Decision could not be saved.", true);
-      return;
-    }
-
-    setStaffPanelStatus(`Application marked as ${decision}.`);
-    await loadStaffApplications();
-  } catch {
-    setStaffPanelStatus("Decision request failed. Staff API may be unavailable.", true);
-  }
-}
-
-async function initStaffPanel() {
-  if (!staffPanelGateEl || !staffPanelAppEl) {
-    return;
-  }
-
-  const currentPage = window.location.pathname.split("/").pop();
-  const shouldRedirectIfUnauthorized = currentPage === "staff.html";
-
-  try {
-    const response = await fetch(authSessionUrl, {
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      if (shouldRedirectIfUnauthorized) {
-        window.location.replace("index.html");
-      }
-      return;
-    }
-
-    const payload = await response.json();
-    const account = payload.account || null;
-
-    mergeAccountState({
-      steamId: account?.steamId || "",
-      steamName: account?.steamName || "",
-      steamAvatar: account?.steamAvatar || "",
-      discordId: account?.discordId || "",
-      discordName: account?.discordName || "",
-      discordUsername: account?.discordUsername || "",
-      discordAvatar: account?.discordAvatar || "",
-      isStaff: Boolean(account?.isStaff),
-      staffRoleError: account?.staffRoleError || "",
-    });
-    renderAccountState();
-
-    if (!account?.steamId || !account?.discordId) {
-      if (shouldRedirectIfUnauthorized) {
-        window.location.replace("index.html");
-      }
-      return;
-    }
-
-    if (!account.isStaff) {
-      if (shouldRedirectIfUnauthorized) {
-        window.location.replace("index.html");
-      }
-      return;
-    }
-
-    staffPanelGateEl.hidden = true;
-    staffPanelAppEl.hidden = false;
-    await loadStaffApplications();
-  } catch {
-    if (shouldRedirectIfUnauthorized) {
-      window.location.replace("index.html");
-    }
-    return;
-  }
-
-  if (staffPanelTypeFilterEl) {
-    staffPanelTypeFilterEl.addEventListener("change", () => {
-      loadStaffApplications();
-    });
-  }
-
-  if (staffPanelStatusFilterEl) {
-    staffPanelStatusFilterEl.addEventListener("change", () => {
-      loadStaffApplications();
-    });
-  }
-
-  if (staffPanelRefreshEl) {
-    staffPanelRefreshEl.addEventListener("click", () => {
-      loadStaffApplications();
-    });
-  }
-
-  if (staffPanelSearchButtonEl) {
-    staffPanelSearchButtonEl.addEventListener("click", () => {
-      loadStaffApplications();
-    });
-  }
-
-  if (staffPanelSearchEl) {
-    staffPanelSearchEl.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") {
-        event.preventDefault();
-        loadStaffApplications();
-      }
-    });
-  }
-
-  if (staffPanelSendReplyEl) {
-    staffPanelSendReplyEl.addEventListener("click", () => {
-      sendStaffReply();
-    });
-  }
-
-  if (staffPanelAcceptEl) {
-    staffPanelAcceptEl.addEventListener("click", () => {
-      decideApplication("accepted");
-    });
-  }
-
-  if (staffPanelDenyEl) {
-    staffPanelDenyEl.addEventListener("click", () => {
-      decideApplication("denied");
-    });
-  }
-}
-
-initStaffPanel();
-initApplicationBuilder();
-initStoreCheckout();
-
-const appTabButtons = document.querySelectorAll("[data-app-tab]");
-const appTabPanels = document.querySelectorAll("[data-app-panel]");
-
-if (appTabButtons.length && appTabPanels.length) {
-  appTabButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const target = button.getAttribute("data-app-tab");
-
-      appTabButtons.forEach((tabButton) => {
-        const isActive = tabButton === button;
-        tabButton.classList.toggle("is-active", isActive);
-        tabButton.setAttribute("aria-selected", String(isActive));
-      });
-
-      appTabPanels.forEach((panel) => {
-        const isMatch = panel.getAttribute("data-app-panel") === target;
-        panel.classList.toggle("is-active", isMatch);
-      });
-    });
-  });
 }
