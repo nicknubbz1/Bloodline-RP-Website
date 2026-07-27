@@ -77,7 +77,8 @@ body.modal-open {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  flex: 1;
+  flex: 0 0 54%;
+  max-width: 54%;
   min-width: 0;
   justify-content: flex-start;
 }
@@ -87,10 +88,9 @@ body.modal-open {
   align-items: center;
   justify-content: flex-start;
   line-height: 1;
-  flex: 0 0 460px;
-  max-width: 48vw;
-  min-width: 300px;
-  height: 72px;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 68px;
 }
 
 .brand img {
@@ -106,6 +106,7 @@ body.modal-open {
   align-items: center;
   gap: 0.8rem;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .nav {
@@ -1574,14 +1575,13 @@ button[disabled] {
   }
 
   .brand {
-    flex: 0 0 290px;
-    min-width: 230px;
-    max-width: 70vw;
-    height: 54px;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 44px;
   }
 
   .brand img {
-    object-position: center;
+    object-position: left center;
   }
 
   h1 {
