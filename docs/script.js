@@ -376,6 +376,7 @@ const storeCheckoutHelp = document.getElementById("storeCheckoutHelp");
 const storePayWithStripe = document.getElementById("storePayWithStripe");
 const storePayWithPaypal = document.getElementById("storePayWithPaypal");
 const storePayWithCashapp = document.getElementById("storePayWithCashapp");
+const unifiedCheckoutUrl = window.BLOODLINE_UNIFIED_CHECKOUT_URL || "";
 const stripeCheckoutUrl = window.BLOODLINE_STRIPE_CHECKOUT_URL || "";
 const paypalCheckoutUrl = window.BLOODLINE_PAYPAL_CHECKOUT_URL || "";
 const cashappCheckoutUrl = window.BLOODLINE_CASHAPP_CHECKOUT_URL || "";
@@ -453,14 +454,20 @@ function openStoreCheckoutModal(tier, price) {
     storeCheckoutPrice.textContent = price;
   }
 
-  setPaymentLink(storePayWithStripe, stripeCheckoutUrl, tier, price);
-  setPaymentLink(storePayWithPaypal, paypalCheckoutUrl, tier, price);
-  setPaymentLink(storePayWithCashapp, cashappCheckoutUrl, tier, price);
+  const stripeUrl = unifiedCheckoutUrl || stripeCheckoutUrl;
+  const paypalUrl = unifiedCheckoutUrl || paypalCheckoutUrl;
+  const cashappUrl = unifiedCheckoutUrl || cashappCheckoutUrl;
+
+  setPaymentLink(storePayWithStripe, stripeUrl, tier, price);
+  setPaymentLink(storePayWithPaypal, paypalUrl, tier, price);
+  setPaymentLink(storePayWithCashapp, cashappUrl, tier, price);
 
   if (storeCheckoutHelp) {
-    const hasAnyLink = Boolean(stripeCheckoutUrl || paypalCheckoutUrl || cashappCheckoutUrl);
+    const hasAnyLink = Boolean(unifiedCheckoutUrl || stripeCheckoutUrl || paypalCheckoutUrl || cashappCheckoutUrl);
     storeCheckoutHelp.textContent = hasAnyLink
-      ? "Select a payment method to continue your subscription."
+      ? (unifiedCheckoutUrl
+        ? "All methods route into the same checkout destination account."
+        : "Select a payment method to continue your subscription.")
       : "No payment links are configured yet. Add them in auth-config.js.";
   }
 
