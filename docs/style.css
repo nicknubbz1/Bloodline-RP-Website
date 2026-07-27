@@ -940,6 +940,66 @@ h1 span,
   gap: 0.85rem;
 }
 
+.app-min-hero {
+  background: #1f2329;
+  border-color: rgba(255, 67, 97, 0.42);
+}
+
+.app-min-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.app-min-card {
+  border: 1px solid rgba(255, 67, 97, 0.32);
+  border-radius: 0.85rem;
+  background: #262b32;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.app-min-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.app-min-card h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.app-min-card header span {
+  border: 1px solid rgba(255, 67, 97, 0.48);
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #ffe2e9;
+  background: rgba(255, 39, 73, 0.14);
+}
+
+.app-min-card ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.app-min-card li {
+  border: 1px solid rgba(255, 67, 97, 0.26);
+  border-radius: 0.58rem;
+  background: rgba(0, 0, 0, 0.2);
+  color: #f3f5f8;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.45rem 0.58rem;
+}
+
 .app-builder-controls {
   display: grid;
   gap: 0.35rem;
@@ -1405,6 +1465,10 @@ button[disabled] {
   .account-flow,
   .app-categories,
   .staff-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .app-min-grid {
     grid-template-columns: 1fr;
   }
 
