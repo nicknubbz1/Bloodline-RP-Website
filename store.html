@@ -48,7 +48,7 @@
           <p class="tag">Bronze Supporter</p>
         </div>
         <h3>$15 <span>/ month</span></h3>
-        <button class="btn btn-primary" type="button">Subscribe</button>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Bronze Supporter" data-price="$15 / month">Subscribe</button>
       </article>
 
       <article class="store-tier-card tier-silver">
@@ -57,7 +57,7 @@
           <p class="tag">Silver Supporter</p>
         </div>
         <h3>$25 <span>/ month</span></h3>
-        <button class="btn btn-primary" type="button">Subscribe</button>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Silver Supporter" data-price="$25 / month">Subscribe</button>
       </article>
 
       <article class="store-tier-card tier-gold">
@@ -66,7 +66,7 @@
           <p class="tag">Gold Supporter</p>
         </div>
         <h3>$40 <span>/ month</span></h3>
-        <button class="btn btn-primary" type="button">Subscribe</button>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Gold Supporter" data-price="$40 / month">Subscribe</button>
       </article>
 
       <article class="store-tier-card tier-platinum">
@@ -75,7 +75,7 @@
           <p class="tag">Platinum Supporter</p>
         </div>
         <h3>$60 <span>/ month</span></h3>
-        <button class="btn btn-primary" type="button">Subscribe</button>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Platinum Supporter" data-price="$60 / month">Subscribe</button>
       </article>
 
       <article class="store-tier-card tier-emerald">
@@ -84,7 +84,7 @@
           <p class="tag">Emerald Supporter</p>
         </div>
         <h3>$80 <span>/ month</span></h3>
-        <button class="btn btn-primary" type="button">Subscribe</button>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Emerald Supporter" data-price="$80 / month">Subscribe</button>
       </article>
 
       <article class="store-tier-card tier-diamond">
@@ -93,7 +93,7 @@
           <p class="tag">Diamond Supporter</p>
         </div>
         <h3>$120 <span>/ month</span></h3>
-        <button class="btn btn-primary" type="button">Subscribe</button>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Diamond Supporter" data-price="$120 / month">Subscribe</button>
       </article>
 
       <article class="store-tier-card tier-bloodline">
@@ -102,10 +102,27 @@
           <p class="tag">Bloodline Supporter</p>
         </div>
         <h3>$220 <span>/ month</span></h3>
-        <button class="btn btn-primary" type="button">Subscribe</button>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Bloodline Supporter" data-price="$220 / month">Subscribe</button>
       </article>
     </section>
   </main>
+
+  <div class="store-checkout-modal" id="storeCheckoutModal" aria-hidden="true">
+    <div class="store-checkout-card" role="dialog" aria-modal="true" aria-labelledby="storeCheckoutTitle">
+      <button class="modal-close" id="storeCheckoutClose" type="button" aria-label="Close checkout">Close</button>
+      <p class="eyebrow">Checkout</p>
+      <h2 id="storeCheckoutTitle">Supporter Subscription</h2>
+      <p class="store-checkout-tier" id="storeCheckoutTier">Tier</p>
+      <p class="store-checkout-price" id="storeCheckoutPrice">Price</p>
+      <p class="store-checkout-note">Choose your payment method:</p>
+      <div class="store-checkout-actions">
+        <a class="btn btn-primary" id="storePayWithStripe" href="#" target="_blank" rel="noopener noreferrer">Pay With Card (Stripe)</a>
+        <a class="btn btn-ghost" id="storePayWithPaypal" href="#" target="_blank" rel="noopener noreferrer">Pay With PayPal</a>
+        <a class="btn btn-ghost" id="storePayWithCashapp" href="#" target="_blank" rel="noopener noreferrer">Pay With Cash App</a>
+      </div>
+      <p class="store-checkout-help" id="storeCheckoutHelp">Set your live payment links in auth-config.js before launch.</p>
+    </div>
+  </div>
 
   <footer class="site-footer">
     <p>Bloodline RP � <span id="year"></span>. All rights reserved.</p>

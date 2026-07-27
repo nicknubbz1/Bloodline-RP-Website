@@ -367,6 +367,18 @@ const applicationFormSelectEl = document.getElementById("applicationFormSelect")
 const applicationBuilderFormEl = document.getElementById("applicationBuilderForm");
 const applicationBuilderFieldsEl = document.getElementById("applicationBuilderFields");
 const applicationBuilderMessageEl = document.getElementById("applicationBuilderMessage");
+const storeSubscribeButtons = document.querySelectorAll(".store-subscribe-btn");
+const storeCheckoutModal = document.getElementById("storeCheckoutModal");
+const storeCheckoutClose = document.getElementById("storeCheckoutClose");
+const storeCheckoutTier = document.getElementById("storeCheckoutTier");
+const storeCheckoutPrice = document.getElementById("storeCheckoutPrice");
+const storeCheckoutHelp = document.getElementById("storeCheckoutHelp");
+const storePayWithStripe = document.getElementById("storePayWithStripe");
+const storePayWithPaypal = document.getElementById("storePayWithPaypal");
+const storePayWithCashapp = document.getElementById("storePayWithCashapp");
+const stripeCheckoutUrl = window.BLOODLINE_STRIPE_CHECKOUT_URL || "";
+const paypalCheckoutUrl = window.BLOODLINE_PAYPAL_CHECKOUT_URL || "";
+const cashappCheckoutUrl = window.BLOODLINE_CASHAPP_CHECKOUT_URL || "";
 
 let staffApplicationCache = [];
 let activeStaffApplicationId = "";
@@ -403,6 +415,94 @@ function setApplicationBuilderMessage(message, kind = "") {
   if (kind) {
     applicationBuilderMessageEl.classList.add(kind);
   }
+}
+
+function setPaymentLink(element, baseUrl, tier, price) {
+  if (!element) {
+    return;
+  }
+
+  if (!baseUrl) {
+    element.setAttribute("href", "#");
+    element.setAttribute("aria-disabled", "true");
+    return;
+  }
+
+  element.removeAttribute("aria-disabled");
+
+  try {
+    const url = new URL(baseUrl);
+    url.searchParams.set("tier", tier);
+    url.searchParams.set("price", price);
+    element.setAttribute("href", url.toString());
+  } catch {
+    element.setAttribute("href", baseUrl);
+  }
+}
+
+function openStoreCheckoutModal(tier, price) {
+  if (!storeCheckoutModal) {
+    return;
+  }
+
+  if (storeCheckoutTier) {
+    storeCheckoutTier.textContent = tier;
+  }
+
+  if (storeCheckoutPrice) {
+    storeCheckoutPrice.textContent = price;
+  }
+
+  setPaymentLink(storePayWithStripe, stripeCheckoutUrl, tier, price);
+  setPaymentLink(storePayWithPaypal, paypalCheckoutUrl, tier, price);
+  setPaymentLink(storePayWithCashapp, cashappCheckoutUrl, tier, price);
+
+  if (storeCheckoutHelp) {
+    const hasAnyLink = Boolean(stripeCheckoutUrl || paypalCheckoutUrl || cashappCheckoutUrl);
+    storeCheckoutHelp.textContent = hasAnyLink
+      ? "Select a payment method to continue your subscription."
+      : "No payment links are configured yet. Add them in auth-config.js.";
+  }
+
+  storeCheckoutModal.classList.add("is-open");
+  storeCheckoutModal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+}
+
+function closeStoreCheckoutModal() {
+  if (!storeCheckoutModal) {
+    return;
+  }
+
+  storeCheckoutModal.classList.remove("is-open");
+  storeCheckoutModal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+}
+
+function initStoreCheckout() {
+  if (!storeSubscribeButtons.length || !storeCheckoutModal) {
+    return;
+  }
+
+  storeSubscribeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const tier = button.getAttribute("data-tier") || "Supporter Tier";
+      const price = button.getAttribute("data-price") || "Custom Price";
+      openStoreCheckoutModal(tier, price);
+    });
+  });
+
+  if (storeCheckoutClose) {
+    storeCheckoutClose.addEventListener("click", () => {
+      closeStoreCheckoutModal();
+    });
+  }
+
+  storeCheckoutModal.addEventListener("click", (event) => {
+    if (event.target === storeCheckoutModal) {
+      closeStoreCheckoutModal();
+    }
+  });
 }
 
 function formatResponseValue(value) {
@@ -896,6 +996,7 @@ async function initStaffPanel() {
 
 initStaffPanel();
 initApplicationBuilder();
+initStoreCheckout();
 
 const appTabButtons = document.querySelectorAll("[data-app-tab]");
 const appTabPanels = document.querySelectorAll("[data-app-panel]");

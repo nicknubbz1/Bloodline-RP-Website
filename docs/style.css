@@ -602,6 +602,69 @@ h1 span,
   border-color: rgba(255, 39, 73, 0.62);
 }
 
+.store-checkout-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 6, 8, 0.84);
+  backdrop-filter: blur(4px);
+  padding: 1rem;
+  z-index: 150;
+}
+
+.store-checkout-modal.is-open {
+  display: flex;
+}
+
+.store-checkout-card {
+  width: min(560px, 100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 103, 129, 0.34);
+  background: linear-gradient(160deg, rgba(20, 22, 27, 0.98), rgba(9, 10, 12, 0.99));
+  padding: 1.15rem;
+  position: relative;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 0.52rem;
+}
+
+.store-checkout-tier {
+  margin: 0;
+  color: #f6f7f9;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.store-checkout-price {
+  margin: 0;
+  color: #ffacbc;
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.store-checkout-note,
+.store-checkout-help {
+  margin: 0;
+  color: var(--muted);
+}
+
+.store-checkout-actions {
+  display: grid;
+  gap: 0.52rem;
+  margin-top: 0.22rem;
+}
+
+.store-checkout-actions .btn {
+  width: 100%;
+}
+
+.store-checkout-actions .btn[aria-disabled="true"] {
+  opacity: 0.56;
+  pointer-events: none;
+}
+
 .applications-hero {
   display: grid;
   gap: 0.75rem;
