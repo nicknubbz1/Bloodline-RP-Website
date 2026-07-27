@@ -1,14 +1,14 @@
 :root {
-  --bg: #050506;
-  --bg-soft: #0a0b0d;
-  --panel: #121317;
-  --panel-strong: #181a1f;
+  --bg: #000000;
+  --bg-soft: #000000;
+  --panel: #2a2d33;
+  --panel-strong: #32363d;
   --text: #f7f7f8;
   --muted: #a7abb5;
-  --line: rgba(255, 62, 88, 0.26);
+  --line: rgba(255, 50, 78, 0.68);
   --accent: #c70f2e;
   --accent-strong: #ff2749;
-  --accent-soft: rgba(255, 39, 73, 0.14);
+  --accent-soft: rgba(255, 39, 73, 0.2);
   --success: #38d39f;
   --radius-lg: 1.25rem;
   --radius-md: 0.9rem;
@@ -27,10 +27,7 @@ body {
   margin: 0;
   font-family: "Manrope", sans-serif;
   color: var(--text);
-  background:
-    radial-gradient(65rem 65rem at 112% -10%, rgba(199, 15, 46, 0.2), transparent 45%),
-    radial-gradient(55rem 55rem at -12% 12%, rgba(255, 39, 73, 0.14), transparent 48%),
-    linear-gradient(180deg, #070708 0%, #050506 100%);
+  background: #000000;
   min-height: 100vh;
   overflow-x: hidden;
 }
@@ -40,26 +37,11 @@ body.modal-open {
 }
 
 .grid-overlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -2;
-  background-image:
-    linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-  background-size: 36px 36px;
-  mask-image: radial-gradient(circle at 50% 20%, rgba(0, 0, 0, 0.85), transparent 92%);
+  display: none;
 }
 
 .bg-orb {
-  position: fixed;
-  width: 40rem;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  filter: blur(70px);
-  opacity: 0.24;
-  pointer-events: none;
-  z-index: -1;
+  display: none;
 }
 
 .orb-one {
@@ -80,7 +62,7 @@ body.modal-open {
   padding: 0.75rem 0.95rem;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: rgba(8, 9, 11, 0.84);
+  background: rgba(22, 24, 28, 0.95);
   backdrop-filter: blur(12px);
   display: flex;
   align-items: center;
@@ -180,7 +162,7 @@ main {
 .hero {
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
-  background: linear-gradient(145deg, rgba(19, 20, 24, 0.96), rgba(9, 10, 12, 0.98));
+  background: var(--panel);
   padding: clamp(1.2rem, 3vw, 2.2rem);
   box-shadow: var(--shadow);
 }
@@ -269,13 +251,14 @@ h1 span,
 
 .btn-primary {
   color: #fff;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  background: linear-gradient(135deg, #af0d29, var(--accent-strong));
+  border-color: rgba(255, 98, 124, 0.75);
   box-shadow: 0 10px 25px rgba(199, 15, 46, 0.35);
 }
 
 .btn-ghost {
-  color: #f8dce3;
-  background: var(--accent-soft);
+  color: #ffd2dc;
+  background: rgba(0, 0, 0, 0.55);
   border-color: var(--line);
 }
 
@@ -285,9 +268,9 @@ h1 span,
 .timeline-item,
 .metric,
 .summary-chip {
-  border: 1px solid rgba(255, 89, 118, 0.2);
+  border: 1px solid var(--line);
   border-radius: var(--radius-md);
-  background: linear-gradient(160deg, rgba(22, 24, 29, 0.88), rgba(12, 13, 16, 0.9));
+  background: var(--panel-strong);
 }
 
 .hero-panel {
@@ -437,8 +420,8 @@ h1 span,
   font-size: 0.94rem;
   padding: 0.55rem 0.65rem;
   border-radius: 0.6rem;
-  border: 1px solid rgba(255, 82, 114, 0.18);
-  background: rgba(255, 82, 114, 0.07);
+  border: 1px solid var(--line);
+  background: rgba(255, 39, 73, 0.14);
 }
 
 .split {
@@ -492,10 +475,10 @@ button[disabled] {
   margin: 0 auto 1.8rem;
   padding: 0.95rem;
   border-radius: 0.8rem;
-  border: 1px solid rgba(255, 87, 116, 0.2);
+  border: 1px solid var(--line);
   text-align: center;
   color: #c9ced9;
-  background: rgba(12, 13, 16, 0.84);
+  background: var(--panel);
 }
 
 .reveal {
