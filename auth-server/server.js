@@ -42,6 +42,24 @@ function cleanText(value, maxLength) {
   return value.trim().replace(/\s+/g, " ").slice(0, maxLength);
 }
 
+function normalizeResponses(rawResponses) {
+  if (!Array.isArray(rawResponses)) {
+    return [];
+  }
+
+  return rawResponses
+    .map((item) => {
+      const id = cleanText(item?.id, 80);
+      const label = cleanText(item?.label, 220);
+      const answer = cleanText(item?.answer, 3000);
+      if (!id || !label) {
+        return null;
+      }
+      return { id, label, answer };
+    })
+    .filter(Boolean);
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -496,6 +514,8 @@ app.post("/api/applications", requireLinkedAccount, (req, res) => {
   const type = cleanText(req.body.type, 40).toLowerCase();
   const requestedTitle = cleanText(req.body.title, 80);
   const body = cleanText(req.body.body || req.body.message, 3000);
+  const formKey = cleanText(req.body.formKey, 80);
+  const responses = normalizeResponses(req.body.responses);
 
   if (!validApplicationTypeKeys.has(type)) {
     res.status(400).json({ error: "Invalid application type." });
@@ -504,6 +524,11 @@ app.post("/api/applications", requireLinkedAccount, (req, res) => {
 
   if (!body) {
     res.status(400).json({ error: "Application details are required." });
+    return;
+  }
+
+  if (responses.length === 0) {
+    res.status(400).json({ error: "Application responses are required." });
     return;
   }
 
@@ -516,6 +541,8 @@ app.post("/api/applications", requireLinkedAccount, (req, res) => {
     title,
     status: "pending",
     body,
+    formKey,
+    responses,
     applicant: {
       steamId: req.session.account.steamId,
       steamName: req.session.account.steamName || "Unknown Steam User",
@@ -570,6 +597,9 @@ app.get("/api/staff/applications", requireStaffRole, (req, res) => {
         application.body,
         application.applicant?.steamName,
         application.applicant?.discordName,
+        ...(Array.isArray(application.responses)
+          ? application.responses.flatMap((responseItem) => [responseItem.label, responseItem.answer])
+          : []),
       ].join(" ").toLowerCase();
       return haystack.includes(search);
     });

@@ -105,6 +105,26 @@
         </article>
       </div>
     </section>
+
+    <section class="panel reveal app-builder" id="application-builder">
+      <div class="panel-head">
+        <h2>Submit Application On Website</h2>
+      </div>
+      <p class="hero-copy">Pick the exact application form, answer each question here, and submit directly to the Bloodline staff review queue.</p>
+
+      <div class="app-builder-controls">
+        <label for="applicationFormSelect">Select Application Form</label>
+        <select id="applicationFormSelect"></select>
+      </div>
+
+      <form id="applicationBuilderForm" class="app-builder-form" novalidate>
+        <div id="applicationBuilderFields" class="app-builder-fields"></div>
+        <div class="hero-actions">
+          <button class="btn btn-primary" type="submit">Submit Application</button>
+        </div>
+        <p id="applicationBuilderMessage" class="app-builder-message">Link Steam and Discord in your account center before submitting.</p>
+      </form>
+    </section>
   </main>
 
   <footer class="site-footer">
@@ -112,6 +132,7 @@
   </footer>
 
   <script src="auth-config.js"></script>
+  <script src="application-forms.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

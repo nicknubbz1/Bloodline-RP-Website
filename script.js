@@ -363,9 +363,16 @@ const staffPanelSendReplyEl = document.getElementById("staffSendReply");
 const staffPanelAcceptEl = document.getElementById("staffAccept");
 const staffPanelDenyEl = document.getElementById("staffDeny");
 const staffPanelStatusMessageEl = document.getElementById("staffStatusMessage");
+const applicationFormSelectEl = document.getElementById("applicationFormSelect");
+const applicationBuilderFormEl = document.getElementById("applicationBuilderForm");
+const applicationBuilderFieldsEl = document.getElementById("applicationBuilderFields");
+const applicationBuilderMessageEl = document.getElementById("applicationBuilderMessage");
 
 let staffApplicationCache = [];
 let activeStaffApplicationId = "";
+const applicationFormDefinitions = Array.isArray(window.BLOODLINE_APPLICATION_FORMS)
+  ? window.BLOODLINE_APPLICATION_FORMS
+  : [];
 
 function setStaffPanelStatus(message, isError = false) {
   if (!staffPanelStatusMessageEl) {
@@ -384,6 +391,25 @@ function getAppTypeLabel(type) {
     "business-gang": "Business And Gang Applications",
   };
   return labels[type] || type;
+}
+
+function setApplicationBuilderMessage(message, kind = "") {
+  if (!applicationBuilderMessageEl) {
+    return;
+  }
+
+  applicationBuilderMessageEl.textContent = message;
+  applicationBuilderMessageEl.classList.remove("error", "success");
+  if (kind) {
+    applicationBuilderMessageEl.classList.add(kind);
+  }
+}
+
+function formatResponseValue(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  return value.trim();
 }
 
 function renderStaffApplicationList() {
@@ -448,6 +474,21 @@ function renderStaffApplicationDetail() {
     ? `<p><strong>Last decision:</strong> ${escapeHtml(application.status)} by ${escapeHtml(application.reviewedBy.name || "Staff")}</p>`
     : "";
 
+  const responseList = Array.isArray(application.responses) ? application.responses : [];
+  const responseMarkup = responseList.length
+    ? `
+      <section class="staff-responses">
+        <h4>Application Answers</h4>
+        ${responseList.map((responseItem) => `
+          <article class="staff-response-item">
+            <strong>${escapeHtml(responseItem.label || "Question")}</strong>
+            <p>${escapeHtml(responseItem.answer || "")}</p>
+          </article>
+        `).join("")}
+      </section>
+    `
+    : `<p class="staff-body">${escapeHtml(application.body || "")}</p>`;
+
   staffPanelDetailEl.innerHTML = `
     <article class="staff-detail-card">
       <header>
@@ -457,7 +498,7 @@ function renderStaffApplicationDetail() {
       <p><strong>Category:</strong> ${escapeHtml(getAppTypeLabel(application.type))}</p>
       <p><strong>Applicant:</strong> ${escapeHtml(application.applicant?.steamName || "Unknown")} (${escapeHtml(application.applicant?.discordName || "No Discord")})</p>
       <p><strong>Submitted:</strong> ${escapeHtml(new Date(application.createdAt).toLocaleString())}</p>
-      <p class="staff-body">${escapeHtml(application.body || "")}</p>
+      ${responseMarkup}
       ${reviewedBy}
       <section class="staff-replies">
         <h4>Staff Replies</h4>
@@ -465,6 +506,161 @@ function renderStaffApplicationDetail() {
       </section>
     </article>
   `;
+}
+
+function renderApplicationBuilderFields() {
+  if (!applicationFormSelectEl || !applicationBuilderFieldsEl) {
+    return;
+  }
+
+  const selectedKey = applicationFormSelectEl.value;
+  const selectedForm = applicationFormDefinitions.find((form) => form.key === selectedKey);
+
+  if (!selectedForm) {
+    applicationBuilderFieldsEl.innerHTML = "";
+    return;
+  }
+
+  const fieldsMarkup = selectedForm.questions
+    .map((question, index) => {
+      const fieldId = `app-q-${question.id}-${index}`;
+      const requiredMarker = question.required ? '<span class="app-required">*</span>' : "";
+      const requiredAttribute = question.required ? "required" : "";
+
+      if (question.kind === "textarea") {
+        return `
+          <div class="app-builder-field">
+            <label for="${escapeHtml(fieldId)}">${escapeHtml(question.label)}${requiredMarker}</label>
+            <textarea id="${escapeHtml(fieldId)}" name="${escapeHtml(question.id)}" data-question-label="${escapeHtml(question.label)}" rows="5" ${requiredAttribute}></textarea>
+          </div>
+        `;
+      }
+
+      if (question.kind === "yesno") {
+        return `
+          <div class="app-builder-field">
+            <label for="${escapeHtml(fieldId)}">${escapeHtml(question.label)}${requiredMarker}</label>
+            <select id="${escapeHtml(fieldId)}" name="${escapeHtml(question.id)}" data-question-label="${escapeHtml(question.label)}" ${requiredAttribute}>
+              <option value="">Select one</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="app-builder-field">
+          <label for="${escapeHtml(fieldId)}">${escapeHtml(question.label)}${requiredMarker}</label>
+          <input id="${escapeHtml(fieldId)}" name="${escapeHtml(question.id)}" data-question-label="${escapeHtml(question.label)}" type="text" ${requiredAttribute} />
+        </div>
+      `;
+    })
+    .join("");
+
+  applicationBuilderFieldsEl.innerHTML = fieldsMarkup;
+}
+
+async function submitApplicationBuilder(event) {
+  event.preventDefault();
+
+  if (!applicationFormSelectEl || !applicationBuilderFormEl || !applicationBuilderFieldsEl) {
+    return;
+  }
+
+  const selectedForm = applicationFormDefinitions.find((form) => form.key === applicationFormSelectEl.value);
+  if (!selectedForm) {
+    setApplicationBuilderMessage("Select a valid application form first.", "error");
+    return;
+  }
+
+  const state = readAccountState();
+  if (!state.steamId || !state.discordId) {
+    setApplicationBuilderMessage("Link Steam and Discord in Account Center before submitting.", "error");
+    return;
+  }
+
+  const responses = [];
+  let firstInvalidField = null;
+
+  const fields = applicationBuilderFieldsEl.querySelectorAll("input, textarea, select");
+  fields.forEach((field) => {
+    const questionLabel = field.getAttribute("data-question-label") || field.name;
+    const answer = formatResponseValue(field.value);
+    const required = field.hasAttribute("required");
+
+    if (required && !answer && !firstInvalidField) {
+      firstInvalidField = field;
+      return;
+    }
+
+    responses.push({
+      id: field.name,
+      label: questionLabel,
+      answer,
+    });
+  });
+
+  if (firstInvalidField) {
+    firstInvalidField.focus();
+    setApplicationBuilderMessage("Please complete all required fields.", "error");
+    return;
+  }
+
+  setApplicationBuilderMessage("Submitting application...");
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/applications`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        type: selectedForm.type,
+        title: selectedForm.title,
+        body: `${selectedForm.title} submitted through website form builder.`,
+        formKey: selectedForm.key,
+        responses,
+      }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      setApplicationBuilderMessage(payload.error || "Application could not be submitted.", "error");
+      return;
+    }
+
+    applicationBuilderFormEl.reset();
+    renderApplicationBuilderFields();
+    setApplicationBuilderMessage("Application submitted successfully. Staff can now review it in the staff panel.", "success");
+  } catch {
+    setApplicationBuilderMessage("Submission failed. Ensure the auth backend is online.", "error");
+  }
+}
+
+function initApplicationBuilder() {
+  if (!applicationFormSelectEl || !applicationBuilderFormEl || !applicationBuilderFieldsEl) {
+    return;
+  }
+
+  if (!applicationFormDefinitions.length) {
+    setApplicationBuilderMessage("No application forms are currently configured.", "error");
+    return;
+  }
+
+  applicationFormSelectEl.innerHTML = applicationFormDefinitions
+    .map((form) => `<option value="${escapeHtml(form.key)}">${escapeHtml(form.title)}</option>`)
+    .join("");
+
+  renderApplicationBuilderFields();
+
+  applicationFormSelectEl.addEventListener("change", () => {
+    renderApplicationBuilderFields();
+  });
+
+  applicationBuilderFormEl.addEventListener("submit", submitApplicationBuilder);
+  setApplicationBuilderMessage("Complete all required fields, then submit directly from the website.");
 }
 
 async function loadStaffApplications() {
@@ -699,6 +895,7 @@ async function initStaffPanel() {
 }
 
 initStaffPanel();
+initApplicationBuilder();
 
 const appTabButtons = document.querySelectorAll("[data-app-tab]");
 const appTabPanels = document.querySelectorAll("[data-app-panel]");
