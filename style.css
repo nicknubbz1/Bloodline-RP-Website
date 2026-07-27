@@ -430,6 +430,63 @@ h1 span,
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.applications-hero {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.app-meta {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+
+.app-meta span {
+  border: 1px solid var(--line);
+  background: rgba(255, 39, 73, 0.1);
+  border-radius: 999px;
+  padding: 0.33rem 0.6rem;
+  color: #ffd2dc;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.app-categories {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.app-category {
+  padding: 1rem;
+}
+
+.app-category .panel-head {
+  margin-bottom: 0.55rem;
+}
+
+.app-category h2 {
+  font-size: clamp(1.08rem, 3vw, 1.45rem);
+}
+
+.app-list {
+  margin: 0.35rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.app-list li {
+  border: 1px solid rgba(255, 67, 97, 0.42);
+  background: rgba(0, 0, 0, 0.34);
+  border-radius: 0.58rem;
+  color: #f0f2f6;
+  font-size: 0.92rem;
+  padding: 0.52rem 0.62rem;
+}
+
 .account-flow {
   display: grid;
   gap: 0.85rem;
@@ -592,7 +649,8 @@ button[disabled] {
   .hero-layout,
   .join,
   .split,
-  .account-flow {
+  .account-flow,
+  .app-categories {
     grid-template-columns: 1fr;
   }
 
