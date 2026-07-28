@@ -4,76 +4,93 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bloodline RP | Account</title>
-  <meta name="description" content="Link Steam and Discord for unified Bloodline RP account access." />
+  <meta name="description" content="Steam and Discord account hub for Bloodline RP." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260727c" />
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=20260727e" />
 </head>
 <body>
-  <header class="site-header">
-    <div class="header-brand">
-      <div class="brand">Bloodline RP</div>
-      <a class="login-chip active login-trigger" href="#login">Login</a>
-    </div>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="header-brand" href="index.html">
+      <div class="brand">Bloodline<small>Roleplay</small></div>
+    </a>
+    <nav class="nav" id="navMenu">
+      <a href="index.html">Home</a>
+      <a href="store.html">Shop</a>
+      <a href="index.html#streamers">Streamers</a>
+      <a href="applications.html">Careers</a>
+      <a href="rules.html">Rules</a>
+      <a class="active" href="account.html">Studios</a>
+    </nav>
     <div class="header-actions">
       <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">Menu</button>
-      <nav class="nav" id="navMenu">
-        <a href="index.html">Home</a>
-        <a href="rules.html">Rules</a>
-        <a href="applications.html">Applications</a>
-        <a href="store.html">Store</a>
-        <a class="active" href="account.html">Account</a>
-      </nav>
+      <a class="icon-btn" href="store.html" aria-label="Store">🛒</a>
+      <a class="login-trigger" href="#login" aria-label="Login with Steam">👤</a>
+      <a class="join-btn" href="applications.html">Join Bloodline</a>
     </div>
-  </header>
+  </div>
+</header>
 
-  <main class="page-shell">
-    <section class="hero">
-      <div class="hero-text">
-        <p class="pill">Identity Gateway</p>
-        <h1>One profile across the full city.</h1>
-        <p class="lead">Link your Steam and Discord accounts to sync identity, applications, and upcoming account-based systems across Bloodline RP.</p>
-        <div class="hero-actions">
-          <a class="btn btn-primary" href="#flow">Begin link flow</a>
-          <a class="btn btn-ghost" href="#summary">Open summary</a>
-        </div>
-      </div>
-      <aside class="hero-panel">
-        <p class="pill">Link Status</p>
-        <div class="status-list">
-          <article class="status-item"><h3>Steam</h3><p id="steamStatus">Pending</p></article>
-          <article class="status-item"><h3>Discord</h3><p id="discordStatus">Pending</p></article>
-        </div>
-      </aside>
-    </section>
-
-    <section class="account-flow" id="flow">
-      <article class="step-card">
+<main class="page-shell">
+  <section class="section">
+    <div class="section-title">
+      <h2>Account Access</h2>
+      <p>Use the top-right account icon to sign in with Steam and unlock account actions.</p>
+    </div>
+    <div class="flow-grid" id="flow">
+      <article class="flow-card">
         <h3>Step 1: Steam Login</h3>
-        <p>Authenticate through Steam to establish your character identity ownership.</p>
+        <p>Authorize Steam to create your profile identity.</p>
         <button class="btn btn-primary auth-btn" type="button" data-auth-provider="steam">Login with Steam</button>
       </article>
-      <article class="step-card">
-        <h3>Step 2: Discord Connect</h3>
-        <p>Link Discord to unlock support syncing and account-level integrations.</p>
+      <article class="flow-card">
+        <h3>Step 2: Discord Link</h3>
+        <p>Connect Discord after Steam authentication.</p>
         <button class="btn btn-primary auth-btn" id="discordButton" type="button" data-auth-provider="discord" disabled>Connect Discord</button>
       </article>
-    </section>
+    </div>
+  </section>
 
-    <section class="account-grid" id="summary">
-      <article class="account-card"><h3>Account Name</h3><p id="accountName">Awaiting Steam login</p></article>
-      <article class="account-card"><h3>Connection State</h3><div class="auth-status"><span class="status-pill" id="steamStatusBadge">Steam Pending</span><span class="status-pill" id="discordStatusBadge">Discord Pending</span></div></article>
-      <article class="account-card"><h3>Discord Display</h3><p id="discordDisplay">Not connected yet</p></article>
-      <article class="account-card"><h3>Future Unlocks</h3><p>Account linking will feed approvals, profile records, and staff workflows.</p></article>
-    </section>
-  </main>
+  <section class="account-grid" id="summary">
+    <article class="account-card"><h3>Account Name</h3><p id="accountName">Awaiting Steam login</p></article>
+    <article class="account-card"><h3>Connection Status</h3><div class="auth-status"><span class="status-pill" id="steamStatusBadge">Steam Pending</span><span class="status-pill" id="discordStatusBadge">Discord Pending</span></div></article>
+    <article class="account-card"><h3>Steam</h3><p id="steamStatus">Pending</p></article>
+    <article class="account-card"><h3>Discord</h3><p id="discordStatus">Pending</p><p id="discordDisplay">Not connected yet</p></article>
+  </section>
+</main>
 
-  <footer class="site-footer">
-    <p>Bloodline RP © <span id="year"></span>. All rights reserved.</p>
-  </footer>
+<footer class="footer">
+  <div class="footer-inner">
+    <div class="footer-grid">
+      <section class="footer-panel">
+        <h3>Bloodline RP</h3>
+        <p>High-standard roleplay built around continuity, consequence, and player-driven city stories.</p>
+      </section>
+      <section class="footer-panel">
+        <h3>Navigate</h3>
+        <p><a href="index.html">Home</a></p>
+        <p><a href="applications.html">Careers / Applications</a></p>
+        <p><a href="store.html">Shop</a></p>
+      </section>
+      <section class="footer-panel">
+        <h3>Legal</h3>
+        <p><a href="rules.html">Rules</a></p>
+        <p>Support Policy</p>
+        <p>Community Guidelines</p>
+      </section>
+      <section class="footer-panel">
+        <h3>Server Status</h3>
+        <p>Public West: <strong id="serverPopulationFooter">--</strong></p>
+        <p>Queue: <strong id="serverQueueFooter">--</strong></p>
+      </section>
+    </div>
+    <p class="footer-note">Bloodline RP © <span id="year"></span>. All rights reserved.</p>
+  </div>
+</footer>
 
-  <script src="auth-config.js"></script>
-  <script src="script.js"></script>
+<script src="auth-config.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
