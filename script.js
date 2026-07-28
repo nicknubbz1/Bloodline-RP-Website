@@ -53,6 +53,15 @@ const authSessionUrl = window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:30
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
 let steamLoginModal = null;
+let connectQueueModal = null;
+let connectQueueState = {
+  statusText: "Offline",
+  playersText: "-- / --",
+  queuePositionText: "--",
+  queueActionLabel: "Connect",
+  queueActionEnabled: false,
+  queueActionHref: queueJoinUrl,
+};
 let accountDropdownState = null;
 
 function openAuthPopup(url, popupName) {
@@ -148,6 +157,119 @@ function closeSteamLoginModal() {
   steamLoginModal.classList.remove("is-open");
   steamLoginModal.setAttribute("aria-hidden", "true");
   document.body.classList.remove("modal-open");
+}
+
+function ensureConnectQueueModal() {
+  if (connectQueueModal) {
+    return connectQueueModal;
+  }
+
+  connectQueueModal = document.createElement("div");
+  connectQueueModal.className = "login-modal connect-modal";
+  connectQueueModal.setAttribute("aria-hidden", "true");
+  connectQueueModal.innerHTML = `
+    <div class="login-modal-card connect-modal-card" role="dialog" aria-modal="true" aria-labelledby="connectQueueTitle">
+      <button class="modal-close connect-modal-close" type="button" aria-label="Close queue popup">Close</button>
+      <div class="steam-login-mark">Bloodline RP</div>
+      <h2 id="connectQueueTitle">Connect Queue</h2>
+      <div class="connect-modal-copy">
+        <div class="connect-modal-status">
+          <span class="connect-stat-label">Server Status</span>
+          <strong id="connectQueueStatusText">Offline</strong>
+        </div>
+        <div class="connect-modal-status">
+          <span class="connect-stat-label">Queue Position</span>
+          <strong id="connectQueuePositionText">--</strong>
+        </div>
+        <p class="connect-modal-message" id="connectQueueMessage">Waiting for live status...</p>
+        <div class="connect-modal-actions">
+          <button class="connect-action" id="connectQueueModalAction" type="button">Connect</button>
+          <button class="btn btn-ghost" type="button" data-connect-modal-close>Close</button>
+        </div>
+        <p class="connect-modal-note" id="connectQueueNote">This popup stays small and will only enable connect when you are next in line.</p>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(connectQueueModal);
+
+  connectQueueModal.addEventListener("click", (event) => {
+    if (event.target === connectQueueModal) {
+      closeConnectQueueModal();
+    }
+  });
+
+  const closeButton = connectQueueModal.querySelector(".connect-modal-close");
+  if (closeButton) {
+    closeButton.addEventListener("click", closeConnectQueueModal);
+  }
+
+  const footerCloseButton = connectQueueModal.querySelector("[data-connect-modal-close]");
+  if (footerCloseButton) {
+    footerCloseButton.addEventListener("click", closeConnectQueueModal);
+  }
+
+  const actionButton = connectQueueModal.querySelector("#connectQueueModalAction");
+  if (actionButton) {
+    actionButton.addEventListener("click", () => {
+      if (!connectQueueState.queueActionEnabled || !connectQueueState.queueActionHref) {
+        return;
+      }
+
+      window.location.href = connectQueueState.queueActionHref;
+    });
+  }
+
+  return connectQueueModal;
+}
+
+function closeConnectQueueModal() {
+  if (!connectQueueModal) {
+    return;
+  }
+
+  connectQueueModal.classList.remove("is-open");
+  connectQueueModal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+}
+
+function updateConnectQueueModal() {
+  const modal = ensureConnectQueueModal();
+  const statusEl = modal.querySelector("#connectQueueStatusText");
+  const positionEl = modal.querySelector("#connectQueuePositionText");
+  const messageEl = modal.querySelector("#connectQueueMessage");
+  const noteEl = modal.querySelector("#connectQueueNote");
+  const actionButton = modal.querySelector("#connectQueueModalAction");
+
+  if (statusEl) {
+    statusEl.textContent = connectQueueState.statusText;
+  }
+
+  if (positionEl) {
+    positionEl.textContent = connectQueueState.queuePositionText;
+  }
+
+  if (messageEl) {
+    messageEl.textContent = connectQueueState.messageText || "Waiting for live status...";
+  }
+
+  if (noteEl) {
+    noteEl.textContent = connectQueueState.noteText || "This popup stays small and will only enable connect when you are next in line.";
+  }
+
+  if (actionButton) {
+    actionButton.textContent = connectQueueState.queueActionLabel || "Connect";
+    actionButton.disabled = !connectQueueState.queueActionEnabled;
+    actionButton.setAttribute("aria-disabled", String(!connectQueueState.queueActionEnabled));
+  }
+}
+
+function openConnectQueueModal() {
+  const modal = ensureConnectQueueModal();
+  updateConnectQueueModal();
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
 }
 
 function readAccountState() {
@@ -392,25 +514,30 @@ function toggleAccountDropdown() {
 function initConnectPanel() {
   const connectButton = document.getElementById("connectQueueButton");
   const populationEl = document.getElementById("serverPopulation");
-  const queueEl = document.getElementById("serverQueueCount");
   const statusEl = document.getElementById("serverStatusText");
 
-  if (!connectButton || !populationEl || !queueEl || !statusEl) {
+  if (!connectButton || !populationEl || !statusEl) {
     return;
   }
 
-  if (queueJoinUrl) {
-    connectButton.setAttribute("href", queueJoinUrl);
-    connectButton.removeAttribute("aria-disabled");
-  } else {
-    connectButton.setAttribute("href", "#");
-    connectButton.setAttribute("aria-disabled", "true");
-    statusEl.textContent = "Queue URL is not configured yet.";
-  }
+  connectButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    openConnectQueueModal();
+  });
 
   if (!serverStatusUrl) {
     populationEl.textContent = "Unavailable";
-    queueEl.textContent = "Unavailable";
+    connectQueueState = {
+      ...connectQueueState,
+      statusText: "Offline",
+      playersText: "Unavailable",
+      queuePositionText: "Unavailable",
+      messageText: "The live status endpoint is not configured yet.",
+      noteText: "Queue access will enable once the server status feed is live.",
+      queueActionLabel: "Connect",
+      queueActionEnabled: false,
+    };
+    updateConnectQueueModal();
     return;
   }
 
@@ -425,17 +552,47 @@ function initConnectPanel() {
       const players = payload.players ?? payload.online ?? payload.population ?? 0;
       const maxPlayers = payload.maxPlayers ?? payload.max ?? payload.capacity ?? "?";
       const queue = payload.queue ?? payload.queued ?? payload.queueCount ?? 0;
+      const queuePosition = payload.queuePosition ?? payload.position ?? payload.place ?? payload.queueIndex ?? payload.queueSpot ?? payload.rank ?? null;
       const rawStatus = payload.status ?? payload.serverStatus ?? payload.state ?? payload.online ?? payload.isOnline;
       const isOnline = rawStatus === true || rawStatus === "online" || rawStatus === "running" || rawStatus === "up";
+      const isNext = payload.next === true || payload.isNext === true || queuePosition === 1 || queuePosition === 0;
+      const isIn = payload.in === true || payload.isIn === true || payload.connected === true || payload.ready === true;
+      const actionEnabled = Boolean(queueJoinUrl && (isNext || isIn));
+
+      connectQueueState = {
+        ...connectQueueState,
+        statusText: isOnline ? "Online" : "Offline",
+        playersText: `${players}/${maxPlayers}`,
+        queuePositionText: queuePosition === null || queuePosition === undefined ? `Queue: ${queue}` : (isNext ? "You're next" : queuePosition === 0 ? "You're in" : `#${queuePosition}`),
+        messageText: isOnline
+          ? (isIn ? "You're in. Connect now to join the server." : isNext ? "You're next in line. Keep this popup open and connect when ready." : `You're in queue behind ${queue} player${queue === 1 ? "" : "s"}.`)
+          : "The server is currently offline.",
+        noteText: isOnline
+          ? (actionEnabled ? "Connect is enabled because you are next in line." : "The connect button will unlock when you reach the front of the queue.")
+          : "Queue access will enable once the server comes back online.",
+        queueActionLabel: actionEnabled ? "Connect Now" : "Connect",
+        queueActionEnabled: actionEnabled,
+        queueActionHref: queueJoinUrl,
+      };
 
       populationEl.textContent = `${players}/${maxPlayers}`;
-      queueEl.textContent = String(queue);
       statusEl.textContent = isOnline ? "Online" : "Offline";
+      updateConnectQueueModal();
     })
     .catch(() => {
       populationEl.textContent = "Unavailable";
-      queueEl.textContent = "Unavailable";
       statusEl.textContent = "Offline";
+      connectQueueState = {
+        ...connectQueueState,
+        statusText: "Offline",
+        playersText: "Unavailable",
+        queuePositionText: "Unavailable",
+        messageText: "Could not reach the live status endpoint.",
+        noteText: "Queue access will enable once the status feed is available.",
+        queueActionLabel: "Connect",
+        queueActionEnabled: false,
+      };
+      updateConnectQueueModal();
     });
 }
 
@@ -540,6 +697,7 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeSteamLoginModal();
     closeAccountDropdown();
+    closeConnectQueueModal();
   }
 });
 

@@ -296,9 +296,58 @@ main.page-shell {
   background: rgba(255, 47, 47, 0.3);
 }
 
+.connect-action:disabled,
 .connect-action[aria-disabled="true"] {
   opacity: 0.7;
   pointer-events: none;
+}
+
+.connect-modal-card {
+  width: min(420px, 94vw);
+}
+
+.connect-modal-copy {
+  display: grid;
+  gap: 0.8rem;
+  margin-top: 0.8rem;
+}
+
+.connect-modal-status {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.72rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.connect-modal-status strong,
+.connect-modal-copy strong {
+  font-family: "Oxanium", sans-serif;
+  color: #ffe3e3;
+}
+
+.connect-modal-message {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.connect-modal-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.connect-modal-actions .btn,
+.connect-modal-actions .connect-action {
+  flex: 1 1 160px;
+}
+
+.connect-modal-note {
+  margin: 0;
+  color: #8f9db5;
+  font-size: 0.95rem;
 }
 
 .btn-row {
@@ -678,4 +727,18 @@ main.page-shell {
 
   .mast h1 { font-size: clamp(2rem, 10vw, 3rem); }
   .hero p.lead { font-size: 1.08rem; }
+
+  .connect-panel {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .connect-panel-stats {
+    width: 100%;
+  }
+
+  .connect-stat,
+  .connect-action {
+    width: 100%;
+  }
 }
