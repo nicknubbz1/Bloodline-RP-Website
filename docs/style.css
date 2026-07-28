@@ -964,6 +964,155 @@ main.page-shell {
   color: #90e2a6;
 }
 
+.app-categories-grid {
+  display: grid;
+  gap: 0.95rem;
+}
+
+.app-category-block {
+  border: 1px solid var(--line);
+  border-radius: 0.95rem;
+  padding: 0.82rem;
+  background: linear-gradient(165deg, rgba(20, 27, 39, 0.84), rgba(13, 18, 29, 0.9));
+  display: grid;
+  gap: 0.68rem;
+}
+
+.app-category-head {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.app-category-head h3 {
+  margin: 0;
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 1rem;
+}
+
+.app-category-head p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.app-category-count {
+  justify-self: start;
+  margin-top: 0.24rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  font-family: "Oxanium", sans-serif;
+  font-size: 0.72rem;
+  color: #ffd8d8;
+}
+
+.app-category-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.58rem;
+}
+
+.app-directory-card {
+  border: 1px solid rgba(255, 255, 255, 0.11);
+  border-radius: 0.78rem;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 0.68rem;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.app-directory-card h4 {
+  margin: 0;
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+  font-size: 0.92rem;
+  letter-spacing: 0.03em;
+}
+
+.app-directory-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.app-directory-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.46rem;
+  color: #cfdaf0;
+  font-size: 0.86rem;
+}
+
+.app-directory-help p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.app-view-shell {
+  gap: 0.9rem;
+}
+
+.app-view-head {
+  display: grid;
+  gap: 0.58rem;
+}
+
+.app-view-form-wrap {
+  display: grid;
+}
+
+.app-view-form {
+  border: 1px solid var(--line);
+  border-radius: 0.95rem;
+  padding: 0.88rem;
+  background: linear-gradient(165deg, rgba(20, 27, 39, 0.84), rgba(13, 18, 29, 0.9));
+  display: grid;
+  gap: 0.68rem;
+}
+
+.app-view-fields {
+  display: grid;
+  gap: 0.58rem;
+}
+
+.app-view-field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.app-view-field label {
+  color: #d7e3f8;
+  font-size: 0.93rem;
+}
+
+.app-view-field input,
+.app-view-field textarea,
+.app-view-field select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.72rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: #edf3ff;
+  padding: 0.62rem 0.68rem;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.98rem;
+}
+
+.app-view-message {
+  margin: 0;
+  color: var(--muted);
+}
+
+.app-view-message.error {
+  color: #ff9baa;
+}
+
+.app-view-message.success {
+  color: #90e2a6;
+}
+
 .socials-section {
   display: grid;
   gap: 0.75rem;
@@ -1400,6 +1549,10 @@ main.page-shell {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .app-category-cards {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .store-tier-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1457,6 +1610,10 @@ main.page-shell {
   }
 
   .app-tabs-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .app-category-cards {
     grid-template-columns: 1fr;
   }
 

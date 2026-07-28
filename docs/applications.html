@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260728g" />
+  <link rel="stylesheet" href="style.css?v=20260728h" />
 </head>
 <body>
 <header class="site-header">
@@ -35,69 +35,14 @@
   <section class="section">
     <div class="section-title">
       <h2>Application Directory</h2>
-      <p>Choose a category, pick a form, and submit directly from the website.</p>
+      <p>All applications are listed below by category. Select one to open the full application screen.</p>
     </div>
   </section>
 
-  <section class="app-tabs-shell" aria-label="Application Categories">
-    <aside class="app-tabs-nav" role="tablist" aria-label="Application category tabs">
-      <button class="app-tab-btn is-active" type="button" role="tab" aria-selected="true" data-app-tab="server">Server Applications</button>
-      <button class="app-tab-btn" type="button" role="tab" aria-selected="false" data-app-tab="public-safety">Public Safety</button>
-      <button class="app-tab-btn" type="button" role="tab" aria-selected="false" data-app-tab="city-hall">City Hall Applications</button>
-      <button class="app-tab-btn" type="button" role="tab" aria-selected="false" data-app-tab="business-gang">Business and Gang Applications</button>
-    </aside>
+  <section class="app-categories-grid" id="applicationCatalog" aria-label="Application categories"></section>
 
-    <div class="app-tabs-content">
-      <article class="app-tab-panel is-active" data-app-panel="server">
-        <header class="app-tab-head">
-          <h3>Server Applications</h3>
-          <span class="app-tab-count" data-app-count="server">0 Open</span>
-        </header>
-        <ul class="app-tab-list" id="appTabListServer"></ul>
-      </article>
-
-      <article class="app-tab-panel" data-app-panel="public-safety">
-        <header class="app-tab-head">
-          <h3>Public Safety</h3>
-          <span class="app-tab-count" data-app-count="public-safety">0 Open</span>
-        </header>
-        <ul class="app-tab-list" id="appTabListPublicSafety"></ul>
-      </article>
-
-      <article class="app-tab-panel" data-app-panel="city-hall">
-        <header class="app-tab-head">
-          <h3>City Hall Applications</h3>
-          <span class="app-tab-count" data-app-count="city-hall">0 Open</span>
-        </header>
-        <ul class="app-tab-list" id="appTabListCityHall"></ul>
-      </article>
-
-      <article class="app-tab-panel" data-app-panel="business-gang">
-        <header class="app-tab-head">
-          <h3>Business and Gang Applications</h3>
-          <span class="app-tab-count" data-app-count="business-gang">0 Open</span>
-        </header>
-        <ul class="app-tab-list" id="appTabListBusinessGang"></ul>
-      </article>
-    </div>
-  </section>
-
-  <section class="section app-builder" id="application-builder">
-    <div class="section-title">
-      <h2>Submit Application</h2>
-      <p>Fill out the selected form and send it to the staff review queue.</p>
-    </div>
-
-    <div class="app-builder-controls">
-      <label for="applicationFormSelect">Select application form</label>
-      <select id="applicationFormSelect"></select>
-    </div>
-
-    <form id="applicationBuilderForm" class="app-builder-form" novalidate>
-      <div id="applicationBuilderFields" class="app-builder-fields"></div>
-      <button class="btn btn-primary" type="submit">Submit Application</button>
-      <p id="applicationBuilderMessage" class="app-builder-message">Link Steam and Discord in your account menu before submitting.</p>
-    </form>
+  <section class="section app-directory-help">
+    <p>Tip: opening an application takes you to a dedicated full-screen page with every question in that form.</p>
   </section>
 </main>
 
@@ -132,7 +77,7 @@
 
 <script src="auth-config.js"></script>
 <script src="application-forms.js?v=20260728a"></script>
-<script src="applications-tab.js?v=20260728a"></script>
-<script src="script.js?v=20260728g"></script>
+<script src="applications-tab.js?v=20260728h"></script>
+<script src="script.js?v=20260728h"></script>
 </body>
 </html>
