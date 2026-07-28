@@ -327,6 +327,14 @@ main.page-shell {
   color: #ffe3e3;
 }
 
+.status-online {
+  color: #7bff7b !important;
+}
+
+.status-offline {
+  color: #ff6a6a !important;
+}
+
 .connect-modal-message {
   margin: 0;
   color: var(--muted);
@@ -349,6 +357,86 @@ main.page-shell {
   color: #8f9db5;
   font-size: 0.95rem;
 }
+
+.socials-section {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.social-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.social-link {
+  min-height: 116px;
+  border: 1px solid var(--line);
+  border-radius: 1.3rem;
+  background:
+    radial-gradient(120px 120px at 35% 30%, rgba(255,255,255,0.18), transparent 58%),
+    linear-gradient(160deg, rgba(24, 31, 44, 0.95), rgba(13, 18, 28, 0.98));
+  box-shadow: var(--shadow);
+  padding: 0.95rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.social-link::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(140deg, rgba(255,255,255,0.04), transparent 42%);
+  pointer-events: none;
+}
+
+.social-link:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255,255,255,0.16);
+}
+
+.social-icon {
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,0.08);
+  color: #eef3ff;
+  flex: 0 0 auto;
+}
+
+.social-copy {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.social-copy strong {
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 1rem;
+}
+
+.social-stats {
+  color: #c0cee1;
+  font-family: "Oxanium", sans-serif;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.social-discord { background-color: rgba(88, 101, 242, 0.14); }
+.social-youtube { background-color: rgba(255, 0, 0, 0.12); }
+.social-tiktok { background-color: rgba(0, 255, 180, 0.11); }
+.social-instagram { background-color: rgba(255, 140, 0, 0.11); }
+.social-x { background-color: rgba(255, 255, 255, 0.08); }
 
 .btn-row {
   justify-content: center;
@@ -740,5 +828,13 @@ main.page-shell {
   .connect-stat,
   .connect-action {
     width: 100%;
+  }
+
+  .social-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .social-link {
+    min-height: 104px;
   }
 }

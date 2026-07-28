@@ -63,6 +63,13 @@ let connectQueueState = {
   queueActionHref: queueJoinUrl,
 };
 let accountDropdownState = null;
+const socialStats = {
+  discord: "16,628 members · 3,054 online",
+  youtube: "128K subscribers · 24 new videos",
+  tiktok: "214K followers · 4.2M views",
+  instagram: "96K followers · 14 new posts",
+  x: "41K followers · 3.8K active",
+};
 
 function openAuthPopup(url, popupName) {
   const popupWidth = 520;
@@ -135,6 +142,23 @@ function ensureSteamLoginModal() {
   }
 
   return steamLoginModal;
+}
+
+function initSocialButtons() {
+  document.querySelectorAll("[data-social-stat]").forEach((el) => {
+    const key = el.getAttribute("data-social-stat");
+    if (key && socialStats[key]) {
+      el.textContent = socialStats[key];
+    }
+  });
+
+  document.querySelectorAll("[data-social-platform]").forEach((link) => {
+    link.addEventListener("click", (event) => {
+      if (link.getAttribute("href") === "#") {
+        event.preventDefault();
+      }
+    });
+  });
 }
 
 function openSteamLoginModal() {
@@ -244,6 +268,8 @@ function updateConnectQueueModal() {
   if (statusEl) {
     statusEl.textContent = connectQueueState.statusText;
   }
+    statusEl.classList.toggle("status-online", connectQueueState.statusText === "Online");
+    statusEl.classList.toggle("status-offline", connectQueueState.statusText === "Offline");
 
   if (positionEl) {
     positionEl.textContent = connectQueueState.queuePositionText;
@@ -577,11 +603,15 @@ function initConnectPanel() {
 
       populationEl.textContent = `${players}/${maxPlayers}`;
       statusEl.textContent = isOnline ? "Online" : "Offline";
+      statusEl.classList.toggle("status-online", isOnline);
+      statusEl.classList.toggle("status-offline", !isOnline);
       updateConnectQueueModal();
     })
     .catch(() => {
       populationEl.textContent = "Unavailable";
       statusEl.textContent = "Offline";
+      statusEl.classList.remove("status-online");
+      statusEl.classList.add("status-offline");
       connectQueueState = {
         ...connectQueueState,
         statusText: "Offline",
@@ -737,6 +767,7 @@ window.addEventListener("message", (event) => {
 renderAccountState();
 accountDropdownState = createAccountDropdown();
 updateAccountDropdownDetails();
+initSocialButtons();
 initConnectPanel();
 
 if (!handleAuthCallbackPage()) {
