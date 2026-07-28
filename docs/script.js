@@ -436,7 +436,13 @@ function renderStoreCart() {
     itemsContainer.appendChild(row);
   });
 
-  countEl.textContent = String(items.length);
+  if (items.length > 0) {
+    countEl.hidden = false;
+    countEl.textContent = String(items.length);
+  } else {
+    countEl.hidden = true;
+    countEl.textContent = "";
+  }
   totalEl.textContent = formatMonthlyPrice(total);
   emptyEl.hidden = items.length > 0;
   updateStoreCartAuthState();
