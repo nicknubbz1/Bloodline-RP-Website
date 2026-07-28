@@ -1050,26 +1050,146 @@ main.page-shell {
   color: var(--muted);
 }
 
-.app-view-shell {
-  gap: 0.9rem;
+
+.app-view-layout {
+  gap: 0.95rem;
 }
 
-.app-view-head {
+.app-view-stage {
   display: grid;
-  gap: 0.58rem;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 0.8rem;
+  align-items: start;
 }
 
-.app-view-form-wrap {
+.app-view-sidebar {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background:
+    radial-gradient(120px 120px at 18% 10%, rgba(255, 87, 87, 0.19), transparent 64%),
+    linear-gradient(175deg, rgba(23, 30, 43, 0.95), rgba(11, 15, 24, 0.98));
+  padding: 0.95rem;
   display: grid;
+  gap: 0.62rem;
+  position: sticky;
+  top: 5.4rem;
+}
+
+.app-view-back {
+  justify-self: start;
+}
+
+.app-view-eyebrow {
+  margin: 0;
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  font-size: 0.72rem;
+  color: #ffd0d0;
+}
+
+.app-view-title {
+  margin: 0;
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+  line-height: 1.1;
+}
+
+.app-view-description {
+  margin: 0;
+  color: #c3d1e8;
+  line-height: 1.45;
+}
+
+.app-view-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.app-view-fact {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 0.76rem;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.46rem 0.52rem;
+  display: grid;
+  gap: 0.14rem;
+}
+
+.app-view-fact span {
+  color: #9fb2d3;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.68rem;
+}
+
+.app-view-fact strong {
+  font-family: "Oxanium", sans-serif;
+  color: #f6f9ff;
+  font-size: 0.95rem;
+}
+
+.app-view-note {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0.76rem;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.54rem 0.62rem;
+}
+
+.app-view-note h3 {
+  margin: 0;
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+  font-size: 0.88rem;
+  letter-spacing: 0.04em;
+}
+
+.app-view-note ul {
+  margin: 0.35rem 0 0;
+  padding-left: 1rem;
+  color: #bfcbdf;
+  line-height: 1.4;
+}
+
+.app-view-workspace {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background:
+    radial-gradient(200px 140px at 100% 0%, rgba(120, 185, 255, 0.14), transparent 60%),
+    linear-gradient(170deg, rgba(20, 27, 39, 0.91), rgba(13, 18, 29, 0.98));
+  padding: 0.95rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.app-view-workspace-head {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.11);
+  padding-bottom: 0.58rem;
+  display: grid;
+  gap: 0.22rem;
+}
+
+.app-view-workspace-head h2 {
+  margin: 0;
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+  font-size: 1.14rem;
+}
+
+.app-view-workspace-head p {
+  margin: 0;
+  color: var(--muted);
 }
 
 .app-view-form {
-  border: 1px solid var(--line);
-  border-radius: 0.95rem;
-  padding: 0.88rem;
-  background: linear-gradient(165deg, rgba(20, 27, 39, 0.84), rgba(13, 18, 29, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 0.9rem;
+  padding: 0.82rem;
+  background: rgba(11, 15, 24, 0.34);
   display: grid;
-  gap: 0.68rem;
+  gap: 0.72rem;
 }
 
 .app-view-fields {
@@ -1103,6 +1223,16 @@ main.page-shell {
 .app-view-message {
   margin: 0;
   color: var(--muted);
+}
+
+.app-view-submit-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 0.58rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.58rem;
+  flex-wrap: wrap;
 }
 
 .app-view-message.error {
@@ -1553,6 +1683,14 @@ main.page-shell {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .app-view-stage {
+    grid-template-columns: 1fr;
+  }
+
+  .app-view-sidebar {
+    position: static;
+  }
+
   .store-tier-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1615,6 +1753,19 @@ main.page-shell {
 
   .app-category-cards {
     grid-template-columns: 1fr;
+  }
+
+  .app-view-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .app-view-submit-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .app-view-submit-row .btn {
+    width: 100%;
   }
 
   .store-tier-grid {

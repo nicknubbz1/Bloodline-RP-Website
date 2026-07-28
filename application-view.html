@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260728h" />
+  <link rel="stylesheet" href="style.css?v=20260728i" />
 </head>
 <body>
 <header class="site-header">
@@ -31,21 +31,49 @@
   </div>
 </header>
 
-<main class="page-shell app-view-shell">
-  <section class="section app-view-head">
-    <a class="btn btn-ghost" href="applications.html">Back to Applications</a>
-    <div class="section-title">
-      <h2 id="appViewTitle">Application</h2>
-      <p id="appViewDescription">Complete each question below and submit when ready.</p>
-    </div>
-  </section>
+<main class="page-shell app-view-layout">
+  <section class="section app-view-stage">
+    <aside class="app-view-sidebar">
+      <a class="btn btn-ghost app-view-back" href="applications.html">Back to Applications</a>
+      <p class="app-view-eyebrow">Bloodline RP Applications</p>
+      <h1 id="appViewTitle" class="app-view-title">Application</h1>
+      <p id="appViewDescription" class="app-view-description">Complete each question below and submit when ready.</p>
 
-  <section class="section app-view-form-wrap">
-    <form id="applicationViewForm" class="app-view-form" novalidate>
-      <div id="applicationViewFields" class="app-view-fields"></div>
-      <button class="btn btn-primary" type="submit">Submit Application</button>
-      <p id="applicationViewMessage" class="app-view-message">Link Steam and Discord in your account menu before submitting.</p>
-    </form>
+      <div class="app-view-facts">
+        <div class="app-view-fact">
+          <span>Category</span>
+          <strong id="appViewCategory">--</strong>
+        </div>
+        <div class="app-view-fact">
+          <span>Total Questions</span>
+          <strong id="appViewQuestionTotal">--</strong>
+        </div>
+      </div>
+
+      <div class="app-view-note">
+        <h3>Before You Submit</h3>
+        <ul>
+          <li>Use clear and complete answers.</li>
+          <li>One serious application per role.</li>
+          <li>Be sure your Steam and Discord are linked.</li>
+        </ul>
+      </div>
+    </aside>
+
+    <section class="app-view-workspace">
+      <header class="app-view-workspace-head">
+        <h2>Application Questions</h2>
+        <p>Every required question must be completed before you can submit.</p>
+      </header>
+
+      <form id="applicationViewForm" class="app-view-form" novalidate>
+        <div id="applicationViewFields" class="app-view-fields"></div>
+        <div class="app-view-submit-row">
+          <p id="applicationViewMessage" class="app-view-message">Link Steam and Discord in your account menu before submitting.</p>
+          <button class="btn btn-primary" type="submit">Submit Application</button>
+        </div>
+      </form>
+    </section>
   </section>
 </main>
 
@@ -80,7 +108,7 @@
 
 <script src="auth-config.js"></script>
 <script src="application-forms.js?v=20260728a"></script>
-<script src="application-view.js?v=20260728a"></script>
-<script src="script.js?v=20260728h"></script>
+<script src="application-view.js?v=20260728b"></script>
+<script src="script.js?v=20260728i"></script>
 </body>
 </html>

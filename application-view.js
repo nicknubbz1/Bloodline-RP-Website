@@ -2,9 +2,18 @@
   const forms = Array.isArray(window.BLOODLINE_APPLICATION_FORMS) ? window.BLOODLINE_APPLICATION_FORMS : [];
   const titleEl = document.getElementById("appViewTitle");
   const descriptionEl = document.getElementById("appViewDescription");
+  const categoryEl = document.getElementById("appViewCategory");
+  const questionTotalEl = document.getElementById("appViewQuestionTotal");
   const fieldsWrap = document.getElementById("applicationViewFields");
   const formEl = document.getElementById("applicationViewForm");
   const messageEl = document.getElementById("applicationViewMessage");
+
+  const categoryNames = {
+    server: "Server",
+    "public-safety": "Public Safety",
+    "city-hall": "City Hall",
+    "business-gang": "Business/Gang",
+  };
 
   const params = new URLSearchParams(window.location.search);
   const formKey = params.get("form") || "";
@@ -98,11 +107,23 @@
       if (formEl) {
         formEl.hidden = true;
       }
+      if (categoryEl) {
+        categoryEl.textContent = "Unknown";
+      }
+      if (questionTotalEl) {
+        questionTotalEl.textContent = "0";
+      }
       return;
     }
 
     titleEl.textContent = selectedForm.title;
     descriptionEl.textContent = selectedForm.description || "Complete each question below and submit when ready.";
+    if (categoryEl) {
+      categoryEl.textContent = categoryNames[selectedForm.type] || "Server";
+    }
+    if (questionTotalEl) {
+      questionTotalEl.textContent = String(Array.isArray(selectedForm.questions) ? selectedForm.questions.length : 0);
+    }
     fieldsWrap.innerHTML = "";
 
     selectedForm.questions.forEach(function (question, index) {
