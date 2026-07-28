@@ -4,22 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bloodline RP | Store</title>
-  <meta name="description" content="Bloodline RP supporter store tiers and package overview." />
-  <meta property="og:url" content="https://nicknubbz1.github.io/Bloodline-RP-Website/store.html" />
-  <link rel="canonical" href="https://nicknubbz1.github.io/Bloodline-RP-Website/store.html" />
+  <meta name="description" content="Support Bloodline RP through the store and premium supporter packages." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600;700&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260727" />
 </head>
 <body>
-  <div class="bg-orb orb-one"></div>
-  <div class="bg-orb orb-two"></div>
-  <div class="grid-overlay"></div>
-
   <header class="site-header">
     <div class="header-brand">
-      <div class="brand"><img src="https://pub-17704311c9bd4f38a0026e11211f09af.r2.dev/Bloodline%20Banner.png" alt="Bloodline RP" /></div>
+      <div class="brand">Bloodline RP</div>
       <a class="login-chip login-trigger" href="#login">Login</a>
     </div>
     <div class="header-actions">
@@ -29,105 +23,37 @@
         <a href="rules.html">Rules</a>
         <a href="applications.html">Applications</a>
         <a class="active" href="store.html">Store</a>
-        <a href="staff.html" data-staff-only-nav hidden>Staff Panel</a>
+        <a href="account.html">Account</a>
       </nav>
     </div>
   </header>
-
-  <main>
-    <section class="hero store-hero">
-      <p class="eyebrow">Supporter Store</p>
-      <h1>Bloodline Supporter Memberships</h1>
-      <p class="hero-copy">Choose a monthly tier below and subscribe directly through the Bloodline RP website.</p>
-    </section>
-
-    <section class="store-tier-grid">
-      <article class="store-tier-card tier-bronze">
-        <div class="store-tier-head">
-          <span class="tier-icon" aria-hidden="true">&#x1F949;</span>
-          <p class="tag">Bronze Supporter</p>
-        </div>
-        <h3>$15 <span>/ month</span></h3>
-        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Bronze Supporter" data-price="$15 / month">Subscribe</button>
-      </article>
-
-      <article class="store-tier-card tier-silver">
-        <div class="store-tier-head">
-          <span class="tier-icon" aria-hidden="true">&#x1F948;</span>
-          <p class="tag">Silver Supporter</p>
-        </div>
-        <h3>$25 <span>/ month</span></h3>
-        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Silver Supporter" data-price="$25 / month">Subscribe</button>
-      </article>
-
-      <article class="store-tier-card tier-gold">
-        <div class="store-tier-head">
-          <span class="tier-icon" aria-hidden="true">&#x1F947;</span>
-          <p class="tag">Gold Supporter</p>
-        </div>
-        <h3>$40 <span>/ month</span></h3>
-        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Gold Supporter" data-price="$40 / month">Subscribe</button>
-      </article>
-
-      <article class="store-tier-card tier-platinum">
-        <div class="store-tier-head">
-          <span class="tier-icon" aria-hidden="true">&#x1F48E;</span>
-          <p class="tag">Platinum Supporter</p>
-        </div>
-        <h3>$60 <span>/ month</span></h3>
-        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Platinum Supporter" data-price="$60 / month">Subscribe</button>
-      </article>
-
-      <article class="store-tier-card tier-emerald">
-        <div class="store-tier-head">
-          <span class="tier-icon" aria-hidden="true">&#x1F7E2;</span>
-          <p class="tag">Emerald Supporter</p>
-        </div>
-        <h3>$80 <span>/ month</span></h3>
-        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Emerald Supporter" data-price="$80 / month">Subscribe</button>
-      </article>
-
-      <article class="store-tier-card tier-diamond">
-        <div class="store-tier-head">
-          <span class="tier-icon" aria-hidden="true">&#x1F48D;</span>
-          <p class="tag">Diamond Supporter</p>
-        </div>
-        <h3>$120 <span>/ month</span></h3>
-        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Diamond Supporter" data-price="$120 / month">Subscribe</button>
-      </article>
-
-      <article class="store-tier-card tier-bloodline">
-        <div class="store-tier-head">
-          <span class="tier-icon" aria-hidden="true">&#x1FA78;</span>
-          <p class="tag">Bloodline Supporter</p>
-        </div>
-        <h3>$220 <span>/ month</span></h3>
-        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Bloodline Supporter" data-price="$220 / month">Subscribe</button>
-      </article>
-    </section>
-  </main>
-
-  <div class="store-checkout-modal" id="storeCheckoutModal" aria-hidden="true">
-    <div class="store-checkout-card" role="dialog" aria-modal="true" aria-labelledby="storeCheckoutTitle">
-      <button class="modal-close" id="storeCheckoutClose" type="button" aria-label="Close checkout">Close</button>
-      <p class="eyebrow">Checkout</p>
-      <h2 id="storeCheckoutTitle">Supporter Subscription</h2>
-      <p class="store-checkout-tier" id="storeCheckoutTier">Tier</p>
-      <p class="store-checkout-price" id="storeCheckoutPrice">Price</p>
-      <p class="store-checkout-note">Choose your payment method:</p>
-      <div class="store-checkout-actions">
-        <a class="btn btn-primary" id="storePayWithStripe" href="#" target="_blank" rel="noopener noreferrer">Pay With Card (Stripe)</a>
-        <a class="btn btn-ghost" id="storePayWithPaypal" href="#" target="_blank" rel="noopener noreferrer">Pay With PayPal</a>
-        <a class="btn btn-ghost" id="storePayWithCashapp" href="#" target="_blank" rel="noopener noreferrer">Pay With Cash App</a>
+  <main class="page-shell">
+    <section class="hero">
+      <div class="hero-copy-block">
+        <p class="eyebrow">Store</p>
+        <h1>Back the city and unlock more support.</h1>
+        <p class="lead">The Bloodline RP store keeps development moving while offering supporters a more premium experience through quality-of-life perks and special recognition.</p>
+        <div class="hero-actions"><a class="btn btn-primary" href="https://store.bloodlinerp.gg" target="_blank" rel="noopener noreferrer">Open Store</a><a class="btn btn-ghost" href="applications.html">Apply For A Role</a></div>
       </div>
-      <p class="store-checkout-help" id="storeCheckoutHelp">Set your live payment links in auth-config.js before launch.</p>
-    </div>
-  </div>
-
-  <footer class="site-footer">
-    <p>Bloodline RP � <span id="year"></span>. All rights reserved.</p>
-  </footer>
-
+      <aside class="hero-panel">
+        <p class="eyebrow">Support benefits</p>
+        <div class="status-list">
+          <div><h3>Priority access</h3><p>Supporters help keep the server moving while receiving a smoother experience in return.</p></div>
+          <div><h3>Community value</h3><p>Store support funds ongoing improvement, updates, and long-term server health.</p></div>
+        </div>
+      </aside>
+    </section>
+    <section>
+      <div class="section-title"><h2>What supporters receive</h2><span class="subtle">Premium support for a premium city.</span></div>
+      <div class="timeline">
+        <article class="timeline-item"><h3>Starter bundle</h3><p>An approachable entry point for supporters who want to help and claim simple perks.</p></article>
+        <article class="timeline-item"><h3>Vehicle access</h3><p>Unlock curated identity-based extras that make your character stand out.</p></article>
+        <article class="timeline-item"><h3>Supporter status</h3><p>Enjoy visible community recognition and deeper long-term engagement with the project.</p></article>
+      </div>
+    </section>
+    <section class="panel"><div class="panel-head"><h2>Store terms</h2><span class="subtle">All purchases support server operations.</span></div><p>Digital store perks are offered under the project’s terms and are delivered according to server policy and local consumer law where applicable.</p></section>
+  </main>
+  <footer class="site-footer"><p>Bloodline RP © <span id="year"></span>. All rights reserved.</p></footer>
   <script src="auth-config.js"></script>
   <script src="script.js"></script>
 </body>

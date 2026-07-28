@@ -4,22 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bloodline RP | GTA RP Server</title>
-  <meta name="description" content="Bloodline RP is a serious GTA RP server with clean systems, active staff, and high-quality story roleplay." />
-  <meta property="og:url" content="https://nicknubbz1.github.io/Bloodline-RP-Website/" />
-  <link rel="canonical" href="https://nicknubbz1.github.io/Bloodline-RP-Website/" />
+  <meta name="description" content="Bloodline RP is a serious GTA RP server with polished systems, active staff, and a premium roleplay experience." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600;700&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260727" />
 </head>
 <body id="home">
-  <div class="bg-orb orb-one"></div>
-  <div class="bg-orb orb-two"></div>
-  <div class="grid-overlay"></div>
-
   <header class="site-header">
     <div class="header-brand">
-      <div class="brand"><img src="https://pub-17704311c9bd4f38a0026e11211f09af.r2.dev/Bloodline%20Banner.png" alt="Bloodline RP" /></div>
+      <div class="brand">Bloodline RP</div>
       <a class="login-chip login-trigger" href="#login">Login</a>
     </div>
     <div class="header-actions">
@@ -29,70 +23,62 @@
         <a href="rules.html">Rules</a>
         <a href="applications.html">Applications</a>
         <a href="store.html">Store</a>
-        <a href="staff.html" data-staff-only-nav hidden>Staff Panel</a>
+        <a href="account.html">Account</a>
       </nav>
     </div>
   </header>
-
-  <main>
-    <div class="launch-banner">NEW DESIGN NOW LIVE</div>
-    <section class="hero reveal home-overview">
-      <div class="home-overview-layout">
-        <div>
-          <p class="eyebrow">Welcome To Bloodline RP</p>
-          <p class="hero-badge">Fresh Layout • Live Queue • Staff Portal</p>
-          <h1>Serious Roleplay Built Around Story And Community</h1>
-          <p class="hero-copy">Bloodline RP was created after years of server hopping and never finding one place that got every major piece right. We built this server to combine strong systems, serious standards, and meaningful story progression in one city.</p>
-          <p class="hero-copy">Whether you run civilian life, criminal arcs, or law enforcement scenes, the goal is the same: keep every path active, engaging, and worth investing in long-term.</p>
-          <div class="hero-actions">
-            <a class="btn btn-primary" href="applications.html">Start Application</a>
-            <a class="btn btn-ghost" href="rules.html">Read Rules</a>
+  <main class="page-shell">
+    <section class="hero">
+      <div class="hero-copy-block">
+        <p class="eyebrow">Public roleplay • serious systems</p>
+        <h1>Built for stories, rebuilt for clarity.</h1>
+        <p class="lead">Bloodline RP blends deep systems, active staff, and a strong community focus into one polished GTA roleplay experience. Whether you’re chasing criminal arcs, civic duty, or business ownership, the city is built to support long-term stories.</p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="applications.html">Start Application</a>
+          <a class="btn btn-ghost" href="rules.html">Read Rules</a>
+        </div>
+      </div>
+      <aside class="hero-panel" id="connectPanel">
+        <p class="eyebrow">Live server snapshot</p>
+        <div class="status-list">
+          <div>
+            <h3>Population</h3>
+            <p id="serverPopulation">Waiting for live status</p>
+          </div>
+          <div>
+            <h3>Queue</h3>
+            <p id="serverQueueCount">Queue pending</p>
+          </div>
+          <div>
+            <h3>Server state</h3>
+            <p id="serverStatusText">Connect details will appear here when configured.</p>
           </div>
         </div>
-
-        <aside class="hero-panel connect-panel" id="connectPanel">
-          <p class="eyebrow">Connect</p>
-          <h3>Server Queue Access</h3>
-          <p class="lead">Website queue access is where players join the server. Live status is shown below.</p>
-          <div class="connect-stats">
-            <article>
-              <h4>Population</h4>
-              <p id="serverPopulation">Unavailable</p>
-            </article>
-            <article>
-              <h4>Queue</h4>
-              <p id="serverQueueCount">Unavailable</p>
-            </article>
-          </div>
-          <p class="connect-status" id="serverStatusText">Waiting for server status configuration.</p>
-          <a class="btn btn-primary" id="connectQueueButton" href="#" aria-disabled="true">Join Queue</a>
-        </aside>
+      </aside>
+    </section>
+    <section class="stats-grid">
+      <article class="stat-card"><div class="value">24/7</div><div class="label">Active roleplay flow</div></article>
+      <article class="stat-card"><div class="value">Staff-led</div><div class="label">Moderation and support</div></article>
+      <article class="stat-card"><div class="value">Custom</div><div class="label">Systems and progression</div></article>
+      <article class="stat-card"><div class="value">Public</div><div class="label">Open to new players</div></article>
+    </section>
+    <section>
+      <div class="section-title">
+        <h2>Why Bloodline feels different</h2>
+        <span class="subtle">A cleaner foundation, stronger storytelling, better pace.</span>
+      </div>
+      <div class="feature-grid">
+        <article class="card"><h3>Story-first city</h3><p>Every route has room to breathe, from civilians to criminals to emergency services.</p></article>
+        <article class="card"><h3>Balanced progression</h3><p>Progression is structured enough to feel rewarding, without becoming a grind.</p></article>
+        <article class="card"><h3>Approachable but serious</h3><p>New players can jump in without feeling lost, while long-term players still get depth.</p></article>
       </div>
     </section>
-
-    <section class="home-summary-grid reveal stagger">
-      <article class="card">
-        <p class="tag">Server Overview</p>
-        <h3>Public And Story-Driven</h3>
-        <p>We are a public GTA RP server focused on interaction-first storytelling, not empty grinding.</p>
-      </article>
-      <article class="card">
-        <p class="tag">Balance</p>
-        <h3>Civilian And Criminal Depth</h3>
-        <p>Civilian progression is treated as seriously as criminal progression so no route feels stale.</p>
-      </article>
-      <article class="card">
-        <p class="tag">Community</p>
-        <h3>Safe And Welcoming</h3>
-        <p>The long-term goal is a community where players can consistently feel comfortable calling Bloodline home.</p>
-      </article>
+    <section class="cta-banner">
+      <div><h3>Ready to step into the city?</h3><p>Apply now, read the rules, and join the next chapter.</p></div>
+      <div class="hero-actions"><a class="btn btn-primary" href="applications.html">Apply Now</a><a class="btn btn-ghost" href="rules.html">View Rules</a></div>
     </section>
   </main>
-
-  <footer class="site-footer">
-    <p>Bloodline RP � <span id="year"></span>. All rights reserved.</p>
-  </footer>
-
+  <footer class="site-footer"><p>Bloodline RP © <span id="year"></span>. All rights reserved.</p></footer>
   <script src="auth-config.js"></script>
   <script src="script.js"></script>
 </body>

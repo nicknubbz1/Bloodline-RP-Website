@@ -4,19 +4,13 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Bloodline RP | Applications</title>
-  <meta name="description" content="Bloodline RP application routes for police, EMS, staff, and business whitelist." />
-  <meta property="og:url" content="https://nicknubbz1.github.io/Bloodline-RP-Website/applications.html" />
-  <link rel="canonical" href="https://nicknubbz1.github.io/Bloodline-RP-Website/applications.html" />
+  <meta name="description" content="Apply for Bloodline RP through the public applications and role pathways." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600;700&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260727" />
 </head>
 <body>
-  <div class="bg-orb orb-one"></div>
-  <div class="bg-orb orb-two"></div>
-  <div class="grid-overlay"></div>
-
   <header class="site-header">
     <div class="header-brand">
       <div class="brand">Bloodline RP</div>
@@ -29,110 +23,41 @@
         <a href="rules.html">Rules</a>
         <a class="active" href="applications.html">Applications</a>
         <a href="store.html">Store</a>
-        <a href="staff.html" data-staff-only-nav hidden>Staff Panel</a>
+        <a href="account.html">Account</a>
       </nav>
     </div>
   </header>
-
-  <main>
-    <section class="hero reveal app-tabs-hero" id="apply-grid">
-      <p class="eyebrow">Application Directory</p>
-      <h1>Choose A Category To View Open Applications</h1>
-      <p class="hero-copy">This version uses a sidebar and dynamic category panes for a cleaner dashboard feel. Select a category to focus on one application type at a time.</p>
-      <div class="app-meta">
-        <span>14 Open Applications</span>
-        <span>4 Categories</span>
-        <span>Tab View Layout</span>
+  <main class="page-shell">
+    <section class="hero">
+      <div class="hero-copy-block">
+        <p class="eyebrow">Applications</p>
+        <h1>Choose your path in the city.</h1>
+        <p class="lead">From law enforcement and emergency services to staff support and business ownership, every application helps shape the kind of city Bloodline becomes.</p>
+        <div class="hero-actions"><a class="btn btn-primary" href="#application-list">Open Application Paths</a><a class="btn btn-ghost" href="rules.html">Read Rules First</a></div>
       </div>
-    </section>
-
-    <section class="app-tabs-shell reveal" aria-label="Application Categories">
-      <aside class="app-tabs-nav" role="tablist" aria-label="Application category tabs">
-        <button class="app-tab-btn is-active" type="button" role="tab" aria-selected="true" data-app-tab="server">Server Applications</button>
-        <button class="app-tab-btn" type="button" role="tab" aria-selected="false" data-app-tab="public-safety">Public Safety</button>
-        <button class="app-tab-btn" type="button" role="tab" aria-selected="false" data-app-tab="city-hall">City Hall Applications</button>
-        <button class="app-tab-btn" type="button" role="tab" aria-selected="false" data-app-tab="business-gang">Business And Gang Applications</button>
-      </aside>
-
-      <div class="app-tabs-content">
-        <article class="app-tab-panel is-active" data-app-panel="server">
-          <header class="app-tab-head">
-            <h2>Server Applications</h2>
-            <span class="app-tab-count">4 Open</span>
-          </header>
-          <ul class="app-tab-list">
-            <li>Moderator Application <span>Open</span></li>
-            <li>Staff Application <span>Open</span></li>
-            <li>Devolper Application <span>Open</span></li>
-            <li>Allowlist Application <span>Open</span></li>
-          </ul>
-        </article>
-
-        <article class="app-tab-panel" data-app-panel="public-safety">
-          <header class="app-tab-head">
-            <h2>Public Safety</h2>
-            <span class="app-tab-count">3 Open</span>
-          </header>
-          <ul class="app-tab-list">
-            <li>LEO Application <span>Open</span></li>
-            <li>EMS Application <span>Open</span></li>
-            <li>Fire Application <span>Open</span></li>
-          </ul>
-        </article>
-
-        <article class="app-tab-panel" data-app-panel="city-hall">
-          <header class="app-tab-head">
-            <h2>City Hall Applications</h2>
-            <span class="app-tab-count">4 Open</span>
-          </header>
-          <ul class="app-tab-list">
-            <li>Mayor Application <span>Open</span></li>
-            <li>City Council Application <span>Open</span></li>
-            <li>Lawyer Application <span>Open</span></li>
-            <li>Judge Application <span>Open</span></li>
-          </ul>
-        </article>
-
-        <article class="app-tab-panel" data-app-panel="business-gang">
-          <header class="app-tab-head">
-            <h2>Business And Gang Applications</h2>
-            <span class="app-tab-count">2 Open</span>
-          </header>
-          <ul class="app-tab-list">
-            <li>Business Application <span>Open</span></li>
-            <li>Gang Application <span>Open</span></li>
-          </ul>
-        </article>
-      </div>
-    </section>
-
-    <section class="panel reveal app-builder" id="application-builder">
-      <div class="panel-head">
-        <h2>Submit Application On Website</h2>
-      </div>
-      <p class="hero-copy">Pick the exact application form, answer each question here, and submit directly to the Bloodline staff review queue.</p>
-
-      <div class="app-builder-controls">
-        <label for="applicationFormSelect">Select Application Form</label>
-        <select id="applicationFormSelect"></select>
-      </div>
-
-      <form id="applicationBuilderForm" class="app-builder-form" novalidate>
-        <div id="applicationBuilderFields" class="app-builder-fields"></div>
-        <div class="hero-actions">
-          <button class="btn btn-primary" type="submit">Submit Application</button>
+      <aside class="hero-panel">
+        <p class="eyebrow">What to expect</p>
+        <div class="status-list">
+          <div><h3>Review windows</h3><p>Applications are reviewed by staff with attention to roleplay quality, maturity, and fit.</p></div>
+          <div><h3>Discord support</h3><p>Use the community Discord to submit questions and stay updated on decisions.</p></div>
         </div>
-        <p id="applicationBuilderMessage" class="app-builder-message">Link Steam and Discord in your account center before submitting.</p>
-      </form>
+      </aside>
     </section>
+    <section id="application-list">
+      <div class="section-title"><h2>Available routes</h2><span class="subtle">Pick the role that matches your style.</span></div>
+      <div class="feature-grid">
+        <article class="card"><h3>Law Enforcement</h3><p>Join the city’s response network and build structured stories through patrol, investigations, and command.</p></article>
+        <article class="card"><h3>EMS & Fire</h3><p>Support the city through rapid response, medical care, and high-pressure rescue scenes.</p></article>
+        <article class="card"><h3>Staff</h3><p>Help the community run smoothly through moderation, event support, and upkeep.</p></article>
+        <article class="card"><h3>Business</h3><p>Pursue legal or grey-market ventures with a clear path to long-term roleplay ownership.</p></article>
+        <article class="card"><h3>Faction</h3><p>Build a strong group identity around a criminal, civic, or professional organization.</p></article>
+        <article class="card"><h3>Community</h3><p>Join events, support projects, and grow as a familiar face in the city’s social circle.</p></article>
+      </div>
+    </section>
+    <section class="cta-banner"><div><h3>Ready to apply?</h3><p>Complete the form, read the rules, and take the first step.</p></div><div class="hero-actions"><a class="btn btn-primary" href="#">Open Application Hub</a><a class="btn btn-ghost" href="store.html">Visit Store</a></div></section>
   </main>
-
-  <footer class="site-footer">
-    <p>Bloodline RP n++ <span id="year"></span>. All rights reserved.</p>
-  </footer>
-
+  <footer class="site-footer"><p>Bloodline RP © <span id="year"></span>. All rights reserved.</p></footer>
   <script src="auth-config.js"></script>
-  <script src="application-forms.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
