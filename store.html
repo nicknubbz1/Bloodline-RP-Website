@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260728e" />
+  <link rel="stylesheet" href="style.css?v=20260728f" />
 </head>
 <body>
 <header class="site-header">
@@ -24,7 +24,7 @@
     </nav>
     <div class="header-actions">
       <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">Menu</button>
-      <a class="icon-btn" href="store.html" aria-label="Store"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 4h-2l-1 2v2h2l2.2 7.2a2 2 0 0 0 1.9 1.4h7.3a2 2 0 0 0 1.9-1.4l1.6-5.2a1 1 0 0 0-1-1.3h-10.6l-.5-2h12.1v-2h-13.6l-.4-1.2a1 1 0 0 0-1-.8Zm4 15a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Zm7 0a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Z"/></svg></a>
+      <button class="icon-btn store-cart-toggle" id="storeCartToggle" type="button" aria-label="Open cart" aria-expanded="false" aria-controls="storeCartDrawer"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 4h-2l-1 2v2h2l2.2 7.2a2 2 0 0 0 1.9 1.4h7.3a2 2 0 0 0 1.9-1.4l1.6-5.2a1 1 0 0 0-1-1.3h-10.6l-.5-2h12.1v-2h-13.6l-.4-1.2a1 1 0 0 0-1-.8Zm4 15a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Zm7 0a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Z"/></svg><span class="store-cart-count" id="storeCartCount">0</span></button>
       <a class="login-trigger" href="#login" aria-label="Login with Steam"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"/></svg></a>
       <a class="join-btn" href="applications.html?v=20260728a">Join Bloodline</a>
     </div>
@@ -119,21 +119,25 @@
   </section>
 </main>
 
-<div class="store-checkout-modal" id="storeCheckoutModal" aria-hidden="true">
-  <div class="store-checkout-card" role="dialog" aria-modal="true" aria-labelledby="storeCheckoutTitle">
-    <button class="modal-close" id="storeCheckoutClose" type="button" aria-label="Close checkout">Close</button>
-    <p class="eyebrow">Checkout</p>
-    <h2 id="storeCheckoutTitle">Supporter Subscription</h2>
-    <p class="store-checkout-tier" id="storeCheckoutTier">Tier</p>
-    <p class="store-checkout-price" id="storeCheckoutPrice">Price</p>
-    <p class="store-checkout-note">Choose your payment method:</p>
-    <div class="store-checkout-actions">
-      <a class="btn btn-primary" id="storePayWithStripe" href="#" target="_blank" rel="noopener noreferrer">Pay With Card (Stripe)</a>
-      <a class="btn btn-ghost" id="storePayWithPaypal" href="#" target="_blank" rel="noopener noreferrer">Pay With PayPal</a>
-      <a class="btn btn-ghost" id="storePayWithCashapp" href="#" target="_blank" rel="noopener noreferrer">Pay With Cash App</a>
+<div class="store-cart-drawer" id="storeCartDrawer" aria-hidden="true">
+  <div class="store-cart-backdrop" id="storeCartBackdrop" aria-hidden="true"></div>
+  <aside class="store-cart-panel" role="dialog" aria-modal="true" aria-labelledby="storeCartTitle">
+    <div class="store-cart-header">
+      <div>
+        <p class="eyebrow">Store</p>
+        <h2 id="storeCartTitle">Your Cart</h2>
+      </div>
+      <button class="modal-close" id="storeCartClose" type="button" aria-label="Close cart">Close</button>
     </div>
-    <p class="store-checkout-help" id="storeCheckoutHelp">Set your live payment links in auth-config.js before launch.</p>
-  </div>
+    <div class="store-cart-body">
+      <p class="store-cart-empty" id="storeCartEmpty">Your cart is empty.</p>
+      <div class="store-cart-items" id="storeCartItems"></div>
+    </div>
+    <div class="store-cart-footer">
+      <p class="store-cart-total">Total <strong id="storeCartTotal">$0 / month</strong></p>
+      <button class="btn btn-primary" id="storeCartCheckout" type="button">Log in to check out</button>
+    </div>
+  </aside>
 </div>
 
 <footer class="footer">
@@ -166,6 +170,6 @@
 </footer>
 
 <script src="auth-config.js"></script>
-<script src="script.js?v=20260728e"></script>
+<script src="script.js?v=20260728f"></script>
 </body>
 </html>

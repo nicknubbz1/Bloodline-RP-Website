@@ -52,8 +52,14 @@ const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3
 const authSessionUrl = window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
+const storeCartStorageKey = "bloodline-store-cart";
 let steamLoginModal = null;
 let connectQueueModal = null;
+let storeCartState = {
+  isOpen: false,
+  items: [],
+  refs: null,
+};
 let connectQueueState = {
   statusText: "Offline",
   playersText: "-- / --",
@@ -349,6 +355,231 @@ function renderAccountState() {
   if (discordDisplayEl) {
     discordDisplayEl.textContent = discordName;
   }
+
+  updateStoreCartAuthState();
+}
+
+function readStoreCartState() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(storeCartStorageKey));
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeStoreCartState(items) {
+  localStorage.setItem(storeCartStorageKey, JSON.stringify(items));
+}
+
+function extractPriceValue(priceText) {
+  if (!priceText) {
+    return 0;
+  }
+
+  const match = String(priceText).match(/[\d,]+(?:\.\d{1,2})?/);
+  if (!match) {
+    return 0;
+  }
+
+  const normalized = match[0].replace(/,/g, "");
+  return Number.parseFloat(normalized) || 0;
+}
+
+function formatMonthlyPrice(value) {
+  return `$${value.toFixed(2)} / month`;
+}
+
+function getPrimaryCheckoutUrl() {
+  return window.BLOODLINE_UNIFIED_CHECKOUT_URL
+    || window.BLOODLINE_STRIPE_CHECKOUT_URL
+    || window.BLOODLINE_PAYPAL_CHECKOUT_URL
+    || window.BLOODLINE_CASHAPP_CHECKOUT_URL
+    || "";
+}
+
+function hasLoggedInAccount() {
+  const state = readAccountState();
+  return Boolean(state.steamId || state.steamName);
+}
+
+function updateStoreCartAuthState() {
+  if (!storeCartState.refs?.checkoutButton) {
+    return;
+  }
+
+  const isLoggedIn = hasLoggedInAccount();
+  storeCartState.refs.checkoutButton.textContent = isLoggedIn ? "Checkout" : "Log in to check out";
+}
+
+function renderStoreCart() {
+  if (!storeCartState.refs) {
+    return;
+  }
+
+  const { itemsContainer, emptyEl, totalEl, countEl } = storeCartState.refs;
+  const items = storeCartState.items;
+  const total = items.reduce((sum, item) => sum + (item.value || 0), 0);
+
+  itemsContainer.innerHTML = "";
+
+  items.forEach((item) => {
+    const row = document.createElement("article");
+    row.className = "store-cart-item";
+    row.innerHTML = `
+      <div>
+        <p class="store-cart-item-tier">${item.tier}</p>
+        <p class="store-cart-item-price">${item.priceLabel}</p>
+      </div>
+      <button class="store-cart-remove" type="button" data-remove-tier="${item.tier}">Remove</button>
+    `;
+    itemsContainer.appendChild(row);
+  });
+
+  countEl.textContent = String(items.length);
+  totalEl.textContent = formatMonthlyPrice(total);
+  emptyEl.hidden = items.length > 0;
+  updateStoreCartAuthState();
+}
+
+function openStoreCartDrawer() {
+  if (!storeCartState.refs?.drawer) {
+    return;
+  }
+
+  storeCartState.isOpen = true;
+  storeCartState.refs.drawer.classList.add("is-open");
+  storeCartState.refs.drawer.setAttribute("aria-hidden", "false");
+  if (storeCartState.refs.toggleButton) {
+    storeCartState.refs.toggleButton.setAttribute("aria-expanded", "true");
+  }
+}
+
+function closeStoreCartDrawer() {
+  if (!storeCartState.refs?.drawer) {
+    return;
+  }
+
+  storeCartState.isOpen = false;
+  storeCartState.refs.drawer.classList.remove("is-open");
+  storeCartState.refs.drawer.setAttribute("aria-hidden", "true");
+  if (storeCartState.refs.toggleButton) {
+    storeCartState.refs.toggleButton.setAttribute("aria-expanded", "false");
+  }
+}
+
+function toggleStoreCartDrawer() {
+  if (storeCartState.isOpen) {
+    closeStoreCartDrawer();
+    return;
+  }
+  openStoreCartDrawer();
+}
+
+function addTierToStoreCart(tier, priceLabel) {
+  const existing = storeCartState.items.some((item) => item.tier === tier);
+  if (existing) {
+    openStoreCartDrawer();
+    return;
+  }
+
+  storeCartState.items.push({
+    tier,
+    priceLabel,
+    value: extractPriceValue(priceLabel),
+  });
+  writeStoreCartState(storeCartState.items);
+  renderStoreCart();
+  openStoreCartDrawer();
+}
+
+function removeTierFromStoreCart(tier) {
+  storeCartState.items = storeCartState.items.filter((item) => item.tier !== tier);
+  writeStoreCartState(storeCartState.items);
+  renderStoreCart();
+}
+
+function initStoreCart() {
+  const drawer = document.getElementById("storeCartDrawer");
+  const toggleButton = document.getElementById("storeCartToggle");
+  const closeButton = document.getElementById("storeCartClose");
+  const backdrop = document.getElementById("storeCartBackdrop");
+  const itemsContainer = document.getElementById("storeCartItems");
+  const emptyEl = document.getElementById("storeCartEmpty");
+  const totalEl = document.getElementById("storeCartTotal");
+  const countEl = document.getElementById("storeCartCount");
+  const checkoutButton = document.getElementById("storeCartCheckout");
+  const subscribeButtons = document.querySelectorAll(".store-subscribe-btn");
+
+  if (!drawer || !toggleButton || !itemsContainer || !emptyEl || !totalEl || !countEl || !checkoutButton || !subscribeButtons.length) {
+    return;
+  }
+
+  storeCartState.refs = {
+    drawer,
+    toggleButton,
+    closeButton,
+    backdrop,
+    itemsContainer,
+    emptyEl,
+    totalEl,
+    countEl,
+    checkoutButton,
+  };
+
+  storeCartState.items = readStoreCartState().map((item) => ({
+    tier: item.tier,
+    priceLabel: item.priceLabel,
+    value: Number.isFinite(item.value) ? item.value : extractPriceValue(item.priceLabel),
+  })).filter((item) => item.tier && item.priceLabel);
+
+  renderStoreCart();
+
+  toggleButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    toggleStoreCartDrawer();
+  });
+
+  if (closeButton) {
+    closeButton.addEventListener("click", closeStoreCartDrawer);
+  }
+
+  if (backdrop) {
+    backdrop.addEventListener("click", closeStoreCartDrawer);
+  }
+
+  subscribeButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      const tier = button.getAttribute("data-tier") || "Supporter";
+      const priceLabel = button.getAttribute("data-price") || "$0 / month";
+      addTierToStoreCart(tier, priceLabel);
+    });
+  });
+
+  itemsContainer.addEventListener("click", (event) => {
+    const removeButton = event.target.closest("[data-remove-tier]");
+    if (!removeButton) {
+      return;
+    }
+    const tier = removeButton.getAttribute("data-remove-tier");
+    if (tier) {
+      removeTierFromStoreCart(tier);
+    }
+  });
+
+  checkoutButton.addEventListener("click", () => {
+    if (!hasLoggedInAccount()) {
+      openSteamLoginModal();
+      return;
+    }
+
+    const checkoutUrl = getPrimaryCheckoutUrl();
+    if (checkoutUrl) {
+      window.open(checkoutUrl, "_blank", "noopener,noreferrer");
+    }
+  });
+
+  updateStoreCartAuthState();
 }
 
 function readSubscriptionState() {
@@ -728,6 +959,7 @@ document.addEventListener("keydown", (event) => {
     closeSteamLoginModal();
     closeAccountDropdown();
     closeConnectQueueModal();
+    closeStoreCartDrawer();
   }
 });
 
@@ -769,6 +1001,7 @@ accountDropdownState = createAccountDropdown();
 updateAccountDropdownDetails();
 initSocialButtons();
 initConnectPanel();
+initStoreCart();
 
 if (!handleAuthCallbackPage()) {
   syncAccountFromBackend();
