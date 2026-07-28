@@ -226,14 +226,26 @@ function formatDateValue(dateValue) {
 
 function createAccountDropdown() {
   const headerActions = document.querySelector(".header-actions");
-  if (!headerActions || document.getElementById("headerAccountDropdown")) {
+  if (!headerActions) {
     return null;
+  }
+
+  const existingDropdown = document.getElementById("headerAccountDropdown");
+  if (existingDropdown) {
+    return {
+      dropdownEl: existingDropdown,
+      steamStatusEl: document.getElementById("headerSteamLinkStatus"),
+      discordStatusEl: document.getElementById("headerDiscordLinkStatus"),
+      appStatusEl: document.getElementById("headerApplicationStatus"),
+      subTierEl: document.getElementById("headerSubscriptionTier"),
+      subRenewalEl: document.getElementById("headerSubscriptionRenewal"),
+      subNextPaymentEl: document.getElementById("headerSubscriptionNextPayment"),
+    };
   }
 
   const wrapper = document.createElement("div");
   wrapper.className = "header-account-menu";
   wrapper.innerHTML = `
-    <button class="header-account-trigger" id="headerAccountTrigger" type="button" aria-expanded="false">Account</button>
     <div class="header-account-dropdown" id="headerAccountDropdown" aria-hidden="true">
       <section class="account-dropdown-block">
         <h4>Account</h4>
@@ -263,27 +275,22 @@ function createAccountDropdown() {
 
   headerActions.appendChild(wrapper);
 
-  const trigger = wrapper.querySelector("#headerAccountTrigger");
   const dropdown = wrapper.querySelector("#headerAccountDropdown");
-  if (!trigger || !dropdown) {
+  if (!dropdown) {
     return null;
   }
 
-  trigger.addEventListener("click", () => {
-    const isOpen = dropdown.classList.toggle("is-open");
-    trigger.setAttribute("aria-expanded", String(isOpen));
-    dropdown.setAttribute("aria-hidden", String(!isOpen));
-  });
-
   document.addEventListener("click", (event) => {
-    if (!wrapper.contains(event.target)) {
+    const clickedTrigger = [...loginTriggers].some((trigger) => trigger.contains(event.target));
+    if (!wrapper.contains(event.target) && !clickedTrigger) {
       dropdown.classList.remove("is-open");
-      trigger.setAttribute("aria-expanded", "false");
       dropdown.setAttribute("aria-hidden", "true");
+      loginTriggers.forEach((trigger) => trigger.setAttribute("aria-expanded", "false"));
     }
   });
 
   return {
+    dropdownEl: dropdown,
     steamStatusEl: wrapper.querySelector("#headerSteamLinkStatus"),
     discordStatusEl: wrapper.querySelector("#headerDiscordLinkStatus"),
     appStatusEl: wrapper.querySelector("#headerApplicationStatus"),
@@ -360,6 +367,26 @@ async function updateAccountDropdownDetails() {
       accountDropdownState.appStatusEl.textContent = "Could not load application statuses right now.";
     }
   }
+}
+
+function closeAccountDropdown() {
+  if (!accountDropdownState?.dropdownEl) {
+    return;
+  }
+
+  accountDropdownState.dropdownEl.classList.remove("is-open");
+  accountDropdownState.dropdownEl.setAttribute("aria-hidden", "true");
+  loginTriggers.forEach((trigger) => trigger.setAttribute("aria-expanded", "false"));
+}
+
+function toggleAccountDropdown() {
+  if (!accountDropdownState?.dropdownEl) {
+    return;
+  }
+
+  const isOpen = accountDropdownState.dropdownEl.classList.toggle("is-open");
+  accountDropdownState.dropdownEl.setAttribute("aria-hidden", String(!isOpen));
+  loginTriggers.forEach((trigger) => trigger.setAttribute("aria-expanded", String(isOpen)));
 }
 
 function initConnectPanel() {
@@ -494,6 +521,15 @@ function handleAuthCallbackPage() {
 loginTriggers.forEach((trigger) => {
   trigger.addEventListener("click", (event) => {
     event.preventDefault();
+
+    const state = readAccountState();
+    const hasSteam = Boolean(state.steamId || state.steamName);
+
+    if (hasSteam && accountDropdownState?.dropdownEl) {
+      toggleAccountDropdown();
+      return;
+    }
+
     openSteamLoginModal();
   });
 });
@@ -501,6 +537,7 @@ loginTriggers.forEach((trigger) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeSteamLoginModal();
+    closeAccountDropdown();
   }
 });
 
