@@ -358,6 +358,130 @@ main.page-shell {
   font-size: 0.95rem;
 }
 
+.store-hero {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.store-tier-grid {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.store-tier-card {
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: linear-gradient(170deg, rgba(50, 54, 61, 0.9), rgba(20, 22, 26, 0.95));
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.store-tier-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.tier-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 67, 97, 0.42);
+  background: rgba(255, 39, 73, 0.2);
+  display: grid;
+  place-items: center;
+  font-size: 1rem;
+}
+
+.store-tier-card h3 {
+  margin: 0;
+  font-size: 1.55rem;
+  color: #ffffff;
+}
+
+.store-tier-card h3 span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #c8cfdb;
+}
+
+.store-tier-card .btn {
+  width: 100%;
+}
+
+.tier-bronze .tier-icon {
+  background: rgba(255, 39, 73, 0.24);
+  border-color: rgba(255, 39, 73, 0.62);
+}
+
+.tier-silver .tier-icon {
+  background: rgba(192, 192, 192, 0.22);
+  border-color: rgba(203, 203, 203, 0.5);
+}
+
+.store-checkout-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.72);
+}
+
+.store-checkout-modal.is-open {
+  display: flex;
+}
+
+.store-checkout-card {
+  width: min(560px, 100%);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(255, 103, 129, 0.34);
+  background: linear-gradient(160deg, rgba(20, 22, 27, 0.98), rgba(9, 10, 12, 0.99));
+  padding: 1rem;
+  display: grid;
+  gap: 0.52rem;
+  box-shadow: var(--shadow);
+}
+
+.store-checkout-tier {
+  margin: 0;
+  color: #f6f7f9;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.store-checkout-price {
+  margin: 0;
+  color: #ffacbc;
+  font-size: 0.94rem;
+  font-weight: 800;
+}
+
+.store-checkout-note,
+.store-checkout-help {
+  margin: 0;
+  color: var(--muted);
+}
+
+.store-checkout-actions {
+  display: grid;
+  gap: 0.52rem;
+  margin-top: 0.22rem;
+}
+
+.store-checkout-actions .btn {
+  width: 100%;
+}
+
+.store-checkout-actions .btn[aria-disabled="true"] {
+  opacity: 0.56;
+  pointer-events: none;
+}
+
 .socials-section {
   display: grid;
   gap: 0.75rem;
@@ -836,5 +960,9 @@ main.page-shell {
 
   .social-link {
     min-height: 104px;
+  }
+
+  .store-tier-grid {
+    grid-template-columns: 1fr;
   }
 }

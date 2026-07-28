@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260727e" />
+  <link rel="stylesheet" href="style.css?v=20260728d" />
 </head>
 <body>
 <header class="site-header">
@@ -32,21 +32,67 @@
 </header>
 
 <main class="page-shell">
-  <section class="section">
+  <section class="section store-hero">
     <div class="section-title">
-      <h2>Queue priority subscriptions</h2>
-      <p>Support the project and unlock priority access.</p>
+      <h2>Bloodline Supporter Memberships</h2>
+      <p>Choose a monthly tier below and subscribe directly through the Bloodline RP website.</p>
     </div>
-    <div class="store-grid">
-      <article class="tier"><h3>Silver</h3><div class="priority">+25</div><p class="price">/mo</p><ul><li>Queue priority stack</li><li>Silver member badge</li><li>Website supporter role</li></ul><a class="btn btn-ghost" href="#">Subscribe</a></article>
-      <article class="tier"><h3>Gold</h3><div class="priority">+40</div><p class="price">/mo</p><ul><li>Queue priority stack</li><li>Gold member badge</li><li>Priority support channel</li></ul><a class="btn btn-ghost" href="#">Subscribe</a></article>
-      <article class="tier"><h3>Emerald</h3><div class="priority">+60</div><p class="price">/mo</p><ul><li>Queue priority stack</li><li>Emerald member badge</li><li>Early feature previews</li></ul><a class="btn btn-ghost" href="#">Subscribe</a></article>
-      <article class="tier"><h3>Platinum</h3><div class="priority">+80</div><p class="price">/mo</p><ul><li>Queue priority stack</li><li>Platinum member badge</li><li>Custom profile highlight</li></ul><a class="btn btn-ghost" href="#">Subscribe</a></article>
-      <article class="tier"><h3>Diamond</h3><div class="priority">+140</div><p class="price">/mo</p><ul><li>Queue priority stack</li><li>Diamond member badge</li><li>Premium support routing</li></ul><a class="btn btn-ghost" href="#">Subscribe</a></article>
-      <article class="tier"><h3>Onyx</h3><div class="priority">+250</div><p class="price">/mo</p><ul><li>Queue priority stack</li><li>Onyx member badge</li><li>Top-tier supporter identity</li></ul><a class="btn btn-ghost" href="#">Subscribe</a></article>
+    <div class="store-tier-grid">
+      <article class="store-tier-card tier-bronze">
+        <div class="store-tier-head"><span class="tier-icon" aria-hidden="true">🥉</span><p class="tag">Bronze Supporter</p></div>
+        <h3>$15 <span>/ month</span></h3>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Bronze Supporter" data-price="$15 / month">Subscribe</button>
+      </article>
+      <article class="store-tier-card tier-silver">
+        <div class="store-tier-head"><span class="tier-icon" aria-hidden="true">🥈</span><p class="tag">Silver Supporter</p></div>
+        <h3>$25 <span>/ month</span></h3>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Silver Supporter" data-price="$25 / month">Subscribe</button>
+      </article>
+      <article class="store-tier-card tier-gold">
+        <div class="store-tier-head"><span class="tier-icon" aria-hidden="true">🥇</span><p class="tag">Gold Supporter</p></div>
+        <h3>$40 <span>/ month</span></h3>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Gold Supporter" data-price="$40 / month">Subscribe</button>
+      </article>
+      <article class="store-tier-card tier-platinum">
+        <div class="store-tier-head"><span class="tier-icon" aria-hidden="true">💎</span><p class="tag">Platinum Supporter</p></div>
+        <h3>$60 <span>/ month</span></h3>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Platinum Supporter" data-price="$60 / month">Subscribe</button>
+      </article>
+      <article class="store-tier-card tier-emerald">
+        <div class="store-tier-head"><span class="tier-icon" aria-hidden="true">🟢</span><p class="tag">Emerald Supporter</p></div>
+        <h3>$80 <span>/ month</span></h3>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Emerald Supporter" data-price="$80 / month">Subscribe</button>
+      </article>
+      <article class="store-tier-card tier-diamond">
+        <div class="store-tier-head"><span class="tier-icon" aria-hidden="true">💍</span><p class="tag">Diamond Supporter</p></div>
+        <h3>$120 <span>/ month</span></h3>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Diamond Supporter" data-price="$120 / month">Subscribe</button>
+      </article>
+      <article class="store-tier-card tier-bloodline">
+        <div class="store-tier-head"><span class="tier-icon" aria-hidden="true">🩸</span><p class="tag">Bloodline Supporter</p></div>
+        <h3>$220 <span>/ month</span></h3>
+        <button class="btn btn-primary store-subscribe-btn" type="button" data-tier="Bloodline Supporter" data-price="$220 / month">Subscribe</button>
+      </article>
     </div>
   </section>
 </main>
+
+<div class="store-checkout-modal" id="storeCheckoutModal" aria-hidden="true">
+  <div class="store-checkout-card" role="dialog" aria-modal="true" aria-labelledby="storeCheckoutTitle">
+    <button class="modal-close" id="storeCheckoutClose" type="button" aria-label="Close checkout">Close</button>
+    <p class="eyebrow">Checkout</p>
+    <h2 id="storeCheckoutTitle">Supporter Subscription</h2>
+    <p class="store-checkout-tier" id="storeCheckoutTier">Tier</p>
+    <p class="store-checkout-price" id="storeCheckoutPrice">Price</p>
+    <p class="store-checkout-note">Choose your payment method:</p>
+    <div class="store-checkout-actions">
+      <a class="btn btn-primary" id="storePayWithStripe" href="#" target="_blank" rel="noopener noreferrer">Pay With Card (Stripe)</a>
+      <a class="btn btn-ghost" id="storePayWithPaypal" href="#" target="_blank" rel="noopener noreferrer">Pay With PayPal</a>
+      <a class="btn btn-ghost" id="storePayWithCashapp" href="#" target="_blank" rel="noopener noreferrer">Pay With Cash App</a>
+    </div>
+    <p class="store-checkout-help" id="storeCheckoutHelp">Set your live payment links in auth-config.js before launch.</p>
+  </div>
+</div>
 
 <footer class="footer">
   <div class="footer-inner">
@@ -78,6 +124,6 @@
 </footer>
 
 <script src="auth-config.js"></script>
-<script src="script.js?v=20260728a"></script>
+<script src="script.js?v=20260728d"></script>
 </body>
 </html>
