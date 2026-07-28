@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@400;600;700&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260727" />
+  <link rel="stylesheet" href="style.css?v=20260727b" />
 </head>
 <body id="home">
   <header class="site-header">
@@ -27,19 +27,20 @@
       </nav>
     </div>
   </header>
+
   <main class="page-shell">
     <section class="hero">
       <div class="hero-copy-block">
-        <p class="eyebrow">Public roleplay • serious systems</p>
-        <h1>Built for stories, rebuilt for clarity.</h1>
-        <p class="lead">Bloodline RP blends deep systems, active staff, and a strong community focus into one polished GTA roleplay experience. Whether you’re chasing criminal arcs, civic duty, or business ownership, the city is built to support long-term stories.</p>
+        <p class="eyebrow">Los Santos Story Framework</p>
+        <h1>Serious roleplay with real momentum.</h1>
+        <p class="lead">Bloodline RP is built for long-form character arcs, high-quality interactions, and city systems that feel connected. Every path in the server is designed to generate meaningful conflict, progress, and consequence.</p>
         <div class="hero-actions">
-          <a class="btn btn-primary" href="applications.html">Start Application</a>
-          <a class="btn btn-ghost" href="rules.html">Read Rules</a>
+          <a class="btn btn-primary" href="applications.html">Enter Applications</a>
+          <a class="btn btn-ghost" href="rules.html">Read Community Rules</a>
         </div>
       </div>
       <aside class="hero-panel" id="connectPanel">
-        <p class="eyebrow">Live server snapshot</p>
+        <p class="eyebrow">City Operations</p>
         <div class="status-list">
           <div>
             <h3>Population</h3>
@@ -54,31 +55,69 @@
             <p id="serverStatusText">Connect details will appear here when configured.</p>
           </div>
         </div>
+        <a class="btn btn-primary" id="connectQueueButton" href="#" aria-disabled="true">Join Queue</a>
       </aside>
     </section>
-    <section class="stats-grid">
-      <article class="stat-card"><div class="value">24/7</div><div class="label">Active roleplay flow</div></article>
-      <article class="stat-card"><div class="value">Staff-led</div><div class="label">Moderation and support</div></article>
-      <article class="stat-card"><div class="value">Custom</div><div class="label">Systems and progression</div></article>
-      <article class="stat-card"><div class="value">Public</div><div class="label">Open to new players</div></article>
+
+    <section class="metrics">
+      <article class="stat-card"><div class="stat-value">24/7</div><div class="stat-label">Live story uptime</div></article>
+      <article class="stat-card"><div class="stat-value">Staff Online</div><div class="stat-label">Moderation and support coverage</div></article>
+      <article class="stat-card"><div class="stat-value">Custom Core</div><div class="stat-label">Purpose-built progression systems</div></article>
+      <article class="stat-card"><div class="stat-value">Public Access</div><div class="stat-label">Open onboarding for new players</div></article>
     </section>
+
     <section>
       <div class="section-title">
-        <h2>Why Bloodline feels different</h2>
-        <span class="subtle">A cleaner foundation, stronger storytelling, better pace.</span>
+        <h2>Built to feel alive every night</h2>
+        <span class="subtle">A complete city rhythm instead of isolated features.</span>
       </div>
       <div class="feature-grid">
-        <article class="card"><h3>Story-first city</h3><p>Every route has room to breathe, from civilians to criminals to emergency services.</p></article>
-        <article class="card"><h3>Balanced progression</h3><p>Progression is structured enough to feel rewarding, without becoming a grind.</p></article>
-        <article class="card"><h3>Approachable but serious</h3><p>New players can jump in without feeling lost, while long-term players still get depth.</p></article>
+        <article class="card">
+          <h3>Civilian economy depth</h3>
+          <p>Business ownership, legal jobs, and social hubs give civilian storylines weight and continuity.</p>
+        </article>
+        <article class="card">
+          <h3>Criminal progression lanes</h3>
+          <p>Organized risk and escalation paths reward teamwork, planning, and roleplay consequence.</p>
+        </article>
+        <article class="card">
+          <h3>Responsive public services</h3>
+          <p>Law enforcement and emergency response are integrated as active narrative forces in the city.</p>
+        </article>
       </div>
     </section>
+
+    <section class="timeline">
+      <article class="timeline-item">
+        <h3>Start your identity</h3>
+        <p>Join with a clear character concept and build your foundation in neighborhoods, jobs, and community spaces.</p>
+      </article>
+      <article class="timeline-item">
+        <h3>Create friction and stakes</h3>
+        <p>Every strong story needs pressure. Rivalries, investigations, politics, and business tension shape the city.</p>
+      </article>
+      <article class="timeline-item">
+        <h3>Leave a legacy</h3>
+        <p>Characters earn reputation through consistency, scene quality, and choices that impact others long-term.</p>
+      </article>
+    </section>
+
     <section class="cta-banner">
-      <div><h3>Ready to step into the city?</h3><p>Apply now, read the rules, and join the next chapter.</p></div>
-      <div class="hero-actions"><a class="btn btn-primary" href="applications.html">Apply Now</a><a class="btn btn-ghost" href="rules.html">View Rules</a></div>
+      <div>
+        <h3>Ready to become part of Bloodline?</h3>
+        <p>Apply, link your account, and step into a city that rewards serious roleplay.</p>
+      </div>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="applications.html">Apply Now</a>
+        <a class="btn btn-ghost" href="account.html">Open Account Hub</a>
+      </div>
     </section>
   </main>
-  <footer class="site-footer"><p>Bloodline RP © <span id="year"></span>. All rights reserved.</p></footer>
+
+  <footer class="site-footer">
+    <p>Bloodline RP © <span id="year"></span>. All rights reserved.</p>
+  </footer>
+
   <script src="auth-config.js"></script>
   <script src="script.js"></script>
 </body>
