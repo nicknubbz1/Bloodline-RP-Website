@@ -126,10 +126,10 @@ a { color: inherit; text-decoration: none; }
   border-radius: 0;
   clip-path: polygon(10% 0, 90% 0, 100% 8%, 100% 92%, 92% 100%, 8% 100%, 0 92%, 0 8%);
   background: linear-gradient(180deg, #181f2a, #121822);
-  min-height: 31rem;
-  padding: 1.2rem 1rem 1.15rem;
+  min-height: 33rem;
+  padding: 1.3rem 1rem 1.2rem;
   display: grid;
-  gap: 0.95rem;
+  gap: 1rem;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03), 0 18px 36px rgba(0, 0, 0, 0.38);
 }
 
@@ -209,7 +209,7 @@ a { color: inherit; text-decoration: none; }
   position: relative;
   z-index: 1;
   margin: 0;
-  min-height: 3.4em;
+  min-height: 3.7em;
   color: #ccd5e5;
   font-size: 0.96rem;
   line-height: 1.5;
