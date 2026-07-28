@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260727e" />
+  <link rel="stylesheet" href="style.css?v=20260728b" />
 </head>
 <body id="home">
 <header class="site-header">
@@ -39,6 +39,27 @@
       <div class="btn-row">
         <a class="btn btn-ghost" href="applications.html?v=20260728a">Apply To Server</a>
         <a class="btn btn-ghost" href="rules.html">Check Rules</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section connect-panel-section" aria-label="Server connect panel">
+    <div class="connect-panel">
+      <div class="connect-panel-copy">
+        <p class="eyebrow">Server access</p>
+        <h2>Jump straight into Bloodline</h2>
+        <p>Check the live server state, see how many players are connected, and join the queue in one click.</p>
+      </div>
+      <div class="connect-panel-stats">
+        <div class="connect-stat">
+          <span class="connect-stat-label">Server Status</span>
+          <span class="connect-stat-value" id="serverStatusText">Checking…</span>
+        </div>
+        <div class="connect-stat">
+          <span class="connect-stat-label">Player Count</span>
+          <span class="connect-stat-value" id="serverPopulation">-- / --</span>
+        </div>
+        <a class="connect-action" id="connectQueueButton" href="#" aria-disabled="true">Connect</a>
       </div>
     </div>
   </section>
@@ -86,6 +107,6 @@
 </footer>
 
 <script src="auth-config.js"></script>
-<script src="script.js?v=20260728a"></script>
+<script src="script.js?v=20260728b"></script>
 </body>
 </html>

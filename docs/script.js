@@ -425,15 +425,17 @@ function initConnectPanel() {
       const players = payload.players ?? payload.online ?? payload.population ?? 0;
       const maxPlayers = payload.maxPlayers ?? payload.max ?? payload.capacity ?? "?";
       const queue = payload.queue ?? payload.queued ?? payload.queueCount ?? 0;
+      const rawStatus = payload.status ?? payload.serverStatus ?? payload.state ?? payload.online ?? payload.isOnline;
+      const isOnline = rawStatus === true || rawStatus === "online" || rawStatus === "running" || rawStatus === "up";
 
       populationEl.textContent = `${players}/${maxPlayers}`;
       queueEl.textContent = String(queue);
-      statusEl.textContent = "Live status updated.";
+      statusEl.textContent = isOnline ? "Online" : "Offline";
     })
     .catch(() => {
       populationEl.textContent = "Unavailable";
       queueEl.textContent = "Unavailable";
-      statusEl.textContent = "Could not reach live status endpoint.";
+      statusEl.textContent = "Offline";
     });
 }
 
