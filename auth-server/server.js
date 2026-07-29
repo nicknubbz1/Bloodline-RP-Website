@@ -21,6 +21,7 @@ const discordClientSecret = process.env.DISCORD_CLIENT_SECRET;
 const discordGuildId = process.env.DISCORD_GUILD_ID || "";
 const discordStaffRoleId = process.env.DISCORD_STAFF_ROLE_ID || "";
 const discordBotToken = process.env.DISCORD_BOT_TOKEN || "";
+const discordInviteUrl = process.env.DISCORD_INVITE_URL || "";
 
 const steamEnabled = Boolean(steamApiKey);
 const discordEnabled = Boolean(discordClientId && discordClientSecret);
@@ -508,6 +509,43 @@ app.get("/api/application-types", (_req, res) => {
   res.json({
     types: applicationTypes,
   });
+});
+
+app.get("/api/discord/stats", async (_req, res) => {
+  if (!discordGuildId || !discordBotToken) {
+    res.status(503).json({
+      error: "Discord stats are not configured.",
+      inviteUrl: discordInviteUrl,
+    });
+    return;
+  }
+
+  try {
+    const response = await discordGet(`/guilds/${discordGuildId}?with_counts=true`);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      res.status(502).json({
+        error: `Discord stats request failed (${response.statusCode}).`,
+        inviteUrl: discordInviteUrl,
+      });
+      return;
+    }
+
+    const payload = JSON.parse(response.body || "{}");
+    const memberCount = Number(payload.approximate_member_count ?? payload.member_count ?? 0);
+    const onlineCount = Number(payload.approximate_presence_count ?? payload.presence_count ?? 0);
+
+    res.json({
+      memberCount: Number.isFinite(memberCount) ? memberCount : 0,
+      onlineCount: Number.isFinite(onlineCount) ? onlineCount : 0,
+      inviteUrl: discordInviteUrl,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: "Could not load Discord stats.",
+      details: error.message || "Unknown error",
+      inviteUrl: discordInviteUrl,
+    });
+  }
 });
 
 app.post("/api/applications", requireLinkedAccount, (req, res) => {

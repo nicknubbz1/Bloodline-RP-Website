@@ -20,6 +20,7 @@ This server handles Steam OpenID, Discord OAuth, staff-role checks, and applicat
    - `DISCORD_GUILD_ID`
    - `DISCORD_STAFF_ROLE_ID`
    - `DISCORD_BOT_TOKEN`
+   - `DISCORD_INVITE_URL`
    - `SESSION_SECRET`
 3. Install dependencies:
    - `npm install`
@@ -37,6 +38,7 @@ This server handles Steam OpenID, Discord OAuth, staff-role checks, and applicat
 
 ## API endpoints
 - `GET /api/application-types`: return available application categories
+- `GET /api/discord/stats`: return live Discord member count, online count, and invite URL
 - `POST /api/applications`: create a new application (requires linked Steam and Discord)
 - `GET /api/my-applications`: list applications submitted by the current account
 - `GET /api/staff/applications`: list applications with optional `type`, `status`, and `search` filters (staff role required)

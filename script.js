@@ -52,6 +52,8 @@ const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3
 const authSessionUrl = window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
+const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "";
+const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "";
 const storeCartStorageKey = "bloodline-store-cart";
 let steamLoginModal = null;
 let connectQueueModal = null;
@@ -151,12 +153,68 @@ function ensureSteamLoginModal() {
 }
 
 function initSocialButtons() {
+  const discordStatsEl = document.querySelector('[data-social-stat="discord"]');
+  const discordLinkEl = document.querySelector('[data-social-platform="discord"]');
+
+  const setDiscordLinkState = (url) => {
+    if (!discordLinkEl) {
+      return;
+    }
+
+    const nextUrl = typeof url === "string" ? url.trim() : "";
+    if (nextUrl) {
+      discordLinkEl.setAttribute("href", nextUrl);
+      discordLinkEl.removeAttribute("aria-disabled");
+      discordLinkEl.setAttribute("target", "_blank");
+      discordLinkEl.setAttribute("rel", "noopener noreferrer");
+      return;
+    }
+
+    discordLinkEl.setAttribute("href", "#");
+    discordLinkEl.setAttribute("aria-disabled", "true");
+    discordLinkEl.removeAttribute("target");
+    discordLinkEl.removeAttribute("rel");
+  };
+
+  const formatCount = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric < 0) {
+      return "--";
+    }
+    return Math.round(numeric).toLocaleString("en-US");
+  };
+
+  setDiscordLinkState(discordInviteUrl);
+
   document.querySelectorAll("[data-social-stat]").forEach((el) => {
     const key = el.getAttribute("data-social-stat");
     if (key && socialStats[key]) {
       el.textContent = socialStats[key];
     }
   });
+
+  if (discordStatsUrl && discordStatsEl) {
+    fetch(discordStatsUrl)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("discord-stats-unavailable");
+        }
+        return response.json();
+      })
+      .then((payload) => {
+        const memberCount = formatCount(payload.memberCount);
+        const onlineCount = formatCount(payload.onlineCount);
+        if (memberCount !== "--") {
+          discordStatsEl.textContent = `${memberCount} members · ${onlineCount} online`;
+        }
+
+        if (typeof payload.inviteUrl === "string") {
+          setDiscordLinkState(payload.inviteUrl);
+        }
+      })
+      .catch(() => {
+      });
+  }
 
   document.querySelectorAll("[data-social-platform]").forEach((link) => {
     link.addEventListener("click", (event) => {
