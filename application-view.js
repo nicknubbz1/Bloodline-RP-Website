@@ -124,6 +124,11 @@
       return;
     }
 
+    if (!isLoggedInLocally()) {
+      alert("Please log in with Steam before submitting.");
+      return;
+    }
+
     const fields = Array.from(fieldsWrap.querySelectorAll("input, textarea, select"));
     const responses = [];
 
@@ -139,11 +144,6 @@
         question: field.getAttribute("data-question-label") || field.name,
         answer: value,
       });
-    }
-
-    if (!isLoggedInLocally()) {
-      alert("Please log in with Steam before submitting.");
-      return;
     }
 
     const body = responses
