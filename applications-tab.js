@@ -41,18 +41,27 @@
     }, {});
   }
 
+  function formatOpenCount(count) {
+    if (count === 1) {
+      return "1 Open Form";
+    }
+    return count + " Open Forms";
+  }
+
   function createCardMarkup(form) {
     const questionCount = Array.isArray(form.questions) ? form.questions.length : 0;
     const description = form.description || "Open application.";
     return ""
-      + '<article class="app-directory-card">'
-      + '<h4>' + escapeHtml(form.title) + '</h4>'
-      + '<p>' + escapeHtml(description) + '</p>'
-      + '<div class="app-directory-meta">'
-      + '<span>' + questionCount + ' questions</span>'
-      + '<span>Open</span>'
+      + '<article class="app-directory-item">'
+      + '<div class="app-directory-item-main">'
+      + '<h4 class="app-directory-title">' + escapeHtml(form.title) + '</h4>'
+      + '<p class="app-directory-description">' + escapeHtml(description) + '</p>'
       + '</div>'
-      + '<a class="btn btn-primary" href="application-view.html?form=' + encodeURIComponent(form.key) + '">Open Application</a>'
+      + '<div class="app-directory-item-side">'
+      + '<span class="app-directory-questions">' + questionCount + ' questions</span>'
+      + '<span class="app-directory-status">Open</span>'
+      + '<a class="btn btn-primary app-directory-open-btn" href="application-view.html?form=' + encodeURIComponent(form.key) + '">Start</a>'
+      + '</div>'
       + '</article>';
   }
 
@@ -79,13 +88,15 @@
         + '<header class="app-category-head">'
         + '<h3>' + escapeHtml(meta.title) + '</h3>'
         + '<p>' + escapeHtml(meta.copy) + '</p>'
-        + '<span class="app-category-count">' + entries.length + ' Open</span>'
+        + '<span class="app-category-count">' + formatOpenCount(entries.length) + '</span>'
         + '</header>'
         + '<div class="app-category-cards"></div>';
 
       const cardsWrap = section.querySelector(".app-category-cards");
       if (cardsWrap) {
-        cardsWrap.innerHTML = entries.map(createCardMarkup).join("");
+        cardsWrap.innerHTML = entries.length
+          ? entries.map(createCardMarkup).join("")
+          : '<article class="app-directory-item app-directory-item-empty"><p>No forms are currently open in this category.</p></article>';
       }
 
       catalog.appendChild(section);
