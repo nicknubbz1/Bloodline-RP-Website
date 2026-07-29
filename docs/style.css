@@ -180,9 +180,9 @@ main.page-shell {
   overflow: hidden;
   background:
     linear-gradient(120deg, rgba(0, 0, 0, 0.55), rgba(0,0,0,0.55)),
-    radial-gradient(920px 460px at 16% 8%, rgba(178, 32, 32, 0.22), transparent 54%),
-    radial-gradient(760px 420px at 86% 28%, rgba(126, 22, 22, 0.16), transparent 58%),
-    linear-gradient(180deg, #171a20, #0d0f14);
+    radial-gradient(920px 460px at 16% 8%, rgba(192, 36, 36, 0.3), transparent 54%),
+    radial-gradient(760px 420px at 86% 28%, rgba(140, 24, 24, 0.22), transparent 58%),
+    linear-gradient(180deg, #1a181d, #0d0d12);
   box-shadow: var(--shadow);
 }
 
@@ -388,9 +388,9 @@ main.page-shell {
   overflow: hidden;
   background:
     linear-gradient(120deg, rgba(0, 0, 0, 0.55), rgba(0,0,0,0.55)),
-    radial-gradient(920px 460px at 16% 8%, rgba(178, 32, 32, 0.22), transparent 54%),
-    radial-gradient(760px 420px at 86% 28%, rgba(126, 22, 22, 0.16), transparent 58%),
-    linear-gradient(180deg, #171a20, #0d0f14);
+    radial-gradient(920px 460px at 16% 8%, rgba(192, 36, 36, 0.3), transparent 54%),
+    radial-gradient(760px 420px at 86% 28%, rgba(140, 24, 24, 0.22), transparent 58%),
+    linear-gradient(180deg, #1a181d, #0d0d12);
   box-shadow: var(--shadow);
   padding: 1.1rem 1.2rem;
 }
