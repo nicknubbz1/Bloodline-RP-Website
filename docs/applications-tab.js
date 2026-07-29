@@ -65,6 +65,22 @@
       + '</article>';
   }
 
+  function sortEntries(entries, type) {
+    if (type !== "server") {
+      return entries;
+    }
+
+    return entries.slice().sort(function (a, b) {
+      if (a.key === "allowlist-app" && b.key !== "allowlist-app") {
+        return -1;
+      }
+      if (b.key === "allowlist-app" && a.key !== "allowlist-app") {
+        return 1;
+      }
+      return 0;
+    });
+  }
+
   function renderCatalog() {
     if (!catalog) {
       return;
@@ -76,7 +92,7 @@
     catalog.innerHTML = "";
 
     categoryOrder.forEach(function (type) {
-      const entries = grouped[type] || [];
+      const entries = sortEntries(grouped[type] || [], type);
       const meta = categoryMeta[type] || {
         title: type,
         copy: "",
