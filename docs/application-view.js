@@ -6,6 +6,9 @@
   const fieldsWrap = document.getElementById("applicationViewFields");
   const formEl = document.getElementById("applicationViewForm");
   const messageEl = document.getElementById("applicationViewMessage");
+  const loginPopupEl = document.getElementById("loginRequiredPopup");
+  const loginPopupCloseEl = document.getElementById("loginRequiredPopupClose");
+  const loginPopupLoginEl = document.getElementById("loginRequiredPopupLogin");
 
   const params = new URLSearchParams(window.location.search);
   const formKey = params.get("form") || "";
@@ -41,6 +44,25 @@
     } catch {
       return false;
     }
+  }
+
+  function showLoginRequiredPopup() {
+    if (!loginPopupEl) {
+      return;
+    }
+    loginPopupEl.hidden = false;
+    document.body.classList.add("popup-open");
+    if (loginPopupCloseEl) {
+      loginPopupCloseEl.focus();
+    }
+  }
+
+  function hideLoginRequiredPopup() {
+    if (!loginPopupEl) {
+      return;
+    }
+    loginPopupEl.hidden = true;
+    document.body.classList.remove("popup-open");
   }
 
   function renderField(question, index) {
@@ -125,7 +147,7 @@
     }
 
     if (!isLoggedInLocally()) {
-      alert("Please log in with Steam before submitting.");
+      showLoginRequiredPopup();
       return;
     }
 
@@ -197,6 +219,30 @@
   }
 
   renderForm();
+  if (loginPopupCloseEl) {
+    loginPopupCloseEl.addEventListener("click", hideLoginRequiredPopup);
+  }
+  if (loginPopupLoginEl) {
+    loginPopupLoginEl.addEventListener("click", function () {
+      hideLoginRequiredPopup();
+      const loginTrigger = document.querySelector(".login-trigger");
+      if (loginTrigger) {
+        loginTrigger.click();
+      }
+    });
+  }
+  if (loginPopupEl) {
+    loginPopupEl.addEventListener("click", function (event) {
+      if (event.target === loginPopupEl) {
+        hideLoginRequiredPopup();
+      }
+    });
+  }
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && loginPopupEl && !loginPopupEl.hidden) {
+      hideLoginRequiredPopup();
+    }
+  });
   if (formEl) {
     formEl.addEventListener("submit", submit);
   }
