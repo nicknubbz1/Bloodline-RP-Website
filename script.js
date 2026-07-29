@@ -56,6 +56,7 @@ const adminSessionUrl = window.BLOODLINE_ADMIN_SESSION_URL || `${apiBaseUrl}/adm
 const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-status`;
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
+const adminDashboardUrl = "admin.html?v=20260729m";
 const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:3000/api/discord/stats";
 const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
 const storeCartStorageKey = "bloodline-store-cart";
@@ -1323,7 +1324,7 @@ function ensureAdminLoginModal() {
           writeAdminAuthState({ staySignedIn });
           closeAdminLoginModal();
           updateAdminJoinButtons();
-          window.location.href = "admin.html";
+          window.location.href = adminDashboardUrl;
           return;
         }
 
@@ -1339,7 +1340,7 @@ function ensureAdminLoginModal() {
         writeAdminAuthState({ staySignedIn });
         closeAdminLoginModal();
         updateAdminJoinButtons();
-        window.location.href = "admin.html";
+        window.location.href = adminDashboardUrl;
       } catch {
         const localAdmin = localAdminLogin(username, password, staySignedIn);
         if (!localAdmin) {
@@ -1355,7 +1356,7 @@ function ensureAdminLoginModal() {
         writeAdminAuthState({ staySignedIn });
         closeAdminLoginModal();
         updateAdminJoinButtons();
-        window.location.href = "admin.html";
+        window.location.href = adminDashboardUrl;
       }
     });
   }
@@ -1396,7 +1397,7 @@ function updateAdminJoinButtons() {
   buttons.forEach((button) => {
     if (adminSessionState.loggedIn) {
       button.textContent = "Admin Dashboard";
-      button.setAttribute("href", "admin.html");
+      button.setAttribute("href", adminDashboardUrl);
       button.setAttribute("aria-label", "Open admin dashboard");
     } else {
       button.textContent = "Admin Login";
