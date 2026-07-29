@@ -122,6 +122,24 @@
     return sanitizeLocalAdminUser(target);
   }
 
+  function updateLocalAdminUser(userId, applyChanges) {
+    const users = ensureLocalAdminUsers();
+    const index = users.findIndex((entry) => entry.id === userId);
+    if (index < 0) {
+      return null;
+    }
+
+    const current = users[index];
+    const next = applyChanges(current);
+    if (!next) {
+      return null;
+    }
+
+    users[index] = next;
+    writeStoredJson(localStorage, localAdminUsersKey, users);
+    return next;
+  }
+
   function normalizePermissions(raw) {
     const entry = raw || {};
     return {
@@ -488,6 +506,28 @@
         return;
       }
 
+      if (state.localMode) {
+        const localUsers = ensureLocalAdminUsers();
+        const current = localUsers.find((entry) => entry.id === state.admin?.id);
+        if (!current) {
+          window.alert("Admin login required.");
+          return;
+        }
+        if (String(current.password || "") !== String(currentPassword)) {
+          window.alert("Current password is incorrect.");
+          return;
+        }
+
+        updateLocalAdminUser(current.id, function (entry) {
+          return {
+            ...entry,
+            password: String(newPassword),
+          };
+        });
+        window.alert("Password changed.");
+        return;
+      }
+
       try {
         await requestJson(`${apiBaseUrl}/admin/change-password`, {
           method: "POST",
@@ -510,6 +550,39 @@
 
       const username = window.prompt("Enter new username for main admin:");
       if (!username) {
+        return;
+      }
+
+      if (state.localMode) {
+        const nextUsername = String(username).trim();
+        if (!nextUsername) {
+          window.alert("Username is required.");
+          return;
+        }
+
+        const localUsers = ensureLocalAdminUsers();
+        const alreadyUsed = localUsers.some(function (entry) {
+          return entry.id !== state.admin.id && String(entry.username || "").toLowerCase() === nextUsername.toLowerCase();
+        });
+        if (alreadyUsed) {
+          window.alert("Username already exists.");
+          return;
+        }
+
+        updateLocalAdminUser(state.admin.id, function (entry) {
+          return {
+            ...entry,
+            username: nextUsername,
+          };
+        });
+
+        state.admin = {
+          ...state.admin,
+          username: nextUsername,
+        };
+        renderAdminMeta();
+        await loadUsers();
+        window.alert("Username changed.");
         return;
       }
 
@@ -569,6 +642,34 @@
         },
       };
 
+      if (state.localMode) {
+        if (!payload.username || !payload.password) {
+          window.alert("Username and password are required.");
+          return;
+        }
+
+        const localUsers = ensureLocalAdminUsers();
+        const duplicate = localUsers.some(function (entry) {
+          return String(entry.username || "").toLowerCase() === payload.username.toLowerCase();
+        });
+        if (duplicate) {
+          window.alert("Username already exists.");
+          return;
+        }
+
+        localUsers.push({
+          id: `local-admin-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          username: payload.username,
+          password: payload.password,
+          isMainAdmin: false,
+          permissions: normalizePermissions(payload.permissions),
+        });
+        writeStoredJson(localStorage, localAdminUsersKey, localUsers);
+        createAdminUserForm.reset();
+        await loadUsers();
+        return;
+      }
+
       try {
         await requestJson(`${apiBaseUrl}/admin/users`, {
           method: "POST",
@@ -600,6 +701,62 @@
       }
 
       const action = button.getAttribute("data-action");
+
+      if (state.localMode) {
+        if (action === "delete") {
+          if (!window.confirm("Delete this admin profile?")) {
+            return;
+          }
+
+          if (target.isMainAdmin) {
+            window.alert("Main admin profile cannot be deleted.");
+            return;
+          }
+
+          const localUsers = ensureLocalAdminUsers().filter(function (entry) {
+            return entry.id !== userId;
+          });
+          writeStoredJson(localStorage, localAdminUsersKey, localUsers);
+          await loadUsers();
+          return;
+        }
+
+        if (action === "set-password") {
+          const newPassword = window.prompt("Enter a new password for this profile:");
+          if (!newPassword) {
+            return;
+          }
+
+          updateLocalAdminUser(userId, function (entry) {
+            return {
+              ...entry,
+              password: String(newPassword),
+            };
+          });
+          await loadUsers();
+          return;
+        }
+
+        const permissions = normalizePermissions(target.permissions);
+        if (action === "toggle-applications") {
+          permissions.applications = !permissions.applications;
+        } else if (action === "toggle-maintenance") {
+          permissions.websiteMaintenance = !permissions.websiteMaintenance;
+        } else if (action === "toggle-subscriptions") {
+          permissions.subscriptions = !permissions.subscriptions;
+        } else if (action === "toggle-permissions") {
+          permissions.permissions = !permissions.permissions;
+        }
+
+        updateLocalAdminUser(userId, function (entry) {
+          return {
+            ...entry,
+            permissions,
+          };
+        });
+        await loadUsers();
+        return;
+      }
 
       if (action === "delete") {
         if (!window.confirm("Delete this admin profile?")) {
