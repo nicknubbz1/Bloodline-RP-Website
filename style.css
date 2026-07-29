@@ -72,9 +72,9 @@ a { color: inherit; text-decoration: none; }
 
 .brand img {
   display: block;
-  height: 2.45rem;
+  height: 3.8rem;
   width: auto;
-  max-width: min(260px, 44vw);
+  max-width: min(420px, 62vw);
   object-fit: contain;
 }
 
