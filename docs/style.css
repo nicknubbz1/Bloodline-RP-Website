@@ -1119,9 +1119,10 @@ main.page-shell {
 
 .app-directory-open-btn {
   min-width: 68px;
-  padding: 0.2rem 0.42rem;
+  padding: 0.2rem 0.42rem !important;
   border-radius: 0.55rem;
-  font-size: 0.58rem;
+  font-size: 0.58rem !important;
+  line-height: 1.05;
 }
 
 .app-directory-open-btn.btn-primary {
