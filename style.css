@@ -57,8 +57,8 @@ a { color: inherit; text-decoration: none; }
   font-size: 2rem;
   line-height: 1;
   display: inline-flex;
-  align-items: flex-end;
-  gap: 0.24rem;
+  align-items: center;
+  line-height: 0;
 }
 
 .brand small {
@@ -68,6 +68,14 @@ a { color: inherit; text-decoration: none; }
   font-weight: 700;
   letter-spacing: 0.04em;
   opacity: 0.92;
+}
+
+.brand img {
+  display: block;
+  height: 2.45rem;
+  width: auto;
+  max-width: min(260px, 44vw);
+  object-fit: contain;
 }
 
 .nav {
