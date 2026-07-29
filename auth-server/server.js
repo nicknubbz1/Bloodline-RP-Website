@@ -43,6 +43,13 @@ const applicationTypes = [
 ];
 const validApplicationTypeKeys = new Set(applicationTypes.map((entry) => entry.key));
 const applicationStorePath = path.join(__dirname, "data", "applications.json");
+const archivedApplicationStorePath = path.join(__dirname, "data", "applications-archived.json");
+const adminUsersStorePath = path.join(__dirname, "data", "admin-users.json");
+const adminSettingsStorePath = path.join(__dirname, "data", "admin-settings.json");
+const subscriptionsStorePath = path.join(__dirname, "data", "subscriptions.json");
+const defaultMainAdminUsername = process.env.MAIN_ADMIN_USERNAME || "1234";
+const defaultMainAdminPassword = process.env.MAIN_ADMIN_PASSWORD || "1234";
+const adminSessionDays = Number(process.env.ADMIN_SESSION_DAYS || 30);
 
 function cleanText(value, maxLength) {
   if (typeof value !== "string") {
@@ -71,6 +78,53 @@ function normalizeResponses(rawResponses) {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
+  const digest = crypto.scryptSync(String(password || ""), salt, 64).toString("hex");
+  return {
+    salt,
+    hash: digest,
+  };
+}
+
+function verifyPassword(password, salt, expectedHash) {
+  if (!salt || !expectedHash) {
+    return false;
+  }
+  const digest = crypto.scryptSync(String(password || ""), salt, 64).toString("hex");
+  return crypto.timingSafeEqual(Buffer.from(digest, "hex"), Buffer.from(expectedHash, "hex"));
+}
+
+function cleanUsername(value) {
+  return cleanText(value, 40).toLowerCase();
+}
+
+function normalizePermissions(rawPermissions = {}) {
+  return {
+    applications: Boolean(rawPermissions.applications),
+    websiteMaintenance: Boolean(rawPermissions.websiteMaintenance),
+    subscriptions: Boolean(rawPermissions.subscriptions),
+    permissions: Boolean(rawPermissions.permissions),
+  };
+}
+
+function isMainAdmin(user) {
+  return Boolean(user && user.isMainAdmin);
+}
+
+function sanitizeAdminUser(adminUser) {
+  if (!adminUser) {
+    return null;
+  }
+  return {
+    id: adminUser.id,
+    username: adminUser.username,
+    isMainAdmin: Boolean(adminUser.isMainAdmin),
+    permissions: normalizePermissions(adminUser.permissions),
+    createdAt: adminUser.createdAt,
+    updatedAt: adminUser.updatedAt,
+  };
 }
 
 function buildSeedApplications() {
@@ -140,6 +194,123 @@ function ensureApplicationStore() {
     const seed = { applications: buildSeedApplications() };
     fs.writeFileSync(applicationStorePath, JSON.stringify(seed, null, 2), "utf8");
   }
+}
+
+function ensureJsonFile(filePath, fallbackData) {
+  const dataDir = path.dirname(filePath);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, JSON.stringify(fallbackData, null, 2), "utf8");
+  }
+}
+
+function readJsonFile(filePath, fallbackData) {
+  ensureJsonFile(filePath, fallbackData);
+  try {
+    const raw = fs.readFileSync(filePath, "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return fallbackData;
+  }
+}
+
+function writeJsonFile(filePath, nextValue) {
+  ensureJsonFile(filePath, nextValue);
+  fs.writeFileSync(filePath, JSON.stringify(nextValue, null, 2), "utf8");
+}
+
+function readArchivedApplicationStore() {
+  const store = readJsonFile(archivedApplicationStorePath, { applications: [] });
+  if (!Array.isArray(store.applications)) {
+    return { applications: [] };
+  }
+  return store;
+}
+
+function writeArchivedApplicationStore(nextStore) {
+  writeJsonFile(archivedApplicationStorePath, nextStore);
+}
+
+function readAdminUsersStore() {
+  const store = readJsonFile(adminUsersStorePath, { users: [] });
+  if (!Array.isArray(store.users)) {
+    return { users: [] };
+  }
+  return store;
+}
+
+function writeAdminUsersStore(nextStore) {
+  writeJsonFile(adminUsersStorePath, nextStore);
+}
+
+function readAdminSettingsStore() {
+  const store = readJsonFile(adminSettingsStorePath, {
+    maintenanceMode: false,
+    updatedAt: nowIso(),
+    updatedBy: "system",
+  });
+  return {
+    maintenanceMode: Boolean(store.maintenanceMode),
+    updatedAt: store.updatedAt || nowIso(),
+    updatedBy: store.updatedBy || "system",
+  };
+}
+
+function writeAdminSettingsStore(nextStore) {
+  writeJsonFile(adminSettingsStorePath, {
+    maintenanceMode: Boolean(nextStore.maintenanceMode),
+    updatedAt: nextStore.updatedAt || nowIso(),
+    updatedBy: nextStore.updatedBy || "system",
+  });
+}
+
+function readSubscriptionsStore() {
+  const store = readJsonFile(subscriptionsStorePath, {
+    current: [],
+    ended: [],
+  });
+  return {
+    current: Array.isArray(store.current) ? store.current : [],
+    ended: Array.isArray(store.ended) ? store.ended : [],
+  };
+}
+
+function writeSubscriptionsStore(nextStore) {
+  writeJsonFile(subscriptionsStorePath, {
+    current: Array.isArray(nextStore.current) ? nextStore.current : [],
+    ended: Array.isArray(nextStore.ended) ? nextStore.ended : [],
+  });
+}
+
+function ensureAdminBootstrapUser() {
+  const store = readAdminUsersStore();
+  const users = store.users || [];
+  if (users.length > 0) {
+    return;
+  }
+
+  const now = nowIso();
+  const credentials = hashPassword(defaultMainAdminPassword);
+  users.push({
+    id: crypto.randomUUID(),
+    username: cleanUsername(defaultMainAdminUsername),
+    isMainAdmin: true,
+    permissions: {
+      applications: true,
+      websiteMaintenance: true,
+      subscriptions: true,
+      permissions: true,
+    },
+    passwordSalt: credentials.salt,
+    passwordHash: credentials.hash,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  writeAdminUsersStore({ users });
 }
 
 function readApplicationStore() {
@@ -256,6 +427,43 @@ function requireLinkedAccount(req, res, next) {
     return;
   }
   next();
+}
+
+function requireAdminSession(req, res, next) {
+  const sessionAdmin = req.session.adminUser;
+  if (!sessionAdmin?.id) {
+    res.status(401).json({ error: "Admin login required." });
+    return;
+  }
+
+  const store = readAdminUsersStore();
+  const adminUser = store.users.find((user) => user.id === sessionAdmin.id) || null;
+  if (!adminUser) {
+    req.session.adminUser = null;
+    res.status(401).json({ error: "Admin account no longer exists." });
+    return;
+  }
+
+  req.adminUser = adminUser;
+  next();
+}
+
+function requireAdminPermission(permissionKey) {
+  return (req, res, next) => {
+    const adminUser = req.adminUser;
+    const permissions = normalizePermissions(adminUser?.permissions);
+    if (isMainAdmin(adminUser)) {
+      next();
+      return;
+    }
+
+    if (!permissions[permissionKey]) {
+      res.status(403).json({ error: "You do not have permission for this area." });
+      return;
+    }
+
+    next();
+  };
 }
 
 app.set("trust proxy", 1);
@@ -553,11 +761,426 @@ app.get("/api/my-applications", requireLinkedAccount, (req, res) => {
   });
 });
 
+app.get("/api/site-status", (_req, res) => {
+  const settings = readAdminSettingsStore();
+  res.json({
+    maintenanceMode: settings.maintenanceMode,
+    updatedAt: settings.updatedAt,
+    updatedBy: settings.updatedBy,
+  });
+});
+
+app.post("/api/admin/login", (req, res) => {
+  const username = cleanUsername(req.body.username);
+  const password = cleanText(req.body.password, 120);
+  const staySignedIn = Boolean(req.body.staySignedIn);
+
+  if (!username || !password) {
+    res.status(400).json({ error: "Username and password are required." });
+    return;
+  }
+
+  const store = readAdminUsersStore();
+  const adminUser = store.users.find((entry) => entry.username === username);
+  if (!adminUser || !verifyPassword(password, adminUser.passwordSalt, adminUser.passwordHash)) {
+    res.status(401).json({ error: "Invalid username or password." });
+    return;
+  }
+
+  req.session.adminUser = {
+    id: adminUser.id,
+  };
+
+  if (staySignedIn) {
+    req.session.cookie.maxAge = 1000 * 60 * 60 * 24 * Math.max(1, adminSessionDays);
+  } else {
+    req.session.cookie.expires = false;
+  }
+
+  res.json({
+    ok: true,
+    admin: sanitizeAdminUser(adminUser),
+  });
+});
+
+app.post("/api/admin/logout", (req, res) => {
+  req.session.adminUser = null;
+  res.json({ ok: true });
+});
+
+app.get("/api/admin/session", requireAdminSession, (req, res) => {
+  res.json({
+    ok: true,
+    admin: sanitizeAdminUser(req.adminUser),
+  });
+});
+
+app.post("/api/admin/change-password", requireAdminSession, (req, res) => {
+  const currentPassword = cleanText(req.body.currentPassword, 120);
+  const nextPassword = cleanText(req.body.newPassword, 120);
+
+  if (!nextPassword) {
+    res.status(400).json({ error: "New password is required." });
+    return;
+  }
+
+  if (!verifyPassword(currentPassword, req.adminUser.passwordSalt, req.adminUser.passwordHash)) {
+    res.status(401).json({ error: "Current password is incorrect." });
+    return;
+  }
+
+  const credentials = hashPassword(nextPassword);
+  const store = readAdminUsersStore();
+  const target = store.users.find((entry) => entry.id === req.adminUser.id);
+  if (!target) {
+    res.status(404).json({ error: "Admin account not found." });
+    return;
+  }
+
+  target.passwordSalt = credentials.salt;
+  target.passwordHash = credentials.hash;
+  target.updatedAt = nowIso();
+  writeAdminUsersStore(store);
+
+  res.json({ ok: true });
+});
+
+app.post("/api/admin/change-username", requireAdminSession, (req, res) => {
+  if (!isMainAdmin(req.adminUser)) {
+    res.status(403).json({ error: "Only the main admin can change username." });
+    return;
+  }
+
+  const nextUsername = cleanUsername(req.body.username);
+  if (!nextUsername) {
+    res.status(400).json({ error: "Username is required." });
+    return;
+  }
+
+  const store = readAdminUsersStore();
+  if (store.users.some((entry) => entry.username === nextUsername && entry.id !== req.adminUser.id)) {
+    res.status(409).json({ error: "Username already exists." });
+    return;
+  }
+
+  const target = store.users.find((entry) => entry.id === req.adminUser.id);
+  if (!target) {
+    res.status(404).json({ error: "Admin account not found." });
+    return;
+  }
+
+  target.username = nextUsername;
+  target.updatedAt = nowIso();
+  writeAdminUsersStore(store);
+
+  req.session.adminUser = { id: target.id };
+  res.json({ ok: true, admin: sanitizeAdminUser(target) });
+});
+
+app.get("/api/admin/users", requireAdminSession, requireAdminPermission("permissions"), (_req, res) => {
+  const store = readAdminUsersStore();
+  res.json({
+    users: store.users.map((entry) => sanitizeAdminUser(entry)),
+  });
+});
+
+app.post("/api/admin/users", requireAdminSession, requireAdminPermission("permissions"), (req, res) => {
+  const username = cleanUsername(req.body.username);
+  const password = cleanText(req.body.password, 120);
+  const permissions = normalizePermissions(req.body.permissions || {});
+
+  if (!username || !password) {
+    res.status(400).json({ error: "Username and password are required." });
+    return;
+  }
+
+  const store = readAdminUsersStore();
+  if (store.users.some((entry) => entry.username === username)) {
+    res.status(409).json({ error: "Username already exists." });
+    return;
+  }
+
+  const credentials = hashPassword(password);
+  const now = nowIso();
+  const createdUser = {
+    id: crypto.randomUUID(),
+    username,
+    isMainAdmin: false,
+    permissions,
+    passwordSalt: credentials.salt,
+    passwordHash: credentials.hash,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  store.users.push(createdUser);
+  writeAdminUsersStore(store);
+
+  res.status(201).json({
+    ok: true,
+    user: sanitizeAdminUser(createdUser),
+  });
+});
+
+app.patch("/api/admin/users/:id", requireAdminSession, requireAdminPermission("permissions"), (req, res) => {
+  const store = readAdminUsersStore();
+  const target = store.users.find((entry) => entry.id === req.params.id);
+  if (!target) {
+    res.status(404).json({ error: "Admin profile not found." });
+    return;
+  }
+
+  if (target.isMainAdmin && !isMainAdmin(req.adminUser)) {
+    res.status(403).json({ error: "Only the main admin can modify the main profile." });
+    return;
+  }
+
+  if (req.body.permissions && !target.isMainAdmin) {
+    target.permissions = normalizePermissions(req.body.permissions);
+  }
+
+  const nextPassword = cleanText(req.body.newPassword, 120);
+  if (nextPassword) {
+    const credentials = hashPassword(nextPassword);
+    target.passwordSalt = credentials.salt;
+    target.passwordHash = credentials.hash;
+  }
+
+  target.updatedAt = nowIso();
+  writeAdminUsersStore(store);
+
+  res.json({
+    ok: true,
+    user: sanitizeAdminUser(target),
+  });
+});
+
+app.delete("/api/admin/users/:id", requireAdminSession, requireAdminPermission("permissions"), (req, res) => {
+  const store = readAdminUsersStore();
+  const target = store.users.find((entry) => entry.id === req.params.id);
+  if (!target) {
+    res.status(404).json({ error: "Admin profile not found." });
+    return;
+  }
+
+  if (target.isMainAdmin) {
+    res.status(403).json({ error: "Main admin profile cannot be deleted." });
+    return;
+  }
+
+  const nextUsers = store.users.filter((entry) => entry.id !== target.id);
+  writeAdminUsersStore({ users: nextUsers });
+  res.json({ ok: true });
+});
+
+app.get("/api/admin/settings", requireAdminSession, (req, res) => {
+  const settings = readAdminSettingsStore();
+  res.json({
+    settings,
+    canManageMaintenance: isMainAdmin(req.adminUser) || normalizePermissions(req.adminUser.permissions).websiteMaintenance,
+  });
+});
+
+app.post("/api/admin/settings/maintenance", requireAdminSession, requireAdminPermission("websiteMaintenance"), (req, res) => {
+  const enabled = Boolean(req.body.enabled);
+  const settings = {
+    maintenanceMode: enabled,
+    updatedAt: nowIso(),
+    updatedBy: req.adminUser.username,
+  };
+  writeAdminSettingsStore(settings);
+  res.json({ ok: true, settings });
+});
+
+app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("applications"), (req, res) => {
+  const source = cleanText(req.query.source, 20).toLowerCase();
+  const type = cleanText(req.query.type, 40).toLowerCase();
+  const status = cleanText(req.query.status, 40).toLowerCase();
+  const search = cleanText(req.query.search, 120).toLowerCase();
+
+  const activeStore = readApplicationStore();
+  const archivedStore = readArchivedApplicationStore();
+  let applications = source === "archived" ? [...archivedStore.applications] : [...activeStore.applications];
+
+  if (type && type !== "all") {
+    applications = applications.filter((application) => application.type === type);
+  }
+
+  if (status && status !== "all") {
+    applications = applications.filter((application) => application.status === status);
+  }
+
+  if (search) {
+    applications = applications.filter((application) => {
+      const haystack = [
+        application.title,
+        application.body,
+        application.applicant?.steamName,
+        application.applicant?.discordName,
+        ...(Array.isArray(application.responses)
+          ? application.responses.flatMap((responseItem) => [responseItem.label, responseItem.answer])
+          : []),
+      ].join(" ").toLowerCase();
+      return haystack.includes(search);
+    });
+  }
+
+  applications.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+
+  res.json({
+    applications,
+    types: applicationTypes,
+    source: source === "archived" ? "archived" : "active",
+  });
+});
+
+app.post("/api/admin/applications/:id/replies", requireAdminSession, requireAdminPermission("applications"), (req, res) => {
+  const message = cleanText(req.body.message, 2000);
+  if (!message) {
+    res.status(400).json({ error: "Reply message is required." });
+    return;
+  }
+
+  const store = readApplicationStore();
+  const application = getApplicationById(store.applications, req.params.id);
+
+  if (!application) {
+    res.status(404).json({ error: "Application not found." });
+    return;
+  }
+
+  const reply = {
+    id: crypto.randomUUID(),
+    authorAdminId: req.adminUser.id,
+    authorName: req.adminUser.username,
+    message,
+    createdAt: nowIso(),
+  };
+
+  application.replies = Array.isArray(application.replies) ? application.replies : [];
+  application.replies.push(reply);
+  application.updatedAt = nowIso();
+
+  writeApplicationStore(store);
+
+  res.status(201).json({
+    ok: true,
+    reply,
+    application,
+  });
+});
+
+app.post("/api/admin/applications/:id/decision", requireAdminSession, requireAdminPermission("applications"), (req, res) => {
+  const decision = cleanText(req.body.decision, 20).toLowerCase();
+  const note = cleanText(req.body.note, 1200);
+
+  if (!["accepted", "denied", "pending"].includes(decision)) {
+    res.status(400).json({ error: "Decision must be accepted, denied, or pending." });
+    return;
+  }
+
+  const store = readApplicationStore();
+  const application = getApplicationById(store.applications, req.params.id);
+
+  if (!application) {
+    res.status(404).json({ error: "Application not found." });
+    return;
+  }
+
+  application.status = decision;
+  application.reviewedBy = {
+    adminId: req.adminUser.id,
+    name: req.adminUser.username,
+    reviewedAt: nowIso(),
+    note,
+  };
+  application.updatedAt = nowIso();
+
+  writeApplicationStore(store);
+
+  res.json({
+    ok: true,
+    application,
+  });
+});
+
+app.post("/api/admin/applications/:id/archive", requireAdminSession, requireAdminPermission("applications"), (req, res) => {
+  const activeStore = readApplicationStore();
+  const archivedStore = readArchivedApplicationStore();
+  const target = getApplicationById(activeStore.applications, req.params.id);
+
+  if (!target) {
+    res.status(404).json({ error: "Application not found." });
+    return;
+  }
+
+  activeStore.applications = activeStore.applications.filter((entry) => entry.id !== target.id);
+  archivedStore.applications.unshift({
+    ...target,
+    archivedAt: nowIso(),
+    archivedBy: req.adminUser.username,
+    updatedAt: nowIso(),
+  });
+
+  writeApplicationStore(activeStore);
+  writeArchivedApplicationStore(archivedStore);
+
+  res.json({ ok: true });
+});
+
+app.delete("/api/admin/applications/:id", requireAdminSession, requireAdminPermission("applications"), (req, res) => {
+  const archivedStore = readArchivedApplicationStore();
+  const before = archivedStore.applications.length;
+  archivedStore.applications = archivedStore.applications.filter((entry) => entry.id !== req.params.id);
+  if (archivedStore.applications.length === before) {
+    res.status(404).json({ error: "Archived application not found." });
+    return;
+  }
+
+  writeArchivedApplicationStore(archivedStore);
+  res.json({ ok: true });
+});
+
+app.get("/api/admin/subscriptions", requireAdminSession, requireAdminPermission("subscriptions"), (_req, res) => {
+  const subscriptions = readSubscriptionsStore();
+  res.json({
+    current: subscriptions.current,
+    ended: subscriptions.ended,
+  });
+});
+
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
 });
 
 ensureApplicationStore();
+ensureJsonFile(archivedApplicationStorePath, { applications: [] });
+ensureJsonFile(subscriptionsStorePath, {
+  current: [
+    {
+      id: "seed-sub-1",
+      name: "Sample Supporter",
+      tier: "Gold",
+      renewsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString(),
+      amount: "$14.99 / month",
+    },
+  ],
+  ended: [
+    {
+      id: "seed-sub-ended-1",
+      name: "Expired Supporter",
+      tier: "Silver",
+      endedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 40).toISOString(),
+      amount: "$9.99 / month",
+    },
+  ],
+});
+ensureJsonFile(adminSettingsStorePath, {
+  maintenanceMode: false,
+  updatedAt: nowIso(),
+  updatedBy: "system",
+});
+ensureAdminBootstrapUser();
 
 app.listen(port, () => {
   console.log(`Bloodline auth server listening on ${backendBaseUrl}`);

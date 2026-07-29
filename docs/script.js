@@ -50,11 +50,16 @@ const authCallbackMessageEl = document.getElementById("authCallbackMessage");
 const steamPopupUrl = window.BLOODLINE_STEAM_AUTH_URL || "http://localhost:3000/auth/steam";
 const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3000/auth/discord";
 const authSessionUrl = window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
+const apiBaseUrl = window.BLOODLINE_API_BASE_URL || "http://localhost:3000/api";
+const adminLoginUrl = window.BLOODLINE_ADMIN_LOGIN_URL || `${apiBaseUrl}/admin/login`;
+const adminSessionUrl = window.BLOODLINE_ADMIN_SESSION_URL || `${apiBaseUrl}/admin/session`;
+const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-status`;
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
 const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:3000/api/discord/stats";
 const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
 const storeCartStorageKey = "bloodline-store-cart";
+const adminAuthStorageKey = "bloodline-admin-auth";
 let steamLoginModal = null;
 let connectQueueModal = null;
 let storeCartState = {
@@ -1034,6 +1039,260 @@ function handleAuthCallbackPage() {
   return true;
 }
 
+let adminLoginModal = null;
+let adminSessionState = {
+  loggedIn: false,
+  admin: null,
+};
+
+function getJoinButtons() {
+  return Array.from(document.querySelectorAll(".join-btn"));
+}
+
+function readAdminAuthState() {
+  try {
+    return JSON.parse(localStorage.getItem(adminAuthStorageKey) || "{}") || {};
+  } catch {
+    return {};
+  }
+}
+
+function writeAdminAuthState(nextState) {
+  localStorage.setItem(adminAuthStorageKey, JSON.stringify(nextState || {}));
+}
+
+function ensureAdminLoginModal() {
+  if (adminLoginModal) {
+    return adminLoginModal;
+  }
+
+  adminLoginModal = document.createElement("div");
+  adminLoginModal.className = "login-modal admin-login-modal";
+  adminLoginModal.setAttribute("aria-hidden", "true");
+  adminLoginModal.innerHTML = `
+    <div class="login-modal-card admin-login-card" role="dialog" aria-modal="true" aria-labelledby="adminLoginTitle">
+      <button class="modal-close" type="button" data-admin-close aria-label="Close admin login">Close</button>
+      <div class="steam-login-mark">Bloodline RP</div>
+      <h2 id="adminLoginTitle">Admin Login</h2>
+      <p class="steam-login-copy">Sign in with your admin credentials.</p>
+      <form id="adminLoginForm" class="admin-login-form">
+        <label for="adminUsernameInput">Username</label>
+        <input id="adminUsernameInput" name="username" type="text" autocomplete="username" required />
+        <label for="adminPasswordInput">Password</label>
+        <input id="adminPasswordInput" name="password" type="password" autocomplete="current-password" required />
+        <label class="admin-stay-signed">
+          <input id="adminStaySignedInInput" name="staySignedIn" type="checkbox" />
+          <span>Stay signed in</span>
+        </label>
+        <p id="adminLoginMessage" class="admin-login-message" hidden></p>
+        <button class="connect-action" type="submit">Login</button>
+      </form>
+    </div>
+  `;
+
+  document.body.appendChild(adminLoginModal);
+
+  adminLoginModal.addEventListener("click", (event) => {
+    if (event.target === adminLoginModal) {
+      closeAdminLoginModal();
+    }
+  });
+
+  const closeButton = adminLoginModal.querySelector("[data-admin-close]");
+  if (closeButton) {
+    closeButton.addEventListener("click", closeAdminLoginModal);
+  }
+
+  const form = adminLoginModal.querySelector("#adminLoginForm");
+  if (form) {
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const usernameInput = form.querySelector("#adminUsernameInput");
+      const passwordInput = form.querySelector("#adminPasswordInput");
+      const staySignedInInput = form.querySelector("#adminStaySignedInInput");
+      const messageEl = form.querySelector("#adminLoginMessage");
+
+      if (!usernameInput || !passwordInput || !staySignedInInput || !messageEl) {
+        return;
+      }
+
+      messageEl.hidden = true;
+      const username = String(usernameInput.value || "").trim();
+      const password = String(passwordInput.value || "").trim();
+      const staySignedIn = Boolean(staySignedInInput.checked);
+
+      if (!username || !password) {
+        messageEl.textContent = "Enter username and password.";
+        messageEl.hidden = false;
+        return;
+      }
+
+      try {
+        const response = await fetch(adminLoginUrl, {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ username, password, staySignedIn }),
+        });
+
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          messageEl.textContent = payload.error || "Login failed.";
+          messageEl.hidden = false;
+          return;
+        }
+
+        adminSessionState = {
+          loggedIn: true,
+          admin: payload.admin || null,
+        };
+        writeAdminAuthState({ staySignedIn });
+        closeAdminLoginModal();
+        updateAdminJoinButtons();
+        window.location.href = "admin.html";
+      } catch {
+        messageEl.textContent = "Could not reach admin server.";
+        messageEl.hidden = false;
+      }
+    });
+  }
+
+  return adminLoginModal;
+}
+
+function openAdminLoginModal() {
+  const modal = ensureAdminLoginModal();
+  const staySignedInInput = modal.querySelector("#adminStaySignedInInput");
+  const saved = readAdminAuthState();
+  if (staySignedInInput) {
+    staySignedInInput.checked = Boolean(saved.staySignedIn);
+  }
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("modal-open");
+
+  const usernameInput = modal.querySelector("#adminUsernameInput");
+  if (usernameInput) {
+    usernameInput.focus();
+  }
+}
+
+function closeAdminLoginModal() {
+  if (!adminLoginModal) {
+    return;
+  }
+  adminLoginModal.classList.remove("is-open");
+  adminLoginModal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("modal-open");
+}
+
+function updateAdminJoinButtons() {
+  const buttons = getJoinButtons();
+  buttons.forEach((button) => {
+    if (adminSessionState.loggedIn) {
+      button.textContent = "Admin Dashboard";
+      button.setAttribute("href", "admin.html");
+      button.setAttribute("aria-label", "Open admin dashboard");
+    } else {
+      button.textContent = "Admin Login";
+      button.setAttribute("href", "#admin-login");
+      button.setAttribute("aria-label", "Open admin login");
+    }
+  });
+}
+
+function attachAdminJoinButtonHandlers() {
+  getJoinButtons().forEach((button) => {
+    if (button.dataset.adminReady === "true") {
+      return;
+    }
+
+    button.dataset.adminReady = "true";
+    button.addEventListener("click", (event) => {
+      if (adminSessionState.loggedIn) {
+        return;
+      }
+      event.preventDefault();
+      openAdminLoginModal();
+    });
+  });
+}
+
+async function refreshAdminSession() {
+  try {
+    const response = await fetch(adminSessionUrl, {
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      adminSessionState = {
+        loggedIn: false,
+        admin: null,
+      };
+      updateAdminJoinButtons();
+      return;
+    }
+
+    const payload = await response.json();
+    adminSessionState = {
+      loggedIn: true,
+      admin: payload.admin || null,
+    };
+    updateAdminJoinButtons();
+  } catch {
+    adminSessionState = {
+      loggedIn: false,
+      admin: null,
+    };
+    updateAdminJoinButtons();
+  }
+}
+
+async function applyMaintenanceGate() {
+  const page = window.location.pathname.split("/").pop() || "index.html";
+  if (page === "admin.html") {
+    return;
+  }
+
+  try {
+    const response = await fetch(siteStatusUrl, {
+      credentials: "include",
+    });
+    if (!response.ok) {
+      return;
+    }
+
+    const payload = await response.json();
+    if (!payload.maintenanceMode) {
+      return;
+    }
+
+    const mainEl = document.querySelector("main");
+    const footerEl = document.querySelector(".footer");
+    if (mainEl) {
+      mainEl.innerHTML = `
+        <section class="maintenance-screen">
+          <h1>Website Down For Maintenance</h1>
+          <p>All sections are temporarily unavailable while maintenance mode is enabled by admin.</p>
+        </section>
+      `;
+    }
+    if (footerEl) {
+      footerEl.style.display = "none";
+    }
+  } catch {
+    // Ignore maintenance check failures.
+  }
+}
+
+function initAdminEntry() {
+  attachAdminJoinButtonHandlers();
+  updateAdminJoinButtons();
+  refreshAdminSession();
+}
+
 loginTriggers.forEach((trigger) => {
   trigger.addEventListener("click", (event) => {
     event.preventDefault();
@@ -1053,6 +1312,7 @@ loginTriggers.forEach((trigger) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeSteamLoginModal();
+    closeAdminLoginModal();
     closeAccountDropdown();
     closeConnectQueueModal();
     closeStoreCartDrawer();
@@ -1095,6 +1355,8 @@ window.addEventListener("message", (event) => {
 renderAccountState();
 accountDropdownState = createAccountDropdown();
 updateAccountDropdownDetails();
+initAdminEntry();
+applyMaintenanceGate();
 initSocialButtons();
 initConnectPanel();
 initStoreCart();

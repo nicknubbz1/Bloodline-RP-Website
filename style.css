@@ -405,6 +405,219 @@ main.page-shell {
   font-size: 0.95rem;
 }
 
+.admin-login-form {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.admin-login-form input[type="text"],
+.admin-login-form input[type="password"],
+.admin-form input[type="text"],
+.admin-form input[type="password"],
+.admin-inline-controls input[type="search"],
+.admin-inline-controls select {
+  border: 1px solid var(--line-strong);
+  border-radius: 0.64rem;
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--text);
+  padding: 0.62rem 0.7rem;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 1rem;
+}
+
+.admin-stay-signed {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: #d6deee;
+}
+
+.admin-login-message {
+  margin: 0;
+  color: #ff9f9f;
+}
+
+.maintenance-screen {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(145deg, rgba(190, 24, 24, 0.3), rgba(0, 0, 0, 0.6));
+  box-shadow: var(--shadow);
+  padding: clamp(1.6rem, 5vw, 3rem);
+  text-align: center;
+}
+
+.maintenance-screen h1 {
+  margin: 0 0 0.6rem;
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+}
+
+.maintenance-screen p {
+  margin: 0;
+  color: #ffe3e3;
+}
+
+.admin-page {
+  gap: 0.95rem;
+}
+
+.admin-hero {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.admin-hero-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-hero h1 {
+  margin: 0.25rem 0 0;
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+}
+
+.admin-hero-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.admin-session-meta {
+  margin: 0;
+  color: #cdd8ea;
+}
+
+.admin-maintenance-toggle {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-maintenance-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+
+.admin-tab {
+  border: 1px solid var(--line-strong);
+  border-radius: 0.62rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: #d6deef;
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+  padding: 0.6rem 0.8rem;
+}
+
+.admin-tab.active {
+  border-color: var(--green-deep);
+  color: #ffd4d4;
+  background: rgba(255, 47, 47, 0.18);
+}
+
+.admin-tab-panel {
+  display: none;
+}
+
+.admin-tab-panel.active {
+  display: block;
+}
+
+.admin-grid.two-col {
+  display: grid;
+  gap: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-form {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-permission-grid {
+  display: grid;
+  gap: 0.35rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-users-list,
+.admin-applications-list,
+.admin-subscription-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.admin-user-card,
+.admin-application-card,
+.admin-subscription-card {
+  border: 1px solid var(--line);
+  border-radius: 0.74rem;
+  padding: 0.8rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-user-card h3,
+.admin-application-card h3,
+.admin-subscription-card h3 {
+  margin: 0 0 0.35rem;
+  font-family: "Oxanium", sans-serif;
+}
+
+.admin-user-card p,
+.admin-application-card p,
+.admin-subscription-card p {
+  margin: 0.2rem 0;
+  color: #ccdaef;
+}
+
+.admin-user-actions,
+.admin-inline-controls {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.admin-badge {
+  display: inline-flex;
+  padding: 0.24rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  font-family: "Oxanium", sans-serif;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+}
+
+.btn.btn-danger {
+  border-color: #a3102d;
+  color: #ffd4de;
+  background: rgba(163, 16, 45, 0.2);
+}
+
+.admin-empty {
+  margin: 0;
+  color: #93a4bf;
+}
+
+@media (max-width: 920px) {
+  .admin-grid.two-col {
+    grid-template-columns: 1fr;
+  }
+}
+
 .store-hero {
   display: grid;
   gap: 0.65rem;

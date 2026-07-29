@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bloodline RP | Admin Dashboard</title>
+  <meta name="description" content="Bloodline RP admin dashboard." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=20260729h" />
+</head>
+<body>
+<header class="site-header">
+  <div class="header-inner">
+    <a class="header-brand" href="index.html?v=20260729f">
+      <div class="brand"><img src="https://pub-17704311c9bd4f38a0026e11211f09af.r2.dev/Bloodline%20Banner.png" alt="Bloodline RP" /></div>
+    </a>
+    <nav class="nav" id="navMenu">
+      <a href="index.html?v=20260729f">Home</a>
+      <a href="store.html?v=20260729f">Store</a>
+      <a href="applications.html?v=20260729f">Applications</a>
+      <a href="rules.html?v=20260729f">Rules</a>
+      <a href="team.html?v=20260729q">MEET THE TEAM</a>
+    </nav>
+    <div class="header-actions">
+      <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">Menu</button>
+      <a class="icon-btn" href="store.html?v=20260729f" aria-label="Store"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 4h-2l-1 2v2h2l2.2 7.2a2 2 0 0 0 1.9 1.4h7.3a2 2 0 0 0 1.9-1.4l1.6-5.2a1 1 0 0 0-1-1.3h-10.6l-.5-2h12.1v-2h-13.6l-.4-1.2a1 1 0 0 0-1-.8Zm4 15a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Zm7 0a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Z"/></svg></a>
+      <a class="login-trigger" href="#login" aria-label="Login with Steam"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"/></svg></a>
+      <a class="join-btn" href="admin.html">Admin Dashboard</a>
+    </div>
+  </div>
+</header>
+
+<main class="page-shell admin-page">
+  <section class="section admin-hero">
+    <div class="admin-hero-head">
+      <div>
+        <p class="eyebrow">Control Center</p>
+        <h1>Admin Dashboard</h1>
+      </div>
+      <div class="admin-hero-actions">
+        <button class="btn btn-ghost" id="adminChangeUsernameBtn" type="button">Change Username</button>
+        <button class="btn btn-ghost" id="adminChangePasswordBtn" type="button">Change Password</button>
+        <button class="btn btn-primary" id="adminLogoutBtn" type="button">Logout</button>
+      </div>
+    </div>
+    <p class="admin-session-meta" id="adminSessionMeta">Loading admin session...</p>
+  </section>
+
+  <section class="section admin-maintenance-toggle">
+    <label class="admin-maintenance-check" for="maintenanceEnabled">
+      <input id="maintenanceEnabled" type="checkbox" />
+      <span>Website Maintenance Mode</span>
+    </label>
+    <p id="maintenanceStatusText">When enabled, all public pages show a maintenance screen.</p>
+  </section>
+
+  <section class="section admin-tabs-wrap">
+    <div class="admin-tabs" role="tablist" aria-label="Admin tabs">
+      <button class="admin-tab active" data-admin-tab="permissions" type="button">Permissions</button>
+      <button class="admin-tab" data-admin-tab="applications" type="button">Applications</button>
+      <button class="admin-tab" data-admin-tab="subscriptions" type="button">Subscriptions</button>
+    </div>
+
+    <div class="admin-tab-panel active" data-admin-panel="permissions">
+      <div class="admin-grid two-col">
+        <article class="panel">
+          <div class="panel-head"><h2>Create Login</h2></div>
+          <form id="createAdminUserForm" class="admin-form">
+            <label>Username</label>
+            <input name="username" type="text" required />
+            <label>Password</label>
+            <input name="password" type="password" required />
+            <div class="admin-permission-grid">
+              <label><input type="checkbox" name="applications" /> Applications</label>
+              <label><input type="checkbox" name="websiteMaintenance" /> Website Maintenance</label>
+              <label><input type="checkbox" name="subscriptions" /> Subscriptions</label>
+              <label><input type="checkbox" name="permissions" /> Permissions</label>
+            </div>
+            <button class="btn btn-primary" type="submit">Create Login</button>
+          </form>
+        </article>
+
+        <article class="panel">
+          <div class="panel-head"><h2>Manage Logins</h2></div>
+          <div id="adminUsersList" class="admin-users-list"></div>
+        </article>
+      </div>
+    </div>
+
+    <div class="admin-tab-panel" data-admin-panel="applications">
+      <article class="panel">
+        <div class="panel-head">
+          <h2>Application Moderation</h2>
+          <div class="admin-inline-controls">
+            <select id="adminApplicationSource">
+              <option value="active">Active</option>
+              <option value="archived">Archived</option>
+            </select>
+            <input id="adminApplicationSearch" type="search" placeholder="Search applications" />
+            <button class="btn btn-ghost" id="adminApplicationRefreshBtn" type="button">Refresh</button>
+          </div>
+        </div>
+        <div id="adminApplicationsList" class="admin-applications-list"></div>
+      </article>
+    </div>
+
+    <div class="admin-tab-panel" data-admin-panel="subscriptions">
+      <div class="admin-grid two-col">
+        <article class="panel">
+          <div class="panel-head"><h2>Current Subscriptions</h2></div>
+          <div id="currentSubscriptionsList" class="admin-subscription-list"></div>
+        </article>
+        <article class="panel">
+          <div class="panel-head"><h2>Ended Subscriptions</h2></div>
+          <div id="endedSubscriptionsList" class="admin-subscription-list"></div>
+        </article>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p class="footer-note">Bloodline RP &copy; <span id="year"></span>. All rights reserved.</p>
+  </div>
+</footer>
+
+<script src="auth-config.js"></script>
+<script src="script.js?v=20260729h"></script>
+<script src="admin-dashboard.js?v=20260729h"></script>
+</body>
+</html>
