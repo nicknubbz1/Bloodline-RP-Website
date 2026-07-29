@@ -156,6 +156,32 @@ function initSocialButtons() {
   const discordStatsEl = document.querySelector('[data-social-stat="discord"]');
   const discordLinkEl = document.querySelector('[data-social-platform="discord"]');
 
+  const renderDiscordStats = (statsEl, membersText, onlineText) => {
+    if (!statsEl) {
+      return;
+    }
+
+    statsEl.classList.add("social-stats-discord");
+
+    let membersEl = statsEl.querySelector("[data-discord-members]");
+    let onlineEl = statsEl.querySelector("[data-discord-online]");
+
+    if (!membersEl) {
+      membersEl = document.createElement("span");
+      membersEl.setAttribute("data-discord-members", "true");
+      statsEl.appendChild(membersEl);
+    }
+
+    if (!onlineEl) {
+      onlineEl = document.createElement("span");
+      onlineEl.setAttribute("data-discord-online", "true");
+      statsEl.appendChild(onlineEl);
+    }
+
+    membersEl.textContent = membersText;
+    onlineEl.textContent = onlineText;
+  };
+
   const setDiscordLinkState = (url) => {
     if (!discordLinkEl) {
       return;
@@ -186,8 +212,16 @@ function initSocialButtons() {
 
   setDiscordLinkState(discordInviteUrl);
 
+  if (discordStatsEl && socialStats.discord) {
+    const [defaultMembers, defaultOnline] = socialStats.discord.split("·").map((value) => value.trim());
+    renderDiscordStats(discordStatsEl, defaultMembers || "-- members", defaultOnline || "-- online");
+  }
+
   document.querySelectorAll("[data-social-stat]").forEach((el) => {
     const key = el.getAttribute("data-social-stat");
+    if (key === "discord") {
+      return;
+    }
     if (key && socialStats[key]) {
       el.textContent = socialStats[key];
     }
@@ -204,9 +238,7 @@ function initSocialButtons() {
       .then((payload) => {
         const memberCount = formatCount(payload.memberCount);
         const onlineCount = formatCount(payload.onlineCount);
-        if (memberCount !== "--") {
-          discordStatsEl.textContent = `${memberCount} members · ${onlineCount} online`;
-        }
+        renderDiscordStats(discordStatsEl, `${memberCount} members`, `${onlineCount} online`);
 
         if (typeof payload.inviteUrl === "string") {
           setDiscordLinkState(payload.inviteUrl);

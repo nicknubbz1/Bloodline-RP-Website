@@ -1365,6 +1365,23 @@ body.popup-open {
   text-transform: uppercase;
 }
 
+.social-stats-discord {
+  display: grid;
+  gap: 0.12rem;
+  letter-spacing: 0.08em;
+}
+
+.social-stats-discord [data-discord-members] {
+  color: #d7e4f7;
+  font-size: 0.79rem;
+}
+
+.social-stats-discord [data-discord-online] {
+  color: #99adc9;
+  font-size: 0.7rem;
+  letter-spacing: 0.14em;
+}
+
 .social-discord { background-color: rgba(88, 101, 242, 0.14); }
 .social-youtube { background-color: rgba(255, 0, 0, 0.12); }
 .social-tiktok { background-color: rgba(0, 255, 180, 0.11); }
