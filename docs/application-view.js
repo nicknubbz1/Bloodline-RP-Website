@@ -142,11 +142,7 @@
     }
 
     if (!isLoggedInLocally()) {
-      setMessage("Log in through the account icon before submitting.", "error");
-      const loginTrigger = document.querySelector(".login-trigger");
-      if (loginTrigger) {
-        loginTrigger.click();
-      }
+      alert("Please log in with Steam before submitting.");
       return;
     }
 
