@@ -60,6 +60,10 @@ const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:
 const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
 const storeCartStorageKey = "bloodline-store-cart";
 const adminAuthStorageKey = "bloodline-admin-auth";
+const localAdminUsersKey = "bloodline-local-admin-users";
+const localAdminSessionKey = "bloodline-local-admin-session";
+const localAdminSessionTempKey = "bloodline-local-admin-session-temp";
+const localAdminSettingsKey = "bloodline-local-admin-settings";
 let steamLoginModal = null;
 let connectQueueModal = null;
 let storeCartState = {
@@ -83,6 +87,129 @@ const socialStats = {
   instagram: "96K followers · 14 new posts",
   x: "41K followers · 3.8K active",
 };
+
+function readStoredJson(storage, key, fallbackValue) {
+  try {
+    const raw = storage.getItem(key);
+    if (!raw) {
+      return fallbackValue;
+    }
+    return JSON.parse(raw);
+  } catch {
+    return fallbackValue;
+  }
+}
+
+function writeStoredJson(storage, key, value) {
+  storage.setItem(key, JSON.stringify(value));
+}
+
+function ensureLocalAdminUsers() {
+  const existing = readStoredJson(localStorage, localAdminUsersKey, null);
+  if (Array.isArray(existing) && existing.length > 0) {
+    return existing;
+  }
+
+  const seed = [{
+    id: "local-main-admin",
+    username: "1234",
+    password: "1234",
+    isMainAdmin: true,
+    permissions: {
+      applications: true,
+      websiteMaintenance: true,
+      subscriptions: true,
+      permissions: true,
+    },
+  }];
+
+  writeStoredJson(localStorage, localAdminUsersKey, seed);
+  return seed;
+}
+
+function sanitizeLocalAdminUser(user) {
+  if (!user) {
+    return null;
+  }
+
+  return {
+    id: user.id,
+    username: user.username,
+    isMainAdmin: Boolean(user.isMainAdmin),
+    permissions: {
+      applications: Boolean(user.permissions?.applications),
+      websiteMaintenance: Boolean(user.permissions?.websiteMaintenance),
+      subscriptions: Boolean(user.permissions?.subscriptions),
+      permissions: Boolean(user.permissions?.permissions),
+    },
+  };
+}
+
+function readLocalAdminSession() {
+  const persistent = readStoredJson(localStorage, localAdminSessionKey, null);
+  if (persistent?.id) {
+    return persistent;
+  }
+
+  const temporary = readStoredJson(sessionStorage, localAdminSessionTempKey, null);
+  if (temporary?.id) {
+    return temporary;
+  }
+
+  return null;
+}
+
+function writeLocalAdminSession(adminUser, staySignedIn) {
+  const payload = {
+    id: adminUser.id,
+  };
+
+  if (staySignedIn) {
+    writeStoredJson(localStorage, localAdminSessionKey, payload);
+    sessionStorage.removeItem(localAdminSessionTempKey);
+    return;
+  }
+
+  writeStoredJson(sessionStorage, localAdminSessionTempKey, payload);
+  localStorage.removeItem(localAdminSessionKey);
+}
+
+function clearLocalAdminSession() {
+  localStorage.removeItem(localAdminSessionKey);
+  sessionStorage.removeItem(localAdminSessionTempKey);
+}
+
+function localAdminLogin(username, password, staySignedIn) {
+  const users = ensureLocalAdminUsers();
+  const target = users.find((entry) => entry.username === username && entry.password === password);
+  if (!target) {
+    return null;
+  }
+
+  writeLocalAdminSession(target, staySignedIn);
+  return sanitizeLocalAdminUser(target);
+}
+
+function resolveLocalAdminFromSession() {
+  const session = readLocalAdminSession();
+  if (!session?.id) {
+    return null;
+  }
+
+  const users = ensureLocalAdminUsers();
+  const target = users.find((entry) => entry.id === session.id);
+  if (!target) {
+    clearLocalAdminSession();
+    return null;
+  }
+
+  return sanitizeLocalAdminUser(target);
+}
+
+function readLocalMaintenanceMode() {
+  const settings = readStoredJson(localStorage, localAdminSettingsKey, { maintenanceMode: false });
+  return Boolean(settings?.maintenanceMode);
+}
 
 function openAuthPopup(url, popupName) {
   const popupWidth = 520;
@@ -1139,8 +1266,21 @@ function ensureAdminLoginModal() {
 
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
-          messageEl.textContent = payload.error || "Login failed.";
-          messageEl.hidden = false;
+          const localAdmin = localAdminLogin(username, password, staySignedIn);
+          if (!localAdmin) {
+            messageEl.textContent = payload.error || "Login failed.";
+            messageEl.hidden = false;
+            return;
+          }
+
+          adminSessionState = {
+            loggedIn: true,
+            admin: localAdmin,
+          };
+          writeAdminAuthState({ staySignedIn });
+          closeAdminLoginModal();
+          updateAdminJoinButtons();
+          window.location.href = "admin.html";
           return;
         }
 
@@ -1153,8 +1293,21 @@ function ensureAdminLoginModal() {
         updateAdminJoinButtons();
         window.location.href = "admin.html";
       } catch {
-        messageEl.textContent = "Could not reach admin server.";
-        messageEl.hidden = false;
+        const localAdmin = localAdminLogin(username, password, staySignedIn);
+        if (!localAdmin) {
+          messageEl.textContent = "Could not reach admin server.";
+          messageEl.hidden = false;
+          return;
+        }
+
+        adminSessionState = {
+          loggedIn: true,
+          admin: localAdmin,
+        };
+        writeAdminAuthState({ staySignedIn });
+        closeAdminLoginModal();
+        updateAdminJoinButtons();
+        window.location.href = "admin.html";
       }
     });
   }
@@ -1229,6 +1382,16 @@ async function refreshAdminSession() {
     });
 
     if (!response.ok) {
+      const localAdmin = resolveLocalAdminFromSession();
+      if (localAdmin) {
+        adminSessionState = {
+          loggedIn: true,
+          admin: localAdmin,
+        };
+        updateAdminJoinButtons();
+        return;
+      }
+
       adminSessionState = {
         loggedIn: false,
         admin: null,
@@ -1244,6 +1407,16 @@ async function refreshAdminSession() {
     };
     updateAdminJoinButtons();
   } catch {
+    const localAdmin = resolveLocalAdminFromSession();
+    if (localAdmin) {
+      adminSessionState = {
+        loggedIn: true,
+        admin: localAdmin,
+      };
+      updateAdminJoinButtons();
+      return;
+    }
+
     adminSessionState = {
       loggedIn: false,
       admin: null,
@@ -1285,7 +1458,23 @@ async function applyMaintenanceGate() {
       footerEl.style.display = "none";
     }
   } catch {
-    // Ignore maintenance check failures.
+    if (!readLocalMaintenanceMode()) {
+      return;
+    }
+
+    const mainEl = document.querySelector("main");
+    const footerEl = document.querySelector(".footer");
+    if (mainEl) {
+      mainEl.innerHTML = `
+        <section class="maintenance-screen">
+          <h1>Website Down For Maintenance</h1>
+          <p>All sections are temporarily unavailable while maintenance mode is enabled by admin.</p>
+        </section>
+      `;
+    }
+    if (footerEl) {
+      footerEl.style.display = "none";
+    }
   }
 }
 

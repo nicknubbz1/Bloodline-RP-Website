@@ -3,6 +3,10 @@
   const adminSessionUrl = window.BLOODLINE_ADMIN_SESSION_URL || `${apiBaseUrl}/admin/session`;
   const adminLoginUrl = window.BLOODLINE_ADMIN_LOGIN_URL || `${apiBaseUrl}/admin/login`;
   const adminLogoutUrl = window.BLOODLINE_ADMIN_LOGOUT_URL || `${apiBaseUrl}/admin/logout`;
+  const localAdminUsersKey = "bloodline-local-admin-users";
+  const localAdminSessionKey = "bloodline-local-admin-session";
+  const localAdminSessionTempKey = "bloodline-local-admin-session-temp";
+  const localAdminSettingsKey = "bloodline-local-admin-settings";
 
   const tabs = Array.from(document.querySelectorAll("[data-admin-tab]"));
   const panels = Array.from(document.querySelectorAll("[data-admin-panel]"));
@@ -28,7 +32,95 @@
     subscriptions: { current: [], ended: [] },
     settings: { maintenanceMode: false },
     source: "active",
+    localMode: false,
   };
+
+  function readStoredJson(storage, key, fallbackValue) {
+    try {
+      const raw = storage.getItem(key);
+      if (!raw) {
+        return fallbackValue;
+      }
+      return JSON.parse(raw);
+    } catch {
+      return fallbackValue;
+    }
+  }
+
+  function writeStoredJson(storage, key, value) {
+    storage.setItem(key, JSON.stringify(value));
+  }
+
+  function ensureLocalAdminUsers() {
+    const existing = readStoredJson(localStorage, localAdminUsersKey, null);
+    if (Array.isArray(existing) && existing.length > 0) {
+      return existing;
+    }
+
+    const seed = [{
+      id: "local-main-admin",
+      username: "1234",
+      password: "1234",
+      isMainAdmin: true,
+      permissions: {
+        applications: true,
+        websiteMaintenance: true,
+        subscriptions: true,
+        permissions: true,
+      },
+    }];
+
+    writeStoredJson(localStorage, localAdminUsersKey, seed);
+    return seed;
+  }
+
+  function sanitizeLocalAdminUser(user) {
+    if (!user) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      username: user.username,
+      isMainAdmin: Boolean(user.isMainAdmin),
+      permissions: normalizePermissions(user.permissions),
+    };
+  }
+
+  function readLocalAdminSession() {
+    const persistent = readStoredJson(localStorage, localAdminSessionKey, null);
+    if (persistent?.id) {
+      return persistent;
+    }
+
+    const temporary = readStoredJson(sessionStorage, localAdminSessionTempKey, null);
+    if (temporary?.id) {
+      return temporary;
+    }
+
+    return null;
+  }
+
+  function clearLocalAdminSession() {
+    localStorage.removeItem(localAdminSessionKey);
+    sessionStorage.removeItem(localAdminSessionTempKey);
+  }
+
+  function resolveLocalAdminFromSession() {
+    const session = readLocalAdminSession();
+    if (!session?.id) {
+      return null;
+    }
+
+    const users = ensureLocalAdminUsers();
+    const target = users.find((entry) => entry.id === session.id);
+    if (!target) {
+      clearLocalAdminSession();
+      return null;
+    }
+
+    return sanitizeLocalAdminUser(target);
+  }
 
   function normalizePermissions(raw) {
     const entry = raw || {};
@@ -223,9 +315,22 @@
   }
 
   async function loadSession() {
-    const payload = await requestJson(adminSessionUrl);
-    state.admin = payload.admin || null;
-    renderAdminMeta();
+    try {
+      const payload = await requestJson(adminSessionUrl);
+      state.admin = payload.admin || null;
+      state.localMode = false;
+      renderAdminMeta();
+      return;
+    } catch {
+      const localAdmin = resolveLocalAdminFromSession();
+      if (!localAdmin) {
+        throw new Error("Admin session not found.");
+      }
+
+      state.admin = localAdmin;
+      state.localMode = true;
+      renderAdminMeta();
+    }
   }
 
   async function loadSessionWithRetry(attempts) {
@@ -254,6 +359,12 @@
       return;
     }
 
+    if (state.localMode) {
+      state.users = ensureLocalAdminUsers().map(sanitizeLocalAdminUser).filter(Boolean);
+      renderUsers();
+      return;
+    }
+
     const payload = await requestJson(`${apiBaseUrl}/admin/users`);
     state.users = Array.isArray(payload.users) ? payload.users : [];
     renderUsers();
@@ -261,6 +372,12 @@
 
   async function loadApplications() {
     if (!hasPermission("applications")) {
+      state.applications = [];
+      renderApplications();
+      return;
+    }
+
+    if (state.localMode) {
       state.applications = [];
       renderApplications();
       return;
@@ -284,6 +401,12 @@
       return;
     }
 
+    if (state.localMode) {
+      state.subscriptions = { current: [], ended: [] };
+      renderSubscriptions();
+      return;
+    }
+
     const payload = await requestJson(`${apiBaseUrl}/admin/subscriptions`);
     state.subscriptions = {
       current: Array.isArray(payload.current) ? payload.current : [],
@@ -293,6 +416,15 @@
   }
 
   async function loadSettings() {
+    if (state.localMode) {
+      const localSettings = readStoredJson(localStorage, localAdminSettingsKey, { maintenanceMode: false });
+      state.settings = {
+        maintenanceMode: Boolean(localSettings?.maintenanceMode),
+      };
+      renderMaintenance();
+      return;
+    }
+
     const payload = await requestJson(`${apiBaseUrl}/admin/settings`);
     state.settings = payload.settings || { maintenanceMode: false };
     renderMaintenance();
@@ -334,9 +466,13 @@
 
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async function () {
-      await requestJson(adminLogoutUrl, { method: "POST" }).catch(function () {
-        return null;
-      });
+      if (state.localMode) {
+        clearLocalAdminSession();
+      } else {
+        await requestJson(adminLogoutUrl, { method: "POST" }).catch(function () {
+          return null;
+        });
+      }
       window.location.href = "index.html";
     });
   }
@@ -395,6 +531,12 @@
   if (maintenanceToggle) {
     maintenanceToggle.addEventListener("change", async function () {
       try {
+        if (state.localMode) {
+          writeStoredJson(localStorage, localAdminSettingsKey, { maintenanceMode: Boolean(maintenanceToggle.checked) });
+          await loadSettings();
+          return;
+        }
+
         await requestJson(`${apiBaseUrl}/admin/settings/maintenance`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
