@@ -50,10 +50,12 @@
 
   function createCardMarkup(form) {
     const questionCount = Array.isArray(form.questions) ? form.questions.length : 0;
+    const description = form.description || "Open application.";
     return ""
       + '<article class="app-directory-item">'
       + '<div class="app-directory-item-main">'
       + '<h4 class="app-directory-title">' + escapeHtml(form.title) + '</h4>'
+      + '<p class="app-directory-description">' + escapeHtml(description) + '</p>'
       + '</div>'
       + '<div class="app-directory-item-side">'
       + '<span class="app-directory-questions">' + questionCount + ' questions</span>'
