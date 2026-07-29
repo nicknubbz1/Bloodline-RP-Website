@@ -85,7 +85,6 @@
       section.innerHTML = ""
         + '<header class="app-category-head">'
         + '<h3>' + escapeHtml(meta.title) + '</h3>'
-        + '<p>' + escapeHtml(meta.copy) + '</p>'
         + '<span class="app-category-count">' + formatOpenCount(entries.length) + '</span>'
         + '</header>'
         + '<div class="app-category-cards"></div>';
