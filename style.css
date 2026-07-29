@@ -1123,10 +1123,12 @@ main.page-shell {
   border-radius: 0.55rem;
   font-size: 0.7rem !important;
   line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  vertical-align: middle;
+  transform: translateY(-0.5px);
 }
 
 .app-directory-open-btn.btn-primary {
