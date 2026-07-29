@@ -14,6 +14,10 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const backendBaseUrl = process.env.BACKEND_BASE_URL || `http://localhost:${port}`;
 const frontendBaseUrl = process.env.FRONTEND_BASE_URL || "http://localhost:5500";
+const frontendBaseUrls = (process.env.FRONTEND_BASE_URLS || "")
+  .split(",")
+  .map((entry) => entry.trim())
+  .filter(Boolean);
 const sessionSecret = process.env.SESSION_SECRET || "change-me-in-production";
 const steamApiKey = process.env.STEAM_API_KEY;
 const discordClientId = process.env.DISCORD_CLIENT_ID;
@@ -26,6 +30,12 @@ const discordInviteUrl = process.env.DISCORD_INVITE_URL || "";
 const steamEnabled = Boolean(steamApiKey);
 const discordEnabled = Boolean(discordClientId && discordClientSecret);
 const staffRoleCheckEnabled = Boolean(discordGuildId && discordStaffRoleId && discordBotToken);
+const allowedFrontendOrigins = new Set([
+  frontendBaseUrl,
+  ...frontendBaseUrls,
+  "http://localhost:5500",
+  "https://nicknubbz1.github.io",
+]);
 
 const applicationTypes = [
   { key: "server", label: "Server Applications" },
@@ -311,7 +321,13 @@ async function requireStaffRole(req, res, next) {
 
 app.set("trust proxy", 1);
 app.use(cors({
-  origin: frontendBaseUrl,
+  origin: (origin, callback) => {
+    if (!origin || allowedFrontendOrigins.has(origin)) {
+      callback(null, true);
+      return;
+    }
+    callback(new Error("CORS origin blocked"));
+  },
   credentials: true,
 }));
 app.use(express.json());
