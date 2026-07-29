@@ -56,7 +56,7 @@ const adminSessionUrl = window.BLOODLINE_ADMIN_SESSION_URL || `${apiBaseUrl}/adm
 const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-status`;
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
-const adminDashboardUrl = "admin.html?v=20260729m";
+const adminDashboardUrl = "admin.html?v=20260729n";
 const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:3000/api/discord/stats";
 const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
 const storeCartStorageKey = "bloodline-store-cart";
