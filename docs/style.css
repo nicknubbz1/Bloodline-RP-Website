@@ -79,7 +79,7 @@ a { color: inherit; text-decoration: none; }
   margin-left: -40%;
   max-width: none;
   object-fit: contain;
-  transform: translateY(0.62rem) scale(5.4, 4.2);
+  transform: translateY(0.56rem) scale(5.4, 4.2);
   transform-origin: left center;
 }
 
@@ -1774,7 +1774,7 @@ body.popup-open {
 
 @media (max-width: 760px) {
   .header-inner { grid-template-columns: auto auto; }
-  .brand img { transform: translateY(0.42rem) scale(3.8, 2.9); }
+  .brand img { transform: translateY(0.38rem) scale(3.8, 2.9); }
   .menu-toggle { display: inline-flex; }
   .nav {
     display: none;
