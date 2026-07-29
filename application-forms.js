@@ -59,7 +59,7 @@ window.BLOODLINE_APPLICATION_FORMS = [
     key: "allowlist-app",
     title: "Allowlist Application",
     type: "server",
-    description: "Complete allowlist review questions before joining the city.",
+    description: "Apply for allowlist to gain access to the city.",
     questions: [
       { id: "discordUsername", label: "What is your discord username?", kind: "text", required: true },
       { id: "age", label: "How old are you IRL?", kind: "text", required: true },
