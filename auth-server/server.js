@@ -23,13 +23,11 @@ const steamApiKey = process.env.STEAM_API_KEY;
 const discordClientId = process.env.DISCORD_CLIENT_ID;
 const discordClientSecret = process.env.DISCORD_CLIENT_SECRET;
 const discordGuildId = process.env.DISCORD_GUILD_ID || "";
-const discordStaffRoleId = process.env.DISCORD_STAFF_ROLE_ID || "";
 const discordBotToken = process.env.DISCORD_BOT_TOKEN || "";
 const discordInviteUrl = process.env.DISCORD_INVITE_URL || "";
 
 const steamEnabled = Boolean(steamApiKey);
 const discordEnabled = Boolean(discordClientId && discordClientSecret);
-const staffRoleCheckEnabled = Boolean(discordGuildId && discordStaffRoleId && discordBotToken);
 const allowedFrontendOrigins = new Set([
   frontendBaseUrl,
   ...frontendBaseUrls,
@@ -203,7 +201,7 @@ function discordGet(pathname) {
 }
 
 async function fetchDiscordMemberRoles(discordId) {
-  if (!staffRoleCheckEnabled || !discordId) {
+  if (!discordGuildId || !discordBotToken || !discordId) {
     return [];
   }
 
@@ -223,47 +221,6 @@ async function fetchDiscordMemberRoles(discordId) {
   }
 
   return payload.roles;
-}
-
-async function refreshStaffAccess(account, forceRefresh = false) {
-  if (!account || !account.discordId) {
-    return account || null;
-  }
-
-  if (!staffRoleCheckEnabled) {
-    return {
-      ...account,
-      isStaff: false,
-      discordRoles: [],
-      staffCheckedAt: null,
-      staffRoleError: "Staff role checks are not configured.",
-    };
-  }
-
-  const checkedAtMs = account.staffCheckedAt ? Date.parse(account.staffCheckedAt) : 0;
-  const cacheIsFresh = Number.isFinite(checkedAtMs) && Date.now() - checkedAtMs < 5 * 60 * 1000;
-  if (!forceRefresh && cacheIsFresh) {
-    return account;
-  }
-
-  try {
-    const roles = await fetchDiscordMemberRoles(account.discordId);
-    return {
-      ...account,
-      discordRoles: roles,
-      isStaff: roles.includes(discordStaffRoleId),
-      staffCheckedAt: nowIso(),
-      staffRoleError: "",
-    };
-  } catch (error) {
-    return {
-      ...account,
-      discordRoles: [],
-      isStaff: false,
-      staffCheckedAt: nowIso(),
-      staffRoleError: error.message || "Staff role check failed.",
-    };
-  }
 }
 
 function buildFrontendUrl(page, params = {}) {
@@ -298,24 +255,6 @@ function requireLinkedAccount(req, res, next) {
     res.status(401).json({ error: "Steam and Discord must both be linked to continue." });
     return;
   }
-  next();
-}
-
-async function requireStaffRole(req, res, next) {
-  const account = req.session.account;
-  if (!account?.steamId || !account?.discordId) {
-    res.status(401).json({ error: "Login with Steam and Discord to access staff tools." });
-    return;
-  }
-
-  const refreshedAccount = await refreshStaffAccess(account, true);
-  req.session.account = refreshedAccount;
-
-  if (!refreshedAccount.isStaff) {
-    res.status(403).json({ error: "Staff role is required for this action." });
-    return;
-  }
-
   next();
 }
 
@@ -387,8 +326,6 @@ if (discordEnabled) {
           accessToken,
           refreshToken,
           discordRoles: roles,
-          isStaff: staffRoleCheckEnabled ? roles.includes(discordStaffRoleId) : false,
-          staffCheckedAt: nowIso(),
         };
         done(null, user);
       } catch (error) {
@@ -403,25 +340,17 @@ app.get("/health", (_req, res) => {
     ok: true,
     steamEnabled,
     discordEnabled,
-    staffRoleCheckEnabled,
     backendBaseUrl,
     frontendBaseUrl,
   });
 });
 
-app.get("/auth/session", async (req, res) => {
-  let account = req.session.account || null;
-
-  if (account?.discordId) {
-    account = await refreshStaffAccess(account);
-    req.session.account = account;
-  }
-
+app.get("/auth/session", (req, res) => {
+  const account = req.session.account || null;
   res.json({
     account,
     steamEnabled,
     discordEnabled,
-    staffRoleCheckEnabled,
   });
 });
 
@@ -504,9 +433,6 @@ app.get("/auth/discord/callback", (req, res, next) => {
       discordUsername: user.username,
       discordAvatar: user.avatar,
       discordRoles: user.discordRoles || [],
-      isStaff: Boolean(user.isStaff),
-      staffCheckedAt: user.staffCheckedAt || nowIso(),
-      staffRoleError: "",
     };
 
     res.redirect(buildFrontendUrl("auth-callback.html", {
@@ -516,7 +442,6 @@ app.get("/auth/discord/callback", (req, res, next) => {
       discordName: user.globalName,
       discordUsername: user.username,
       discordAvatar: user.avatar,
-      isStaff: user.isStaff ? "1" : "0",
     }));
   })(req, res, next);
 });
@@ -628,127 +553,6 @@ app.get("/api/my-applications", requireLinkedAccount, (req, res) => {
   });
 });
 
-app.get("/api/staff/applications", requireStaffRole, (req, res) => {
-  const type = cleanText(req.query.type, 40).toLowerCase();
-  const status = cleanText(req.query.status, 40).toLowerCase();
-  const search = cleanText(req.query.search, 120).toLowerCase();
-
-  const store = readApplicationStore();
-  let applications = [...store.applications];
-
-  if (type && type !== "all") {
-    applications = applications.filter((application) => application.type === type);
-  }
-
-  if (status && status !== "all") {
-    applications = applications.filter((application) => application.status === status);
-  }
-
-  if (search) {
-    applications = applications.filter((application) => {
-      const haystack = [
-        application.title,
-        application.body,
-        application.applicant?.steamName,
-        application.applicant?.discordName,
-        ...(Array.isArray(application.responses)
-          ? application.responses.flatMap((responseItem) => [responseItem.label, responseItem.answer])
-          : []),
-      ].join(" ").toLowerCase();
-      return haystack.includes(search);
-    });
-  }
-
-  applications.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
-
-  res.json({
-    applications,
-    types: applicationTypes,
-  });
-});
-
-app.get("/api/staff/applications/:id", requireStaffRole, (req, res) => {
-  const store = readApplicationStore();
-  const application = getApplicationById(store.applications, req.params.id);
-
-  if (!application) {
-    res.status(404).json({ error: "Application not found." });
-    return;
-  }
-
-  res.json({ application });
-});
-
-app.post("/api/staff/applications/:id/replies", requireStaffRole, (req, res) => {
-  const message = cleanText(req.body.message, 2000);
-  if (!message) {
-    res.status(400).json({ error: "Reply message is required." });
-    return;
-  }
-
-  const store = readApplicationStore();
-  const application = getApplicationById(store.applications, req.params.id);
-
-  if (!application) {
-    res.status(404).json({ error: "Application not found." });
-    return;
-  }
-
-  const reply = {
-    id: crypto.randomUUID(),
-    authorDiscordId: req.session.account.discordId,
-    authorName: req.session.account.discordName || req.session.account.discordUsername || "Staff",
-    message,
-    createdAt: nowIso(),
-  };
-
-  application.replies = Array.isArray(application.replies) ? application.replies : [];
-  application.replies.push(reply);
-  application.updatedAt = nowIso();
-
-  writeApplicationStore(store);
-
-  res.status(201).json({
-    ok: true,
-    reply,
-    application,
-  });
-});
-
-app.post("/api/staff/applications/:id/decision", requireStaffRole, (req, res) => {
-  const decision = cleanText(req.body.decision, 20).toLowerCase();
-  const note = cleanText(req.body.note, 1200);
-
-  if (!["accepted", "denied", "pending"].includes(decision)) {
-    res.status(400).json({ error: "Decision must be accepted, denied, or pending." });
-    return;
-  }
-
-  const store = readApplicationStore();
-  const application = getApplicationById(store.applications, req.params.id);
-
-  if (!application) {
-    res.status(404).json({ error: "Application not found." });
-    return;
-  }
-
-  application.status = decision;
-  application.reviewedBy = {
-    discordId: req.session.account.discordId,
-    name: req.session.account.discordName || req.session.account.discordUsername || "Staff",
-    reviewedAt: nowIso(),
-    note,
-  };
-  application.updatedAt = nowIso();
-
-  writeApplicationStore(store);
-
-  res.json({
-    ok: true,
-    application,
-  });
-});
-
 app.use((_req, res) => {
   res.status(404).json({ error: "Not found" });
 });
@@ -758,5 +562,4 @@ ensureApplicationStore();
 app.listen(port, () => {
   console.log(`Bloodline auth server listening on ${backendBaseUrl}`);
   console.log(`Frontend callback base: ${frontendBaseUrl}`);
-  console.log(`Staff role checks enabled: ${staffRoleCheckEnabled}`);
 });

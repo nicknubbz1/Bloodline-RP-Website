@@ -1,14 +1,13 @@
 # Bloodline Auth Server
 
-This server handles Steam OpenID, Discord OAuth, staff-role checks, and application moderation APIs for the Bloodline RP website.
+This server handles Steam OpenID, Discord OAuth, Discord live stats, and application submission APIs for the Bloodline RP website.
 
 ## What it does
 - Starts Steam authentication at `/auth/steam`
 - Handles Steam callback at `/auth/steam/return`
 - Starts Discord OAuth at `/auth/discord`
 - Handles Discord callback at `/auth/discord/callback`
-- Verifies whether a Discord user has your configured staff role
-- Stores and serves application records for staff moderation
+- Stores and serves application records for account-linked submissions
 - Redirects the popup back to `auth-callback.html`, where the static site stores the linked account state locally
 
 ## Setup
@@ -18,7 +17,6 @@ This server handles Steam OpenID, Discord OAuth, staff-role checks, and applicat
    - `DISCORD_CLIENT_ID`
    - `DISCORD_CLIENT_SECRET`
    - `DISCORD_GUILD_ID`
-   - `DISCORD_STAFF_ROLE_ID`
    - `DISCORD_BOT_TOKEN`
    - `DISCORD_INVITE_URL`
    - `SESSION_SECRET`
@@ -41,7 +39,3 @@ This server handles Steam OpenID, Discord OAuth, staff-role checks, and applicat
 - `GET /api/discord/stats`: return live Discord member count, online count, and invite URL
 - `POST /api/applications`: create a new application (requires linked Steam and Discord)
 - `GET /api/my-applications`: list applications submitted by the current account
-- `GET /api/staff/applications`: list applications with optional `type`, `status`, and `search` filters (staff role required)
-- `GET /api/staff/applications/:id`: get one application detail (staff role required)
-- `POST /api/staff/applications/:id/replies`: add staff reply to an application (staff role required)
-- `POST /api/staff/applications/:id/decision`: set status to `accepted`, `denied`, or `pending` (staff role required)
