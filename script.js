@@ -190,6 +190,49 @@ function localAdminLogin(username, password, staySignedIn) {
   return sanitizeLocalAdminUser(target);
 }
 
+function upsertLocalAdminFromRemote(adminUser, password, staySignedIn) {
+  if (!adminUser || !adminUser.username) {
+    return null;
+  }
+
+  const users = ensureLocalAdminUsers();
+  const normalized = {
+    id: adminUser.id || `remote-${String(adminUser.username).toLowerCase()}`,
+    username: String(adminUser.username),
+    password: String(password || ""),
+    isMainAdmin: Boolean(adminUser.isMainAdmin),
+    permissions: {
+      applications: Boolean(adminUser.permissions?.applications),
+      websiteMaintenance: Boolean(adminUser.permissions?.websiteMaintenance),
+      subscriptions: Boolean(adminUser.permissions?.subscriptions),
+      permissions: Boolean(adminUser.permissions?.permissions),
+    },
+  };
+
+  const existingIndex = users.findIndex((entry) => {
+    return entry.id === normalized.id || entry.username === normalized.username;
+  });
+
+  if (existingIndex >= 0) {
+    const existing = users[existingIndex];
+    users[existingIndex] = {
+      ...existing,
+      ...normalized,
+      password: normalized.password || existing.password || "",
+      permissions: {
+        ...(existing.permissions || {}),
+        ...normalized.permissions,
+      },
+    };
+  } else {
+    users.push(normalized);
+  }
+
+  writeStoredJson(localStorage, localAdminUsersKey, users);
+  writeLocalAdminSession(normalized, staySignedIn);
+  return sanitizeLocalAdminUser(normalized);
+}
+
 function resolveLocalAdminFromSession() {
   const session = readLocalAdminSession();
   if (!session?.id) {
@@ -1284,9 +1327,14 @@ function ensureAdminLoginModal() {
           return;
         }
 
+        const remoteAdmin = payload.admin || null;
+        const localShadowAdmin = remoteAdmin
+          ? upsertLocalAdminFromRemote(remoteAdmin, password, staySignedIn)
+          : localAdminLogin(username, password, staySignedIn);
+
         adminSessionState = {
           loggedIn: true,
-          admin: payload.admin || null,
+          admin: remoteAdmin || localShadowAdmin || null,
         };
         writeAdminAuthState({ staySignedIn });
         closeAdminLoginModal();
