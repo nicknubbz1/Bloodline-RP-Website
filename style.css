@@ -1215,6 +1215,20 @@ main.page-shell {
   font-size: 0.98rem;
 }
 
+.app-view-field select option {
+  color: #101a2b;
+  background: #f4f7ff;
+}
+
+.app-view-field select option[value=""] {
+  color: #4a5770;
+}
+
+.app-view-field select option:checked {
+  background: #2f62b7;
+  color: #ffffff;
+}
+
 .app-view-message {
   margin: 0;
   color: var(--muted);
