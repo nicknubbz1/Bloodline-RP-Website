@@ -1128,7 +1128,7 @@ main.page-shell {
   justify-content: center !important;
   text-align: center !important;
   vertical-align: middle;
-  transform: translateY(-0.5px);
+  transform: translateY(0.5px);
 }
 
 .app-directory-open-btn.btn-primary {
