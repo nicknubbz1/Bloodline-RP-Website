@@ -57,6 +57,7 @@ const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-st
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
 const adminDashboardUrl = "admin.html?v=20260729n";
+const adminDashboardScriptVersion = "v=20260729p";
 const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:3000/api/discord/stats";
 const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
 const storeCartStorageKey = "bloodline-store-cart";
@@ -254,6 +255,31 @@ function readLocalMaintenanceMode() {
   const settings = readStoredJson(localStorage, localAdminSettingsKey, { maintenanceMode: false });
   return Boolean(settings?.maintenanceMode);
 }
+
+function ensureLatestAdminDashboardScript() {
+  const currentPage = window.location.pathname.split("/").pop() || "";
+  if (currentPage !== "admin.html") {
+    return;
+  }
+
+  window.BLOODLINE_ADMIN_DASHBOARD_REQUIRED_VERSION = adminDashboardScriptVersion;
+  const requiredSrc = `admin-dashboard.js?${adminDashboardScriptVersion}`;
+  const alreadyPresent = Array.from(document.querySelectorAll("script[src]")).some((scriptEl) => {
+    const src = String(scriptEl.getAttribute("src") || "");
+    return src.includes(requiredSrc);
+  });
+
+  if (alreadyPresent) {
+    return;
+  }
+
+  const scriptEl = document.createElement("script");
+  scriptEl.src = requiredSrc;
+  scriptEl.async = false;
+  (document.body || document.documentElement).appendChild(scriptEl);
+}
+
+ensureLatestAdminDashboardScript();
 
 function openAuthPopup(url, popupName) {
   const popupWidth = 520;

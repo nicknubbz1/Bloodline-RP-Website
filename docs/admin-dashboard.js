@@ -1,4 +1,24 @@
 (function () {
+  const requiredDashboardVersion = window.BLOODLINE_ADMIN_DASHBOARD_REQUIRED_VERSION || "";
+  const currentScript = document.currentScript;
+  const currentScriptSrc = currentScript
+    ? String(currentScript.getAttribute("src") || currentScript.src || "")
+    : "";
+
+  if (
+    requiredDashboardVersion
+    && currentScriptSrc
+    && currentScriptSrc.includes("admin-dashboard.js")
+    && !currentScriptSrc.includes(requiredDashboardVersion)
+  ) {
+    return;
+  }
+
+  if (window.BLOODLINE_ADMIN_DASHBOARD_LOADED) {
+    return;
+  }
+  window.BLOODLINE_ADMIN_DASHBOARD_LOADED = true;
+
   const apiBaseUrl = window.BLOODLINE_API_BASE_URL || "http://localhost:3000/api";
   const adminSessionUrl = window.BLOODLINE_ADMIN_SESSION_URL || `${apiBaseUrl}/admin/session`;
   const adminLoginUrl = window.BLOODLINE_ADMIN_LOGIN_URL || `${apiBaseUrl}/admin/login`;
