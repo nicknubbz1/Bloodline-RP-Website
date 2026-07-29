@@ -1124,6 +1124,19 @@ main.page-shell {
   font-size: 0.65rem;
 }
 
+.app-directory-open-btn.btn-primary {
+  border-color: var(--green-deep);
+  background: rgba(18, 25, 38, 0.62);
+  color: #ffdede;
+}
+
+.app-directory-open-btn.btn-primary:hover,
+.app-directory-open-btn.btn-primary:focus-visible,
+.app-directory-open-btn.btn-primary:active {
+  background: rgba(255, 47, 47, 0.92);
+  color: #fff;
+}
+
 .app-directory-item-empty {
   place-content: center;
   min-height: 84px;

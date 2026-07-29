@@ -60,7 +60,7 @@
       + '<div class="app-directory-item-side">'
       + '<span class="app-directory-questions">' + questionCount + ' questions</span>'
       + '<span class="app-directory-status">Open</span>'
-      + '<a class="btn btn-primary app-directory-open-btn" href="application-view.html?form=' + encodeURIComponent(form.key) + '">Start</a>'
+        + '<a class="btn btn-primary app-directory-open-btn" href="application-view.html?form=' + encodeURIComponent(form.key) + '">Apply</a>'
       + '</div>'
       + '</article>';
   }
