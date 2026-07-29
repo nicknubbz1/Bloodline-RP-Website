@@ -1118,14 +1118,14 @@ main.page-shell {
 }
 
 .app-directory-open-btn {
-  min-width: 82px;
-  padding: 0.28rem 0.5rem;
+  min-width: 68px;
+  padding: 0.2rem 0.42rem;
   border-radius: 0.55rem;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
 }
 
 .app-directory-open-btn.btn-primary {
-  border-color: var(--green-deep);
+  border-color: #a51212;
   background: rgba(18, 25, 38, 0.62);
   color: #ffdede;
 }
@@ -1133,8 +1133,8 @@ main.page-shell {
 .app-directory-open-btn.btn-primary:hover,
 .app-directory-open-btn.btn-primary:focus-visible,
 .app-directory-open-btn.btn-primary:active {
-  background: var(--green-deep) !important;
-  border-color: var(--green-deep);
+  background: #a51212 !important;
+  border-color: #a51212;
   color: #fff;
 }
 
