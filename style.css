@@ -1133,7 +1133,8 @@ main.page-shell {
 .app-directory-open-btn.btn-primary:hover,
 .app-directory-open-btn.btn-primary:focus-visible,
 .app-directory-open-btn.btn-primary:active {
-  background: var(--green-deep);
+  background: var(--green-deep) !important;
+  border-color: var(--green-deep);
   color: #fff;
 }
 
