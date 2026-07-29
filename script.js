@@ -1179,6 +1179,8 @@ function openAdminLoginModal() {
   }
 }
 
+window.openAdminLoginModal = openAdminLoginModal;
+
 function closeAdminLoginModal() {
   if (!adminLoginModal) {
     return;

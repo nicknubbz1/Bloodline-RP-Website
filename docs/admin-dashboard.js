@@ -228,6 +228,25 @@
     renderAdminMeta();
   }
 
+  async function loadSessionWithRetry(attempts) {
+    const maxAttempts = Number.isFinite(attempts) ? Math.max(1, attempts) : 3;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        await loadSession();
+        return true;
+      } catch {
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => {
+            setTimeout(resolve, 220 * attempt);
+          });
+        }
+      }
+    }
+
+    return false;
+  }
+
   async function loadUsers() {
     if (!hasPermission("permissions")) {
       state.users = [];
@@ -280,10 +299,16 @@
   }
 
   async function boot() {
-    try {
-      await loadSession();
-    } catch {
-      window.location.href = "index.html";
+    const hasSession = await loadSessionWithRetry(3);
+    if (!hasSession) {
+      if (sessionMetaEl) {
+        sessionMetaEl.textContent = "Admin session not found. Log in again to continue.";
+      }
+
+      if (typeof window.openAdminLoginModal === "function") {
+        window.openAdminLoginModal();
+      }
+
       return;
     }
 
