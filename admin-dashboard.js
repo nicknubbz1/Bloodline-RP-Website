@@ -1080,6 +1080,11 @@
 
     const payload = await requestJson(`${apiBaseUrl}/admin/settings`);
     state.settings = payload.settings || { maintenanceMode: false };
+    writeStoredJson(localStorage, localAdminSettingsKey, {
+      maintenanceMode: Boolean(state.settings?.maintenanceMode),
+      updatedAt: state.settings?.updatedAt || new Date().toISOString(),
+      updatedBy: state.settings?.updatedBy || state.admin?.username || "remote",
+    });
     renderMaintenance();
   }
 
@@ -1301,6 +1306,11 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ enabled: maintenanceToggle.checked }),
+        });
+        writeStoredJson(localStorage, localAdminSettingsKey, {
+          maintenanceMode: Boolean(maintenanceToggle.checked),
+          updatedAt: new Date().toISOString(),
+          updatedBy: state.admin?.username || "remote",
         });
         await loadSettings();
       } catch (error) {

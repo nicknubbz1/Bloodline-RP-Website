@@ -260,6 +260,77 @@ function readLocalMaintenanceMode() {
   return Boolean(settings?.maintenanceMode);
 }
 
+function writeLocalMaintenanceMode(enabled, metadata) {
+  const existing = readStoredJson(localStorage, localAdminSettingsKey, { maintenanceMode: false });
+  const nextSettings = {
+    ...(existing && typeof existing === "object" ? existing : {}),
+    maintenanceMode: Boolean(enabled),
+    updatedAt: metadata?.updatedAt || new Date().toISOString(),
+    updatedBy: metadata?.updatedBy || existing?.updatedBy || "system",
+  };
+  writeStoredJson(localStorage, localAdminSettingsKey, nextSettings);
+}
+
+const maintenanceGatePollMs = 10000;
+const maintenanceGateIgnoredPages = new Set(["admin.html"]);
+let maintenanceGateOverlay = null;
+let maintenanceGateEnabled = null;
+
+function isMaintenanceGatePage() {
+  const page = window.location.pathname.split("/").pop() || "index.html";
+  return !maintenanceGateIgnoredPages.has(page);
+}
+
+function ensureMaintenanceGateOverlay() {
+  if (maintenanceGateOverlay) {
+    return maintenanceGateOverlay;
+  }
+
+  const overlay = document.createElement("section");
+  overlay.className = "maintenance-screen maintenance-screen-overlay";
+  overlay.setAttribute("aria-live", "polite");
+  overlay.hidden = true;
+  overlay.innerHTML = `
+    <h1>Website Down For Maintenance</h1>
+    <p>All sections are temporarily unavailable while maintenance mode is enabled by admin.</p>
+  `;
+
+  document.body.appendChild(overlay);
+  maintenanceGateOverlay = overlay;
+  return maintenanceGateOverlay;
+}
+
+function setMaintenanceGate(enabled) {
+  if (!isMaintenanceGatePage()) {
+    return;
+  }
+
+  const active = Boolean(enabled);
+  if (maintenanceGateEnabled === active) {
+    return;
+  }
+
+  maintenanceGateEnabled = active;
+  const overlay = ensureMaintenanceGateOverlay();
+  const mainEl = document.querySelector("main");
+  const footerEl = document.querySelector(".footer");
+
+  overlay.hidden = !active;
+
+  if (mainEl) {
+    mainEl.style.display = active ? "none" : "";
+  }
+  if (footerEl) {
+    footerEl.style.display = active ? "none" : "";
+  }
+
+  document.body.classList.toggle("maintenance-gated", active);
+}
+
+if (isMaintenanceGatePage() && readLocalMaintenanceMode()) {
+  setMaintenanceGate(true);
+}
+
 function ensureLatestAdminDashboardScript() {
   const currentPage = window.location.pathname.split("/").pop() || "";
   if (currentPage !== "admin.html") {
@@ -1505,55 +1576,34 @@ async function refreshAdminSession() {
 }
 
 async function applyMaintenanceGate() {
-  const page = window.location.pathname.split("/").pop() || "index.html";
-  if (page === "admin.html") {
+  if (!isMaintenanceGatePage()) {
     return;
   }
 
+  setMaintenanceGate(readLocalMaintenanceMode());
+
   try {
-    const response = await fetch(siteStatusUrl, {
+    const cacheBustedStatusUrl = siteStatusUrl.includes("?")
+      ? `${siteStatusUrl}&_ts=${Date.now()}`
+      : `${siteStatusUrl}?_ts=${Date.now()}`;
+    const response = await fetch(cacheBustedStatusUrl, {
       credentials: "include",
+      cache: "no-store",
     });
     if (!response.ok) {
+      setMaintenanceGate(readLocalMaintenanceMode());
       return;
     }
 
     const payload = await response.json();
-    if (!payload.maintenanceMode) {
-      return;
-    }
-
-    const mainEl = document.querySelector("main");
-    const footerEl = document.querySelector(".footer");
-    if (mainEl) {
-      mainEl.innerHTML = `
-        <section class="maintenance-screen">
-          <h1>Website Down For Maintenance</h1>
-          <p>All sections are temporarily unavailable while maintenance mode is enabled by admin.</p>
-        </section>
-      `;
-    }
-    if (footerEl) {
-      footerEl.style.display = "none";
-    }
+    const enabled = Boolean(payload?.maintenanceMode);
+    writeLocalMaintenanceMode(enabled, {
+      updatedAt: payload?.updatedAt,
+      updatedBy: payload?.updatedBy,
+    });
+    setMaintenanceGate(enabled);
   } catch {
-    if (!readLocalMaintenanceMode()) {
-      return;
-    }
-
-    const mainEl = document.querySelector("main");
-    const footerEl = document.querySelector(".footer");
-    if (mainEl) {
-      mainEl.innerHTML = `
-        <section class="maintenance-screen">
-          <h1>Website Down For Maintenance</h1>
-          <p>All sections are temporarily unavailable while maintenance mode is enabled by admin.</p>
-        </section>
-      `;
-    }
-    if (footerEl) {
-      footerEl.style.display = "none";
-    }
+    setMaintenanceGate(readLocalMaintenanceMode());
   }
 }
 
@@ -1652,6 +1702,16 @@ window.addEventListener("storage", (event) => {
     renderAccountState();
     updateAccountDropdownDetails();
   }
+
+  if (event.key === localAdminSettingsKey) {
+    setMaintenanceGate(readLocalMaintenanceMode());
+  }
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    applyMaintenanceGate();
+  }
 });
 
 window.addEventListener("message", (event) => {
@@ -1671,6 +1731,7 @@ accountDropdownState = createAccountDropdown();
 updateAccountDropdownDetails();
 initAdminEntry();
 applyMaintenanceGate();
+setInterval(applyMaintenanceGate, maintenanceGatePollMs);
 updateAllowlistHeroButtonState();
 initSocialButtons();
 initConnectPanel();
