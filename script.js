@@ -482,6 +482,10 @@ function openSteamPopup() {
   openAuthPopup(steamPopupUrl, "bloodline-steam-login");
 }
 
+function startSteamLoginRedirect() {
+  window.location.href = steamPopupUrl;
+}
+
 function openDiscordPopup() {
   openAuthPopup(discordPopupUrl, "bloodline-discord-login");
 }
@@ -518,7 +522,7 @@ function ensureSteamLoginModal() {
   const steamButton = steamLoginModal.querySelector(".steam-login-button");
   if (steamButton) {
     steamButton.addEventListener("click", () => {
-      openSteamPopup();
+      startSteamLoginRedirect();
     });
   }
 
@@ -2143,7 +2147,7 @@ loginTriggers.forEach((trigger) => {
       return;
     }
 
-    openSteamLoginModal();
+    startSteamLoginRedirect();
   });
 });
 
@@ -2156,7 +2160,7 @@ document.addEventListener("keydown", (event) => {
 steamAuthButtons.forEach((button) => {
   button.addEventListener("click", (event) => {
     event.preventDefault();
-    openSteamPopup();
+    startSteamLoginRedirect();
   });
 });
 
