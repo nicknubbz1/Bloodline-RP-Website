@@ -1271,6 +1271,16 @@ function initStoreCart() {
     closeButton.addEventListener("click", closeStoreCartDrawer);
   }
 
+  if (backdrop) {
+    backdrop.addEventListener("click", closeStoreCartDrawer);
+  }
+
+  drawer.addEventListener("click", (event) => {
+    if (event.target === drawer) {
+      closeStoreCartDrawer();
+    }
+  });
+
   subscribeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const tier = button.getAttribute("data-tier") || "Supporter";
