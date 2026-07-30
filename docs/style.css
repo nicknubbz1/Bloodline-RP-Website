@@ -2086,9 +2086,9 @@ body.popup-open {
   left: 0;
   right: 0;
   bottom: 0;
-  height: 1px;
-  background: linear-gradient(90deg, rgba(255, 47, 47, 0.5), rgba(255, 47, 47, 0));
-  opacity: 0.72;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 47, 47, 0.95), rgba(255, 47, 47, 0));
+  opacity: 0.56;
 }
 
 .rule-entry:first-child {
