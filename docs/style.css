@@ -339,6 +339,16 @@ main.page-shell {
   letter-spacing: 0.04em;
 }
 
+.connect-action.has-timer {
+  justify-content: space-between;
+}
+
+.connect-action-timer {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.92;
+}
+
 .connect-action:hover {
   background: rgba(255, 47, 47, 0.3);
 }

@@ -678,11 +678,9 @@ function ensureConnectQueueModal() {
           <span class="connect-stat-label">Queue</span>
           <strong id="connectQueueCountText">0/0</strong>
         </div>
-        <p class="connect-modal-countdown" id="connectQueueCountdown" hidden></p>
         <div class="connect-modal-actions">
           <button class="connect-action" id="connectQueueModalAction" type="button">Connect</button>
         </div>
-        <p class="connect-modal-note" id="connectQueueNote">This popup stays small and will only enable connect when you are next in line.</p>
       </div>
     </div>
   `;
@@ -866,7 +864,7 @@ function refreshConnectPanelStatus(populationEl, statusEl) {
     return;
   }
 
-  fetch(serverStatusUrl)
+    fetch(serverStatusUrl)
     .then((response) => {
       if (!response.ok) {
         throw new Error("status-unavailable");
@@ -899,8 +897,6 @@ function updateConnectQueueModal() {
   const statusEl = modal.querySelector("#connectQueueStatusText");
   const playerCountEl = modal.querySelector("#connectQueuePlayerCountText");
   const countEl = modal.querySelector("#connectQueueCountText");
-  const countdownEl = modal.querySelector("#connectQueueCountdown");
-  const noteEl = modal.querySelector("#connectQueueNote");
   const actionButton = modal.querySelector("#connectQueueModalAction");
 
   if (statusEl) {
@@ -917,23 +913,19 @@ function updateConnectQueueModal() {
     countEl.textContent = connectQueueState.queueCountText || "0/0";
   }
 
-  if (countdownEl) {
-    const secondsLeft = Number(connectQueueState.readySecondsRemaining || 0);
-    if (connectQueueState.queueActionEnabled && secondsLeft > 0) {
-      countdownEl.hidden = false;
-      countdownEl.textContent = `Ready window: ${secondsLeft}s remaining`;
-    } else {
-      countdownEl.hidden = true;
-      countdownEl.textContent = "";
-    }
-  }
-
-  if (noteEl) {
-    noteEl.textContent = connectQueueState.noteText || "This popup stays small and will only enable connect when you are next in line.";
-  }
-
   if (actionButton) {
-    actionButton.textContent = connectQueueState.queueActionLabel || "Connect";
+    const baseLabel = connectQueueState.queueActionLabel || "Connect";
+    const secondsLeft = Number(connectQueueState.readySecondsRemaining || 0);
+    const showTimer = connectQueueState.queueActionEnabled && secondsLeft > 0;
+
+    if (showTimer) {
+      actionButton.classList.add("has-timer");
+      actionButton.innerHTML = `<span class="connect-action-label">${baseLabel}</span><span class="connect-action-timer">${secondsLeft}s</span>`;
+    } else {
+      actionButton.classList.remove("has-timer");
+      actionButton.textContent = baseLabel;
+    }
+
     actionButton.disabled = !connectQueueState.queueActionEnabled;
     actionButton.setAttribute("aria-disabled", String(!connectQueueState.queueActionEnabled));
   }
