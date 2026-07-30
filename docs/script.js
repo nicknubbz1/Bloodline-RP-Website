@@ -119,6 +119,7 @@ function ensureLocalAdminUsers() {
     isMainAdmin: true,
     permissions: {
       applications: true,
+      applicationAvailability: true,
       websiteMaintenance: true,
       subscriptions: true,
       permissions: true,
@@ -140,6 +141,7 @@ function sanitizeLocalAdminUser(user) {
     isMainAdmin: Boolean(user.isMainAdmin),
     permissions: {
       applications: Boolean(user.permissions?.applications),
+      applicationAvailability: Boolean(user.permissions?.applicationAvailability),
       websiteMaintenance: Boolean(user.permissions?.websiteMaintenance),
       subscriptions: Boolean(user.permissions?.subscriptions),
       permissions: Boolean(user.permissions?.permissions),
@@ -205,6 +207,7 @@ function upsertLocalAdminFromRemote(adminUser, password, staySignedIn) {
     isMainAdmin: Boolean(adminUser.isMainAdmin),
     permissions: {
       applications: Boolean(adminUser.permissions?.applications),
+      applicationAvailability: Boolean(adminUser.permissions?.applicationAvailability),
       websiteMaintenance: Boolean(adminUser.permissions?.websiteMaintenance),
       subscriptions: Boolean(adminUser.permissions?.subscriptions),
       permissions: Boolean(adminUser.permissions?.permissions),

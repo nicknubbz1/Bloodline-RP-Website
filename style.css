@@ -625,6 +625,60 @@ main.page-shell {
   letter-spacing: 0.03em;
 }
 
+.admin-application-availability-card {
+  margin-bottom: 0.6rem;
+}
+
+.admin-application-availability-list {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.admin-availability-item {
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0.6rem;
+  background: rgba(255, 255, 255, 0.02);
+  display: flex;
+  justify-content: space-between;
+  gap: 0.7rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.admin-availability-item h4 {
+  margin: 0;
+  font-family: "Oxanium", sans-serif;
+  font-size: 0.92rem;
+}
+
+.admin-availability-item p {
+  margin: 0.2rem 0 0;
+  color: #a8bbd8;
+  font-size: 0.88rem;
+}
+
+.app-form-status-badge {
+  border-radius: 999px;
+  padding: 0.16rem 0.44rem;
+  font-size: 0.66rem;
+  font-family: "Oxanium", sans-serif;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.app-form-status-open {
+  border: 1px solid rgba(126, 255, 156, 0.42);
+  background: rgba(76, 189, 98, 0.12);
+  color: #bbffd1;
+}
+
+.app-form-status-closed {
+  border: 1px solid rgba(255, 106, 106, 0.44);
+  background: rgba(179, 31, 31, 0.2);
+  color: #ffd1d1;
+}
+
 .admin-user-actions,
 .admin-inline-controls {
   display: flex;
@@ -1389,9 +1443,6 @@ main.page-shell {
 }
 
 .app-directory-status {
-  border: 1px solid rgba(126, 255, 156, 0.42);
-  background: rgba(76, 189, 98, 0.12);
-  color: #bbffd1;
   border-radius: 999px;
   padding: 0.16rem 0.4rem;
   font-size: 0.61rem;
@@ -1399,6 +1450,18 @@ main.page-shell {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.app-directory-status-open {
+  border: 1px solid rgba(126, 255, 156, 0.42);
+  background: rgba(76, 189, 98, 0.12);
+  color: #bbffd1;
+}
+
+.app-directory-status-closed {
+  border: 1px solid rgba(255, 106, 106, 0.44);
+  background: rgba(179, 31, 31, 0.2);
+  color: #ffd1d1;
 }
 
 .app-directory-open-btn {
@@ -1427,6 +1490,12 @@ main.page-shell {
   background: #a51212 !important;
   border-color: #a51212;
   color: #fff;
+}
+
+.app-directory-open-btn-disabled {
+  cursor: not-allowed;
+  opacity: 0.86;
+  pointer-events: none;
 }
 
 .app-directory-item-empty {

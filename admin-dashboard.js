@@ -27,6 +27,8 @@
   const localAdminSessionKey = "bloodline-local-admin-session";
   const localAdminSessionTempKey = "bloodline-local-admin-session-temp";
   const localAdminSettingsKey = "bloodline-local-admin-settings";
+  const localApplicationAvailabilityKey = "bloodline-application-form-availability";
+  const applicationForms = Array.isArray(window.BLOODLINE_APPLICATION_FORMS) ? window.BLOODLINE_APPLICATION_FORMS : [];
 
   const tabs = Array.from(document.querySelectorAll("[data-admin-tab]"));
   const panels = Array.from(document.querySelectorAll("[data-admin-panel]"));
@@ -49,6 +51,7 @@
     admin: null,
     users: [],
     applications: [],
+    applicationAvailability: {},
     subscriptions: { current: [], ended: [] },
     settings: { maintenanceMode: false },
     source: "active",
@@ -284,6 +287,7 @@
       isMainAdmin: true,
       permissions: {
         applications: true,
+        applicationAvailability: true,
         websiteMaintenance: true,
         subscriptions: true,
         permissions: true,
@@ -364,10 +368,45 @@
     const entry = raw || {};
     return {
       applications: Boolean(entry.applications),
+      applicationAvailability: Boolean(entry.applicationAvailability),
       websiteMaintenance: Boolean(entry.websiteMaintenance),
       subscriptions: Boolean(entry.subscriptions),
       permissions: Boolean(entry.permissions),
     };
+  }
+
+  function readLocalApplicationAvailability() {
+    return readStoredJson(localStorage, localApplicationAvailabilityKey, {});
+  }
+
+  function writeLocalApplicationAvailability(nextValue) {
+    writeStoredJson(localStorage, localApplicationAvailabilityKey, nextValue || {});
+  }
+
+  function normalizeApplicationAvailability(raw) {
+    const source = raw && typeof raw === "object" ? raw : {};
+    const normalized = {};
+
+    applicationForms.forEach(function (form) {
+      const key = String(form?.key || "").trim();
+      if (!key) {
+        return;
+      }
+      const current = source[key];
+      normalized[key] = current === undefined ? true : Boolean(current);
+    });
+
+    return normalized;
+  }
+
+  function isApplicationFormOpen(formKey) {
+    if (!formKey) {
+      return true;
+    }
+    if (state.applicationAvailability[formKey] === undefined) {
+      return true;
+    }
+    return Boolean(state.applicationAvailability[formKey]);
   }
 
   function hasPermission(permissionKey) {
@@ -394,7 +433,7 @@
     }
 
     if (tabKey === "applications") {
-      return Boolean(state.admin.permissions?.applications);
+      return Boolean(state.admin.permissions?.applications || state.admin.permissions?.applicationAvailability);
     }
 
     if (tabKey === "subscriptions") {
@@ -522,6 +561,7 @@
           ${user.isMainAdmin ? '<p class="admin-user-main-note">Main admin has all permissions enabled.</p>' : `
           <ul class="admin-user-permission-list">
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="applications" type="checkbox" ${perms.applications ? "checked" : ""} /><span>Applications</span></label></li>
+            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="applicationAvailability" type="checkbox" ${perms.applicationAvailability ? "checked" : ""} /><span>Toggle Apps</span></label></li>
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="websiteMaintenance" type="checkbox" ${perms.websiteMaintenance ? "checked" : ""} /><span>Maintenance</span></label></li>
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="subscriptions" type="checkbox" ${perms.subscriptions ? "checked" : ""} /><span>Subscriptions</span></label></li>
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="permissions" type="checkbox" ${perms.permissions ? "checked" : ""} /><span>Permissions</span></label></li>
@@ -540,18 +580,46 @@
       return;
     }
 
-    if (!hasPermission("applications")) {
+    const canModerateApplications = hasPermission("applications");
+    const canToggleApplications = hasPermission("applicationAvailability");
+
+    if (!canModerateApplications && !canToggleApplications) {
       adminApplicationsList.innerHTML = '<p class="admin-empty">You do not have applications access.</p>';
       return;
     }
 
-    if (!state.applications.length) {
-      adminApplicationsList.innerHTML = '<p class="admin-empty">No applications found for this view.</p>';
-      return;
-    }
+    const availabilityMarkup = canToggleApplications
+      ? `
+        <article class="admin-application-card admin-application-availability-card">
+          <header>
+            <h3>Application Availability</h3>
+            <span class="admin-badge">Toggle Apps</span>
+          </header>
+          <div class="admin-application-availability-list">
+            ${applicationForms.length ? applicationForms.map(function (form) {
+              const isOpen = isApplicationFormOpen(form.key);
+              const statusClass = isOpen ? "app-form-status-open" : "app-form-status-closed";
+              return `
+                <article class="admin-availability-item" data-form-key="${form.key}">
+                  <div>
+                    <h4>${form.title || form.key}</h4>
+                    <p>${form.description || "Application visibility control."}</p>
+                  </div>
+                  <div class="admin-inline-controls">
+                    <span class="app-form-status-badge ${statusClass}">${isOpen ? "Open" : "Closed"}</span>
+                    <button class="btn ${isOpen ? "btn-danger" : "btn-ghost"}" data-action="toggle-form-open" type="button">${isOpen ? "Close" : "Open"}</button>
+                  </div>
+                </article>
+              `;
+            }).join("") : '<p class="admin-empty">No application forms are configured.</p>'}
+          </div>
+        </article>
+      `
+      : '<article class="admin-application-card"><p class="admin-empty">You do not have Toggle Apps permission.</p></article>';
 
-    adminApplicationsList.innerHTML = state.applications.map(function (app) {
-      return `
+    const moderationMarkup = canModerateApplications
+      ? state.applications.map(function (app) {
+        return `
         <article class="admin-application-card" data-application-id="${app.id}">
           <header>
             <h3>${app.title || "Application"}</h3>
@@ -569,7 +637,20 @@
           </div>
         </article>
       `;
-    }).join("");
+      }).join("")
+      : '<p class="admin-empty">You do not have Applications moderation permission.</p>';
+
+    const moderationWrap = `
+      <article class="admin-application-card admin-application-moderation-wrap">
+        <header>
+          <h3>Application Moderation Queue</h3>
+          <span class="admin-badge">${state.source === "archived" ? "Archived" : "Active"}</span>
+        </header>
+        ${canModerateApplications && !state.applications.length ? '<p class="admin-empty">No applications found for this view.</p>' : moderationMarkup}
+      </article>
+    `;
+
+    adminApplicationsList.innerHTML = `${availabilityMarkup}${moderationWrap}`;
   }
 
   function renderSubscriptions() {
@@ -669,13 +750,22 @@
   }
 
   async function loadApplications() {
-    if (!hasPermission("applications")) {
+    if (!hasPermission("applications") && !hasPermission("applicationAvailability")) {
+      state.applications = [];
+      state.applicationAvailability = normalizeApplicationAvailability(readLocalApplicationAvailability());
+      renderApplications();
+      return;
+    }
+
+    state.applicationAvailability = normalizeApplicationAvailability(readLocalApplicationAvailability());
+
+    if (state.localMode) {
       state.applications = [];
       renderApplications();
       return;
     }
 
-    if (state.localMode) {
+    if (!hasPermission("applications")) {
       state.applications = [];
       renderApplications();
       return;
@@ -951,6 +1041,7 @@
         password: String(formData.get("password") || "").trim(),
         permissions: {
           applications: formData.get("applications") === "on",
+          applicationAvailability: formData.get("applicationAvailability") === "on",
           websiteMaintenance: formData.get("websiteMaintenance") === "on",
           subscriptions: formData.get("subscriptions") === "on",
           permissions: formData.get("permissions") === "on",
@@ -1110,7 +1201,7 @@
       }
 
       const permissionKey = checkbox.getAttribute("data-permission");
-      if (!["applications", "websiteMaintenance", "subscriptions", "permissions"].includes(permissionKey)) {
+      if (!["applications", "applicationAvailability", "websiteMaintenance", "subscriptions", "permissions"].includes(permissionKey)) {
         return;
       }
 
@@ -1162,6 +1253,28 @@
   if (adminApplicationsList) {
     adminApplicationsList.addEventListener("click", async function (event) {
       const button = event.target.closest("button[data-action]");
+      const availabilityCard = event.target.closest("[data-form-key]");
+      if (button && button.getAttribute("data-action") === "toggle-form-open") {
+        if (!hasPermission("applicationAvailability")) {
+          await showAlert("You do not have Toggle Apps permission.", "Access Denied");
+          return;
+        }
+
+        const formKey = availabilityCard?.getAttribute("data-form-key") || "";
+        if (!formKey) {
+          return;
+        }
+
+        const nextMap = {
+          ...state.applicationAvailability,
+          [formKey]: !isApplicationFormOpen(formKey),
+        };
+        writeLocalApplicationAvailability(nextMap);
+        state.applicationAvailability = normalizeApplicationAvailability(nextMap);
+        renderApplications();
+        return;
+      }
+
       const card = event.target.closest("[data-application-id]");
       if (!button || !card) {
         return;
@@ -1169,6 +1282,11 @@
 
       const appId = card.getAttribute("data-application-id");
       const action = button.getAttribute("data-action");
+
+      if (!hasPermission("applications")) {
+        await showAlert("You do not have Applications moderation permission.", "Access Denied");
+        return;
+      }
 
       try {
         if (action === "accept" || action === "deny") {

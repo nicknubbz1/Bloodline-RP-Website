@@ -1,6 +1,7 @@
 (function () {
   const forms = Array.isArray(window.BLOODLINE_APPLICATION_FORMS) ? window.BLOODLINE_APPLICATION_FORMS : [];
   const catalog = document.getElementById("applicationCatalog");
+  const localApplicationAvailabilityKey = "bloodline-application-form-availability";
 
   const categoryMeta = {
     server: {
@@ -41,6 +42,25 @@
     }, {});
   }
 
+  function readApplicationAvailability() {
+    try {
+      return JSON.parse(localStorage.getItem(localApplicationAvailabilityKey) || "{}") || {};
+    } catch {
+      return {};
+    }
+  }
+
+  function isFormOpen(form, availabilityMap) {
+    if (!form || !form.key) {
+      return true;
+    }
+    const value = availabilityMap[form.key];
+    if (value === undefined) {
+      return true;
+    }
+    return Boolean(value);
+  }
+
   function formatOpenCount(count) {
     if (count === 1) {
       return "1 Open Form";
@@ -48,9 +68,15 @@
     return count + " Open Forms";
   }
 
-  function createCardMarkup(form) {
+  function createCardMarkup(form, availabilityMap) {
     const questionCount = Array.isArray(form.questions) ? form.questions.length : 0;
     const description = form.description || "Open application.";
+    const open = isFormOpen(form, availabilityMap);
+    const statusClass = open ? "app-directory-status-open" : "app-directory-status-closed";
+    const statusText = open ? "Open" : "Closed";
+    const actionMarkup = open
+      ? '<a class="btn btn-primary app-directory-open-btn" href="application-view.html?form=' + encodeURIComponent(form.key) + '">Apply</a>'
+      : '<span class="btn btn-danger app-directory-open-btn app-directory-open-btn-disabled" aria-disabled="true">Closed</span>';
     return ""
       + '<article class="app-directory-item">'
       + '<div class="app-directory-item-main">'
@@ -59,8 +85,8 @@
       + '</div>'
       + '<div class="app-directory-item-side">'
       + '<span class="app-directory-questions">' + questionCount + ' questions</span>'
-      + '<span class="app-directory-status">Open</span>'
-        + '<a class="btn btn-primary app-directory-open-btn" href="application-view.html?form=' + encodeURIComponent(form.key) + '">Apply</a>'
+      + '<span class="app-directory-status ' + statusClass + '">' + statusText + '</span>'
+      + actionMarkup
       + '</div>'
       + '</article>';
   }
@@ -87,6 +113,7 @@
     }
 
     const grouped = groupFormsByType();
+    const availabilityMap = readApplicationAvailability();
     const categoryOrder = ["server", "public-safety", "city-hall", "business-gang"];
 
     catalog.innerHTML = "";
@@ -100,17 +127,22 @@
 
       const section = document.createElement("section");
       section.className = "app-category-block";
+      const openCount = entries.filter(function (entry) {
+        return isFormOpen(entry, availabilityMap);
+      }).length;
       section.innerHTML = ""
         + '<header class="app-category-head">'
         + '<h3>' + escapeHtml(meta.title) + '</h3>'
-        + '<span class="app-category-count">' + formatOpenCount(entries.length) + '</span>'
+        + '<span class="app-category-count">' + formatOpenCount(openCount) + '</span>'
         + '</header>'
         + '<div class="app-category-cards"></div>';
 
       const cardsWrap = section.querySelector(".app-category-cards");
       if (cardsWrap) {
         cardsWrap.innerHTML = entries.length
-          ? entries.map(createCardMarkup).join("")
+          ? entries.map(function (entry) {
+            return createCardMarkup(entry, availabilityMap);
+          }).join("")
           : '<article class="app-directory-item app-directory-item-empty"><p>No forms are currently open in this category.</p></article>';
       }
 

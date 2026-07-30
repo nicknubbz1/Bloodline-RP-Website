@@ -103,6 +103,7 @@ function cleanUsername(value) {
 function normalizePermissions(rawPermissions = {}) {
   return {
     applications: Boolean(rawPermissions.applications),
+    applicationAvailability: Boolean(rawPermissions.applicationAvailability),
     websiteMaintenance: Boolean(rawPermissions.websiteMaintenance),
     subscriptions: Boolean(rawPermissions.subscriptions),
     permissions: Boolean(rawPermissions.permissions),
@@ -300,6 +301,7 @@ function ensureAdminBootstrapUser() {
     isMainAdmin: true,
     permissions: {
       applications: true,
+      applicationAvailability: true,
       websiteMaintenance: true,
       subscriptions: true,
       permissions: true,

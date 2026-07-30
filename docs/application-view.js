@@ -9,12 +9,32 @@
   const loginPopupEl = document.getElementById("loginRequiredPopup");
   const loginPopupCloseEl = document.getElementById("loginRequiredPopupClose");
   const loginPopupLoginEl = document.getElementById("loginRequiredPopupLogin");
+  const localApplicationAvailabilityKey = "bloodline-application-form-availability";
 
   const params = new URLSearchParams(window.location.search);
   const formKey = params.get("form") || "";
   const selectedForm = forms.find(function (entry) {
     return entry.key === formKey;
   });
+
+  function readApplicationAvailability() {
+    try {
+      return JSON.parse(localStorage.getItem(localApplicationAvailabilityKey) || "{}") || {};
+    } catch {
+      return {};
+    }
+  }
+
+  function isSelectedFormOpen() {
+    if (!selectedForm?.key) {
+      return false;
+    }
+    const map = readApplicationAvailability();
+    if (map[selectedForm.key] === undefined) {
+      return true;
+    }
+    return Boolean(map[selectedForm.key]);
+  }
 
   function setMessage(text, kind) {
     if (!messageEl) {
@@ -127,6 +147,21 @@
       return;
     }
 
+    if (!isSelectedFormOpen()) {
+      titleEl.textContent = selectedForm.title;
+      descriptionEl.textContent = "This application is currently closed. Please check back later.";
+      if (fieldsWrap) {
+        fieldsWrap.innerHTML = "";
+      }
+      if (formEl) {
+        formEl.hidden = true;
+      }
+      if (questionTotalEl) {
+        questionTotalEl.textContent = "0";
+      }
+      return;
+    }
+
     titleEl.textContent = selectedForm.title;
     descriptionEl.textContent = selectedForm.description || "Complete each question below and submit when ready.";
     if (questionTotalEl) {
@@ -143,6 +178,11 @@
     event.preventDefault();
 
     if (!selectedForm || !fieldsWrap) {
+      return;
+    }
+
+    if (!isSelectedFormOpen()) {
+      setMessage("This application is currently closed.", "error");
       return;
     }
 
