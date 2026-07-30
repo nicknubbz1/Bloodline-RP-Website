@@ -83,7 +83,6 @@ let connectQueueState = {
   queueActionLabel: "Connect",
   queueActionEnabled: false,
   queueActionHref: queueJoinUrl,
-  messageText: "Open this popup to check your queue status.",
   noteText: "Connect stays locked until you are next in line.",
   readyExpiresAt: 0,
   readySecondsRemaining: 0,
@@ -678,14 +677,13 @@ function ensureConnectQueueModal() {
           <strong id="connectQueueStatusText">Offline</strong>
         </div>
         <div class="connect-modal-status">
+          <span class="connect-stat-label">Player Count</span>
+          <strong id="connectQueuePlayerCountText">0/0</strong>
+        </div>
+        <div class="connect-modal-status">
           <span class="connect-stat-label">Queue</span>
           <strong id="connectQueueCountText">0/0</strong>
         </div>
-        <div class="connect-modal-status">
-          <span class="connect-stat-label">Queue Position</span>
-          <strong id="connectQueuePositionText">In queue</strong>
-        </div>
-        <p class="connect-modal-message" id="connectQueueMessage">Waiting for live status...</p>
         <p class="connect-modal-countdown" id="connectQueueCountdown" hidden></p>
         <div class="connect-modal-actions">
           <button class="connect-action" id="connectQueueModalAction" type="button">Connect</button>
@@ -751,8 +749,7 @@ function markConnectWindowExpired() {
     ...connectQueueState,
     queueActionEnabled: false,
     queueActionLabel: "Connect",
-    queuePositionText: "Requeued",
-    messageText: "You did not connect within 60 seconds. You were returned to queue.",
+    queuePositionText: "In queue",
     noteText: "Wait until you are next in line again to unlock Connect.",
     readyExpiresAt: 0,
     readySecondsRemaining: 0,
@@ -800,19 +797,10 @@ function resolveQueueDisplay(payload) {
   const validPosition = Number.isFinite(queuePosition) && queuePosition >= 0 ? queuePosition : null;
   const validTotal = Number.isFinite(queueTotal) && queueTotal >= 0 ? queueTotal : 0;
 
-  const positionText = validPosition === null
-    ? "In queue"
-    : validPosition === 0
-      ? "You're in"
-      : validPosition === 1
-        ? "You're next"
-        : `#${validPosition}`;
-
   return {
     positionValue: validPosition,
     totalValue: validTotal,
     queueCountText: `${validPosition ?? 0}/${validTotal}`,
-    queuePositionText: positionText,
   };
 }
 
@@ -844,12 +832,7 @@ function applyConnectStatusPayload(payload) {
     statusText: isOnline ? "Online" : "Offline",
     playersText: `${Number.isFinite(players) ? players : 0}/${Number.isFinite(maxPlayers) && maxPlayers > 0 ? maxPlayers : 0}`,
     queueCountText: queueInfo.queueCountText,
-    queuePositionText: queueInfo.queuePositionText,
-    messageText: isOnline
-      ? (shouldEnableConnect
-        ? "You are ready to connect. You have 60 seconds to join."
-        : "You are currently waiting in queue.")
-      : "The server is currently offline.",
+    queuePositionText: "In queue",
     noteText: shouldEnableConnect
       ? "If you do not connect in time, you will be placed back into queue automatically."
       : "Connect unlocks only when you are next in line and ready.",
@@ -868,7 +851,6 @@ function applyConnectOfflineFallback(message, note) {
     playersText: "0/0",
     queueCountText: "0/0",
     queuePositionText: "In queue",
-    messageText: message,
     noteText: note,
     queueActionLabel: "Connect",
     queueActionEnabled: false,
@@ -933,9 +915,8 @@ function refreshConnectPanelStatus(populationEl, statusEl) {
 function updateConnectQueueModal() {
   const modal = ensureConnectQueueModal();
   const statusEl = modal.querySelector("#connectQueueStatusText");
+  const playerCountEl = modal.querySelector("#connectQueuePlayerCountText");
   const countEl = modal.querySelector("#connectQueueCountText");
-  const positionEl = modal.querySelector("#connectQueuePositionText");
-  const messageEl = modal.querySelector("#connectQueueMessage");
   const countdownEl = modal.querySelector("#connectQueueCountdown");
   const noteEl = modal.querySelector("#connectQueueNote");
   const actionButton = modal.querySelector("#connectQueueModalAction");
@@ -946,16 +927,12 @@ function updateConnectQueueModal() {
     statusEl.classList.toggle("status-offline", connectQueueState.statusText === "Offline");
   }
 
+  if (playerCountEl) {
+    playerCountEl.textContent = connectQueueState.playersText || "0/0";
+  }
+
   if (countEl) {
     countEl.textContent = connectQueueState.queueCountText || "0/0";
-  }
-
-  if (positionEl) {
-    positionEl.textContent = connectQueueState.queuePositionText;
-  }
-
-  if (messageEl) {
-    messageEl.textContent = connectQueueState.messageText || "Waiting for live status...";
   }
 
   if (countdownEl) {
