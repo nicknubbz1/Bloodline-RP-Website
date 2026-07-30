@@ -734,23 +734,25 @@
 
     adminUsersList.innerHTML = state.users.map(function (user) {
       const perms = normalizePermissions(user.permissions);
+      const isSelfManagedProfile = Boolean(state.admin && user.id === state.admin.id && !user.isMainAdmin);
       return `
-        <article class="admin-user-card" data-user-id="${user.id}">
+        <article class="admin-user-card${isSelfManagedProfile ? " admin-user-card-readonly" : ""}" data-user-id="${user.id}">
           <div class="admin-user-head">
             <h3>${user.username}${user.isMainAdmin ? " (Main)" : ""}</h3>
             <p>Profile access controls</p>
           </div>
           ${user.isMainAdmin ? '<p class="admin-user-main-note">Main admin has all permissions enabled.</p>' : `
           <ul class="admin-user-permission-list">
-            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="applications" type="checkbox" ${perms.applications ? "checked" : ""} /><span>Applications</span></label></li>
-            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="applicationAvailability" type="checkbox" ${perms.applicationAvailability ? "checked" : ""} /><span>Toggle Apps</span></label></li>
-            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="websiteMaintenance" type="checkbox" ${perms.websiteMaintenance ? "checked" : ""} /><span>Maintenance</span></label></li>
-            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="subscriptions" type="checkbox" ${perms.subscriptions ? "checked" : ""} /><span>Subscriptions</span></label></li>
-            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="permissions" type="checkbox" ${perms.permissions ? "checked" : ""} /><span>Permissions</span></label></li>
+            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="applications" type="checkbox" ${perms.applications ? "checked" : ""} ${isSelfManagedProfile ? "disabled" : ""} /><span>Applications</span></label></li>
+            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="applicationAvailability" type="checkbox" ${perms.applicationAvailability ? "checked" : ""} ${isSelfManagedProfile ? "disabled" : ""} /><span>Toggle Apps</span></label></li>
+            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="websiteMaintenance" type="checkbox" ${perms.websiteMaintenance ? "checked" : ""} ${isSelfManagedProfile ? "disabled" : ""} /><span>Maintenance</span></label></li>
+            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="subscriptions" type="checkbox" ${perms.subscriptions ? "checked" : ""} ${isSelfManagedProfile ? "disabled" : ""} /><span>Subscriptions</span></label></li>
+            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="permissions" type="checkbox" ${perms.permissions ? "checked" : ""} ${isSelfManagedProfile ? "disabled" : ""} /><span>Permissions</span></label></li>
           </ul>`}
+          ${isSelfManagedProfile ? '<p class="admin-empty">You can view your own permissions but cannot edit them.</p>' : ""}
           <div class="admin-user-actions">
-            ${user.isMainAdmin ? "" : '<button class="btn btn-ghost" data-action="set-password" type="button">Reset Password</button>'}
-            ${user.isMainAdmin ? "" : '<button class="btn btn-danger" data-action="delete" type="button">Delete Profile</button>'}
+            ${user.isMainAdmin ? "" : `<button class="btn btn-ghost" data-action="set-password" type="button" ${isSelfManagedProfile ? "disabled" : ""}>Reset Password</button>`}
+            ${user.isMainAdmin ? "" : `<button class="btn btn-danger" data-action="delete" type="button" ${isSelfManagedProfile ? "disabled" : ""}>Delete Profile</button>`}
           </div>
         </article>
       `;
@@ -1317,6 +1319,11 @@
         return;
       }
 
+      if (state.admin && target.id === state.admin.id && !target.isMainAdmin) {
+        await showAlert("You can view your own permissions but cannot edit your profile from this panel.", "Access Denied");
+        return;
+      }
+
       const action = button.getAttribute("data-action");
 
       if (state.localMode) {
@@ -1408,6 +1415,13 @@
       });
       if (!target || target.isMainAdmin) {
         checkbox.checked = true;
+        return;
+      }
+
+      if (state.admin && target.id === state.admin.id) {
+        const permissions = normalizePermissions(target.permissions);
+        checkbox.checked = Boolean(permissions[checkbox.getAttribute("data-permission")]);
+        await showAlert("You can view your own permissions but cannot edit them.", "Access Denied");
         return;
       }
 

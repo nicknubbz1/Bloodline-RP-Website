@@ -592,6 +592,20 @@ main.page-shell {
   margin-top: 0.5rem;
 }
 
+.admin-user-card-readonly {
+  opacity: 0.7;
+  border-color: rgba(197, 211, 233, 0.22);
+}
+
+.admin-user-card-readonly .admin-user-permission-item {
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.admin-user-card-readonly .admin-user-permission-item input,
+.admin-user-card-readonly .admin-user-actions button {
+  cursor: not-allowed;
+}
+
 .admin-user-permission-list {
   list-style: none;
   margin: 0.55rem 0 0;
