@@ -1819,6 +1819,116 @@ function updateAllowlistHeroButtonState() {
   allowlistButton.setAttribute("aria-disabled", "true");
 }
 
+function initRulesPageNavigation() {
+  const sideNav = document.querySelector(".side-nav");
+  if (!sideNav) {
+    return;
+  }
+
+  const navLinks = Array.from(sideNav.querySelectorAll('a[href^="#"]'));
+  if (!navLinks.length) {
+    return;
+  }
+
+  const sections = navLinks
+    .map((link) => {
+      const hash = String(link.getAttribute("href") || "");
+      if (!hash.startsWith("#") || hash.length < 2) {
+        return null;
+      }
+      return document.getElementById(hash.slice(1));
+    })
+    .filter(Boolean);
+
+  if (!sections.length) {
+    return;
+  }
+
+  const linkBySectionId = new Map();
+  navLinks.forEach((link) => {
+    const hash = String(link.getAttribute("href") || "");
+    const id = hash.startsWith("#") ? hash.slice(1) : "";
+    if (id) {
+      linkBySectionId.set(id, link);
+    }
+  });
+
+  let manualActiveSectionId = "";
+  let manualActiveUntil = 0;
+
+  const setActiveLink = function (sectionId) {
+    navLinks.forEach((link) => {
+      const linkHash = String(link.getAttribute("href") || "");
+      const isActive = linkHash === `#${sectionId}`;
+      link.classList.toggle("active", isActive);
+      if (isActive) {
+        link.setAttribute("aria-current", "location");
+      } else {
+        link.removeAttribute("aria-current");
+      }
+    });
+  };
+
+  const updateFromHash = function () {
+    const hash = decodeURIComponent(String(window.location.hash || "").replace(/^#/, ""));
+    if (hash && linkBySectionId.has(hash)) {
+      setActiveLink(hash);
+      return true;
+    }
+    return false;
+  };
+
+  navLinks.forEach((link) => {
+    link.addEventListener("click", function () {
+      const hash = String(link.getAttribute("href") || "");
+      const id = hash.startsWith("#") ? hash.slice(1) : "";
+      if (id) {
+        manualActiveSectionId = id;
+        manualActiveUntil = Date.now() + 900;
+        setActiveLink(id);
+      }
+    });
+  });
+
+  if (!updateFromHash()) {
+    setActiveLink(sections[0].id);
+  }
+
+  const syncActiveLinkToScroll = function () {
+    if (manualActiveSectionId && Date.now() < manualActiveUntil) {
+      setActiveLink(manualActiveSectionId);
+      return;
+    }
+
+    manualActiveSectionId = "";
+    const activationOffset = 170;
+    let activeSectionId = sections[0].id;
+
+    sections.forEach((section) => {
+      const top = section.getBoundingClientRect().top;
+      if (top - activationOffset <= 0) {
+        activeSectionId = section.id;
+      }
+    });
+
+    const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4;
+    if (nearBottom) {
+      activeSectionId = sections[sections.length - 1].id;
+    }
+
+    setActiveLink(activeSectionId);
+  };
+
+  window.addEventListener("hashchange", function () {
+    if (!updateFromHash()) {
+      syncActiveLinkToScroll();
+    }
+  });
+  window.addEventListener("scroll", syncActiveLinkToScroll, { passive: true });
+  window.addEventListener("resize", syncActiveLinkToScroll);
+  setTimeout(syncActiveLinkToScroll, 0);
+}
+
 loginTriggers.forEach((trigger) => {
   trigger.addEventListener("click", (event) => {
     event.preventDefault();
@@ -1895,6 +2005,7 @@ initAdminEntry();
 applyMaintenanceGate();
 setInterval(applyMaintenanceGate, maintenanceGatePollMs);
 updateAllowlistHeroButtonState();
+initRulesPageNavigation();
 initSocialButtons();
 initConnectPanel();
 initStoreCart();
