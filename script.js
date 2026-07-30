@@ -291,8 +291,10 @@ function ensureMaintenanceGateOverlay() {
   overlay.setAttribute("aria-live", "polite");
   overlay.hidden = true;
   overlay.innerHTML = `
-    <h1>Website Down For Maintenance</h1>
-    <p>All sections are temporarily unavailable while maintenance mode is enabled by admin.</p>
+    <div class="maintenance-screen-panel">
+      <h1>Website Down For Maintenance</h1>
+      <p>All sections are temporarily unavailable while maintenance mode is enabled by admin.</p>
+    </div>
   `;
 
   document.body.appendChild(overlay);
