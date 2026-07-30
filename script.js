@@ -1590,15 +1590,18 @@ function updateAllowlistHeroButtonState() {
   }
 
   const open = isAllowlistOpen();
+  const titleMarkup = '<span class="allowlist-btn-title">Allowlist Application</span>';
   if (open) {
-    allowlistButton.textContent = "Allowlist Application";
+    allowlistButton.innerHTML = titleMarkup;
     allowlistButton.setAttribute("href", "application-view.html?form=allowlist-app");
+    allowlistButton.classList.remove("allowlist-btn-stacked");
     allowlistButton.classList.remove("btn-disabled");
     allowlistButton.removeAttribute("aria-disabled");
     return;
   }
 
-  allowlistButton.textContent = "Closed";
+  allowlistButton.innerHTML = `${titleMarkup}<span class="allowlist-btn-status">Closed</span>`;
+  allowlistButton.classList.add("allowlist-btn-stacked");
   allowlistButton.removeAttribute("href");
   allowlistButton.classList.add("btn-disabled");
   allowlistButton.setAttribute("aria-disabled", "true");
