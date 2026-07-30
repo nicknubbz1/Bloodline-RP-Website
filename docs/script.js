@@ -510,12 +510,6 @@ function ensureSteamLoginModal() {
 
   document.body.appendChild(steamLoginModal);
 
-  steamLoginModal.addEventListener("click", (event) => {
-    if (event.target === steamLoginModal) {
-      closeSteamLoginModal();
-    }
-  });
-
   const closeButton = steamLoginModal.querySelector(".steam-modal-close");
   if (closeButton) {
     closeButton.addEventListener("click", closeSteamLoginModal);
@@ -694,12 +688,6 @@ function ensureConnectQueueModal() {
   `;
 
   document.body.appendChild(connectQueueModal);
-
-  connectQueueModal.addEventListener("click", (event) => {
-    if (event.target === connectQueueModal) {
-      closeConnectQueueModal();
-    }
-  });
 
   const closeButton = connectQueueModal.querySelector(".connect-modal-close");
   if (closeButton) {
@@ -1301,10 +1289,6 @@ function initStoreCart() {
     closeButton.addEventListener("click", closeStoreCartDrawer);
   }
 
-  if (backdrop) {
-    backdrop.addEventListener("click", closeStoreCartDrawer);
-  }
-
   subscribeButtons.forEach((button) => {
     button.addEventListener("click", () => {
       const tier = button.getAttribute("data-tier") || "Supporter";
@@ -1711,12 +1695,6 @@ function ensureAdminLoginModal() {
   `;
 
   document.body.appendChild(adminLoginModal);
-
-  adminLoginModal.addEventListener("click", (event) => {
-    if (event.target === adminLoginModal) {
-      closeAdminLoginModal();
-    }
-  });
 
   const closeButton = adminLoginModal.querySelector("[data-admin-close]");
   if (closeButton) {
@@ -2179,11 +2157,7 @@ loginTriggers.forEach((trigger) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    closeSteamLoginModal();
-    closeAdminLoginModal();
     closeAccountDropdown();
-    closeConnectQueueModal();
-    closeStoreCartDrawer();
   }
 });
 

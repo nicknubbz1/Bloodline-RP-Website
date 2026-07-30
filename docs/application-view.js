@@ -271,18 +271,6 @@
       }
     });
   }
-  if (loginPopupEl) {
-    loginPopupEl.addEventListener("click", function (event) {
-      if (event.target === loginPopupEl) {
-        hideLoginRequiredPopup();
-      }
-    });
-  }
-  document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && loginPopupEl && !loginPopupEl.hidden) {
-      hideLoginRequiredPopup();
-    }
-  });
   if (formEl) {
     formEl.addEventListener("submit", submit);
   }

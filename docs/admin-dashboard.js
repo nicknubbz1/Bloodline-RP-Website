@@ -97,20 +97,6 @@
     `;
 
     document.body.appendChild(adminDialogModal);
-    adminDialogModal.addEventListener("click", function (event) {
-      if (event.target === adminDialogModal) {
-        const cancelBtn = adminDialogModal.querySelector("[data-dialog-cancel]");
-        if (cancelBtn && !cancelBtn.hidden) {
-          cancelBtn.click();
-          return;
-        }
-
-        const closeBtn = adminDialogModal.querySelector("[data-dialog-close]");
-        if (closeBtn) {
-          closeBtn.click();
-        }
-      }
-    });
 
     return adminDialogModal;
   }
@@ -193,15 +179,6 @@
 
     return new Promise(function (resolve) {
       const onKeyDown = function (event) {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          if (!cancelBtn.hidden) {
-            cancelBtn.click();
-          } else {
-            confirmBtn.click();
-          }
-        }
-
         if (event.key === "Enter" && isPrompt && event.target === inputEl) {
           event.preventDefault();
           confirmBtn.click();
