@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260730e" />
+  <link rel="stylesheet" href="style.css?v=20260730f" />
 </head>
 <body>
 <header class="site-header">
@@ -75,6 +75,7 @@
             <div class="admin-permission-grid">
               <label><input type="checkbox" name="applications" /> Applications</label>
               <label><input type="checkbox" name="applicationAvailability" /> Toggle Apps</label>
+              <label><input type="checkbox" name="giftSubscriptions" /> Gift Subscriptions</label>
               <label><input type="checkbox" name="websiteMaintenance" /> Website Maintenance</label>
               <label><input type="checkbox" name="subscriptions" /> Subscriptions</label>
               <label><input type="checkbox" name="permissions" /> Permissions</label>
@@ -108,6 +109,37 @@
     </div>
 
     <div class="admin-tab-panel" data-admin-panel="subscriptions">
+      <article class="panel">
+        <div class="panel-head"><h2>Gift Subscription</h2></div>
+        <form id="subscriptionGiftForm" class="admin-form subscription-gift-form">
+          <label for="subscriptionGiftSearch">Steam / Discord</label>
+          <input id="subscriptionGiftSearch" name="giftSearch" type="text" list="subscriptionGiftSearchList" placeholder="Search Steam or Discord" required />
+          <datalist id="subscriptionGiftSearchList"></datalist>
+
+          <label for="subscriptionGiftTier">Tier</label>
+          <select id="subscriptionGiftTier" name="giftTier" required>
+            <option value="">Select tier</option>
+            <option value="Bronze">Bronze</option>
+            <option value="Silver">Silver</option>
+            <option value="Gold">Gold</option>
+            <option value="Platinum">Platinum</option>
+          </select>
+
+          <label for="subscriptionGiftDuration">Duration</label>
+          <select id="subscriptionGiftDuration" name="giftDuration" required>
+            <option value="">Select duration</option>
+            <option value="lifetime">Lifetime</option>
+            <option value="1m">1 Month</option>
+            <option value="3m">3 Months</option>
+            <option value="6m">6 Months</option>
+            <option value="12m">12 Months</option>
+          </select>
+
+          <button class="btn btn-primary" id="subscriptionGiftSubmitBtn" type="submit">Gift Subscription</button>
+          <p id="subscriptionGiftMessage" class="admin-empty"></p>
+        </form>
+      </article>
+
       <div class="admin-grid two-col">
         <article class="panel">
           <div class="panel-head"><h2>Current Subscriptions</h2></div>
@@ -129,9 +161,9 @@
 </footer>
 
 <script src="auth-config.js"></script>
-<script src="script.js?v=20260730a"></script>
+<script src="script.js?v=20260730b"></script>
 <script src="application-forms.js?v=20260730a"></script>
-<script src="admin-dashboard.js?v=20260730g"></script>
+<script src="admin-dashboard.js?v=20260730h"></script>
 </body>
 </html>
 

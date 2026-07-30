@@ -27,6 +27,7 @@
   const localAdminSessionKey = "bloodline-local-admin-session";
   const localAdminSessionTempKey = "bloodline-local-admin-session-temp";
   const localAdminSettingsKey = "bloodline-local-admin-settings";
+  const localSubscriptionsKey = "bloodline-local-subscriptions";
   const localApplicationAvailabilityKey = "bloodline-application-form-availability";
   const applicationForms = Array.isArray(window.BLOODLINE_APPLICATION_FORMS) ? window.BLOODLINE_APPLICATION_FORMS : [];
 
@@ -46,6 +47,13 @@
   const adminApplicationsList = document.getElementById("adminApplicationsList");
   const currentSubscriptionsList = document.getElementById("currentSubscriptionsList");
   const endedSubscriptionsList = document.getElementById("endedSubscriptionsList");
+  const subscriptionGiftForm = document.getElementById("subscriptionGiftForm");
+  const subscriptionGiftSearch = document.getElementById("subscriptionGiftSearch");
+  const subscriptionGiftSearchList = document.getElementById("subscriptionGiftSearchList");
+  const subscriptionGiftTier = document.getElementById("subscriptionGiftTier");
+  const subscriptionGiftDuration = document.getElementById("subscriptionGiftDuration");
+  const subscriptionGiftSubmitBtn = document.getElementById("subscriptionGiftSubmitBtn");
+  const subscriptionGiftMessage = document.getElementById("subscriptionGiftMessage");
 
   const state = {
     admin: null,
@@ -53,6 +61,7 @@
     applications: [],
     applicationAvailability: {},
     subscriptions: { current: [], ended: [] },
+    giftCandidates: [],
     settings: { maintenanceMode: false },
     source: "active",
     localMode: false,
@@ -288,6 +297,7 @@
       permissions: {
         applications: true,
         applicationAvailability: true,
+        giftSubscriptions: true,
         websiteMaintenance: true,
         subscriptions: true,
         permissions: true,
@@ -369,10 +379,26 @@
     return {
       applications: Boolean(entry.applications),
       applicationAvailability: Boolean(entry.applicationAvailability),
+      giftSubscriptions: Boolean(entry.giftSubscriptions),
       websiteMaintenance: Boolean(entry.websiteMaintenance),
       subscriptions: Boolean(entry.subscriptions),
       permissions: Boolean(entry.permissions),
     };
+  }
+
+  function readLocalSubscriptionsStore() {
+    const store = readStoredJson(localStorage, localSubscriptionsKey, { current: [], ended: [] });
+    return {
+      current: Array.isArray(store.current) ? store.current : [],
+      ended: Array.isArray(store.ended) ? store.ended : [],
+    };
+  }
+
+  function writeLocalSubscriptionsStore(nextStore) {
+    writeStoredJson(localStorage, localSubscriptionsKey, {
+      current: Array.isArray(nextStore.current) ? nextStore.current : [],
+      ended: Array.isArray(nextStore.ended) ? nextStore.ended : [],
+    });
   }
 
   function readLocalApplicationAvailability() {
@@ -437,7 +463,7 @@
     }
 
     if (tabKey === "subscriptions") {
-      return Boolean(state.admin.permissions?.subscriptions);
+      return Boolean(state.admin.permissions?.subscriptions || state.admin.permissions?.giftSubscriptions);
     }
 
     return false;
@@ -496,6 +522,139 @@
       return "Not set";
     }
     return parsed.toLocaleString();
+  }
+
+  function durationLabel(value) {
+    const map = {
+      lifetime: "Lifetime",
+      "1m": "1 Month",
+      "3m": "3 Months",
+      "6m": "6 Months",
+      "12m": "12 Months",
+    };
+    return map[value] || "Custom";
+  }
+
+  function calculateRenewalDate(duration) {
+    if (duration === "lifetime") {
+      return null;
+    }
+
+    const monthsMap = {
+      "1m": 1,
+      "3m": 3,
+      "6m": 6,
+      "12m": 12,
+    };
+    const months = monthsMap[duration] || 0;
+    if (!months) {
+      return null;
+    }
+
+    const date = new Date();
+    date.setMonth(date.getMonth() + months);
+    return date.toISOString();
+  }
+
+  function setSubscriptionGiftMessage(message, kind) {
+    if (!subscriptionGiftMessage) {
+      return;
+    }
+    subscriptionGiftMessage.textContent = message || "";
+    subscriptionGiftMessage.classList.remove("error", "success");
+    if (kind) {
+      subscriptionGiftMessage.classList.add(kind);
+    }
+  }
+
+  function buildGiftCandidates() {
+    const map = new Map();
+
+    const pushCandidate = function (raw) {
+      if (!raw) {
+        return;
+      }
+
+      const steamId = String(raw.steamId || "").trim();
+      const steamName = String(raw.steamName || "").trim();
+      const discordId = String(raw.discordId || "").trim();
+      const discordName = String(raw.discordName || "").trim();
+      const fallbackName = String(raw.name || raw.displayName || "").trim();
+      const displayName = steamName || discordName || fallbackName;
+
+      if (!displayName && !steamId && !discordId) {
+        return;
+      }
+
+      const key = `${steamId.toLowerCase()}|${discordId.toLowerCase()}|${displayName.toLowerCase()}`;
+      if (map.has(key)) {
+        return;
+      }
+
+      map.set(key, {
+        steamId,
+        steamName,
+        discordId,
+        discordName,
+        displayName,
+      });
+    };
+
+    state.applications.forEach(function (application) {
+      pushCandidate(application?.applicant || null);
+    });
+
+    const subscriptions = [
+      ...(Array.isArray(state.subscriptions.current) ? state.subscriptions.current : []),
+      ...(Array.isArray(state.subscriptions.ended) ? state.subscriptions.ended : []),
+    ];
+    subscriptions.forEach(function (entry) {
+      pushCandidate(entry);
+    });
+
+    return Array.from(map.values()).sort(function (a, b) {
+      return a.displayName.localeCompare(b.displayName);
+    });
+  }
+
+  function findGiftCandidate(query) {
+    const normalized = String(query || "").trim().toLowerCase();
+    if (!normalized) {
+      return null;
+    }
+
+    return state.giftCandidates.find(function (candidate) {
+      const fields = [
+        candidate.displayName,
+        candidate.steamId,
+        candidate.steamName,
+        candidate.discordId,
+        candidate.discordName,
+      ];
+      return fields.some(function (field) {
+        return String(field || "").toLowerCase() === normalized;
+      });
+    }) || null;
+  }
+
+  function renderGiftSearchOptions() {
+    if (!subscriptionGiftSearchList) {
+      return;
+    }
+
+    state.giftCandidates = buildGiftCandidates();
+    subscriptionGiftSearchList.innerHTML = state.giftCandidates.map(function (candidate) {
+      const labels = [];
+      if (candidate.steamId) {
+        labels.push(`Steam: ${candidate.steamId}`);
+      }
+      if (candidate.discordId) {
+        labels.push(`Discord: ${candidate.discordId}`);
+      }
+      const suffix = labels.length ? ` (${labels.join(" | ")})` : "";
+      const value = candidate.displayName || candidate.steamId || candidate.discordId;
+      return `<option value="${value}">${value}${suffix}</option>`;
+    }).join("");
   }
 
   async function requestJson(url, options) {
@@ -562,6 +721,7 @@
           <ul class="admin-user-permission-list">
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="applications" type="checkbox" ${perms.applications ? "checked" : ""} /><span>Applications</span></label></li>
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="applicationAvailability" type="checkbox" ${perms.applicationAvailability ? "checked" : ""} /><span>Toggle Apps</span></label></li>
+            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="giftSubscriptions" type="checkbox" ${perms.giftSubscriptions ? "checked" : ""} /><span>Gift Subs</span></label></li>
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="websiteMaintenance" type="checkbox" ${perms.websiteMaintenance ? "checked" : ""} /><span>Maintenance</span></label></li>
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="subscriptions" type="checkbox" ${perms.subscriptions ? "checked" : ""} /><span>Subscriptions</span></label></li>
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="permissions" type="checkbox" ${perms.permissions ? "checked" : ""} /><span>Permissions</span></label></li>
@@ -658,9 +818,39 @@
       return;
     }
 
-    if (!hasPermission("subscriptions")) {
+    const canViewSubscriptions = hasPermission("subscriptions");
+    const canGiftSubscriptions = hasPermission("giftSubscriptions");
+
+    if (!canViewSubscriptions && !canGiftSubscriptions) {
       currentSubscriptionsList.innerHTML = '<p class="admin-empty">You do not have subscriptions access.</p>';
       endedSubscriptionsList.innerHTML = '<p class="admin-empty">You do not have subscriptions access.</p>';
+      if (subscriptionGiftForm) {
+        subscriptionGiftForm.style.display = "none";
+      }
+      return;
+    }
+
+    if (subscriptionGiftForm) {
+      subscriptionGiftForm.style.display = canGiftSubscriptions ? "grid" : "none";
+    }
+    if (subscriptionGiftSearch) {
+      subscriptionGiftSearch.disabled = !canGiftSubscriptions;
+    }
+    if (subscriptionGiftTier) {
+      subscriptionGiftTier.disabled = !canGiftSubscriptions;
+    }
+    if (subscriptionGiftDuration) {
+      subscriptionGiftDuration.disabled = !canGiftSubscriptions;
+    }
+    if (subscriptionGiftSubmitBtn) {
+      subscriptionGiftSubmitBtn.disabled = !canGiftSubscriptions;
+    }
+
+    renderGiftSearchOptions();
+
+    if (!canViewSubscriptions) {
+      currentSubscriptionsList.innerHTML = '<p class="admin-empty">You do not have subscriptions view permission.</p>';
+      endedSubscriptionsList.innerHTML = '<p class="admin-empty">You do not have subscriptions view permission.</p>';
       return;
     }
 
@@ -669,7 +859,7 @@
 
     currentSubscriptionsList.innerHTML = current.length
       ? current.map(function (entry) {
-        return `<article class="admin-subscription-card"><h3>${entry.name || "Unknown"}</h3><p>Tier: ${entry.tier || "Unknown"}</p><p>Renews: ${formatDate(entry.renewsAt)}</p><p>Amount: ${entry.amount || "Not set"}</p></article>`;
+        return `<article class="admin-subscription-card"><h3>${entry.name || "Unknown"}</h3><p>Tier: ${entry.tier || "Unknown"}</p><p>Steam: ${entry.steamId || "Not set"}</p><p>Discord: ${entry.discordId || "Not set"}</p><p>Duration: ${entry.lifetime ? "Lifetime" : durationLabel(entry.duration)}</p><p>Renews: ${entry.lifetime ? "Lifetime" : formatDate(entry.renewsAt)}</p><p>Amount: ${entry.amount || "Not set"}</p></article>`;
       }).join("")
       : '<p class="admin-empty">No current subscriptions.</p>';
 
@@ -783,13 +973,19 @@
   }
 
   async function loadSubscriptions() {
-    if (!hasPermission("subscriptions")) {
+    if (!hasPermission("subscriptions") && !hasPermission("giftSubscriptions")) {
       state.subscriptions = { current: [], ended: [] };
       renderSubscriptions();
       return;
     }
 
     if (state.localMode) {
+      state.subscriptions = readLocalSubscriptionsStore();
+      renderSubscriptions();
+      return;
+    }
+
+    if (!hasPermission("subscriptions")) {
       state.subscriptions = { current: [], ended: [] };
       renderSubscriptions();
       return;
@@ -1042,6 +1238,7 @@
         permissions: {
           applications: formData.get("applications") === "on",
           applicationAvailability: formData.get("applicationAvailability") === "on",
+          giftSubscriptions: formData.get("giftSubscriptions") === "on",
           websiteMaintenance: formData.get("websiteMaintenance") === "on",
           subscriptions: formData.get("subscriptions") === "on",
           permissions: formData.get("permissions") === "on",
@@ -1201,7 +1398,7 @@
       }
 
       const permissionKey = checkbox.getAttribute("data-permission");
-      if (!["applications", "applicationAvailability", "websiteMaintenance", "subscriptions", "permissions"].includes(permissionKey)) {
+      if (!["applications", "applicationAvailability", "giftSubscriptions", "websiteMaintenance", "subscriptions", "permissions"].includes(permissionKey)) {
         return;
       }
 
@@ -1227,6 +1424,78 @@
         showAlert(error.message || "Could not update permissions.", "Error");
       });
       await loadUsers();
+    });
+  }
+
+  if (subscriptionGiftForm) {
+    subscriptionGiftForm.addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      if (!hasPermission("giftSubscriptions")) {
+        await showAlert("You do not have Gift Subscriptions permission.", "Access Denied");
+        return;
+      }
+
+      const query = String(subscriptionGiftSearch?.value || "").trim();
+      const tier = String(subscriptionGiftTier?.value || "").trim();
+      const duration = String(subscriptionGiftDuration?.value || "").trim();
+
+      if (!query || !tier || !duration) {
+        setSubscriptionGiftMessage("Steam/Discord, tier, and duration are required.", "error");
+        return;
+      }
+
+      const candidate = findGiftCandidate(query);
+      const recipientName = candidate?.displayName || query;
+      const payload = {
+        recipientQuery: query,
+        steamId: candidate?.steamId || "",
+        steamName: candidate?.steamName || recipientName,
+        discordId: candidate?.discordId || "",
+        discordName: candidate?.discordName || recipientName,
+        tier,
+        duration,
+      };
+
+      try {
+        if (state.localMode) {
+          const localStore = readLocalSubscriptionsStore();
+          const entry = {
+            id: `local-gift-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            name: payload.steamName || payload.discordName || recipientName,
+            steamId: payload.steamId,
+            steamName: payload.steamName,
+            discordId: payload.discordId,
+            discordName: payload.discordName,
+            tier,
+            duration,
+            lifetime: duration === "lifetime",
+            renewsAt: calculateRenewalDate(duration),
+            amount: "Gifted",
+            giftedBy: state.admin?.username || "staff",
+            giftedAt: new Date().toISOString(),
+          };
+
+          localStore.current.unshift(entry);
+          writeLocalSubscriptionsStore(localStore);
+          state.subscriptions = localStore;
+          setSubscriptionGiftMessage(`Gifted ${tier} to ${entry.name}.`, "success");
+          subscriptionGiftForm.reset();
+          await loadSubscriptions();
+          return;
+        }
+
+        await requestJson(`${apiBaseUrl}/admin/subscriptions/gift`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        setSubscriptionGiftMessage(`Gifted ${tier} to ${recipientName}.`, "success");
+        subscriptionGiftForm.reset();
+        await loadSubscriptions();
+      } catch (error) {
+        setSubscriptionGiftMessage(error.message || "Could not gift subscription.", "error");
+      }
     });
   }
 

@@ -104,6 +104,7 @@ function normalizePermissions(rawPermissions = {}) {
   return {
     applications: Boolean(rawPermissions.applications),
     applicationAvailability: Boolean(rawPermissions.applicationAvailability),
+    giftSubscriptions: Boolean(rawPermissions.giftSubscriptions),
     websiteMaintenance: Boolean(rawPermissions.websiteMaintenance),
     subscriptions: Boolean(rawPermissions.subscriptions),
     permissions: Boolean(rawPermissions.permissions),
@@ -302,6 +303,7 @@ function ensureAdminBootstrapUser() {
     permissions: {
       applications: true,
       applicationAvailability: true,
+      giftSubscriptions: true,
       websiteMaintenance: true,
       subscriptions: true,
       permissions: true,
@@ -1148,6 +1150,76 @@ app.get("/api/admin/subscriptions", requireAdminSession, requireAdminPermission(
   res.json({
     current: subscriptions.current,
     ended: subscriptions.ended,
+  });
+});
+
+app.post("/api/admin/subscriptions/gift", requireAdminSession, requireAdminPermission("giftSubscriptions"), (req, res) => {
+  const recipientQuery = cleanText(req.body.recipientQuery, 140);
+  const steamId = cleanText(req.body.steamId, 80);
+  const steamName = cleanText(req.body.steamName, 120);
+  const discordId = cleanText(req.body.discordId, 80);
+  const discordName = cleanText(req.body.discordName, 120);
+  const tier = cleanText(req.body.tier, 60);
+  const duration = cleanText(req.body.duration, 20).toLowerCase();
+
+  if (!recipientQuery || !tier || !duration) {
+    res.status(400).json({ error: "Recipient, tier, and duration are required." });
+    return;
+  }
+
+  if (!["lifetime", "1m", "3m", "6m", "12m"].includes(duration)) {
+    res.status(400).json({ error: "Duration must be lifetime, 1m, 3m, 6m, or 12m." });
+    return;
+  }
+
+  const renewsAt = (() => {
+    if (duration === "lifetime") {
+      return null;
+    }
+
+    const monthsMap = {
+      "1m": 1,
+      "3m": 3,
+      "6m": 6,
+      "12m": 12,
+    };
+    const months = monthsMap[duration] || 0;
+    if (!months) {
+      return null;
+    }
+
+    const date = new Date();
+    date.setMonth(date.getMonth() + months);
+    return date.toISOString();
+  })();
+
+  const displayName = steamName || discordName || recipientQuery;
+  const store = readSubscriptionsStore();
+  const createdAt = nowIso();
+  const giftedSubscription = {
+    id: crypto.randomUUID(),
+    name: displayName,
+    steamId,
+    steamName,
+    discordId,
+    discordName,
+    tier,
+    duration,
+    lifetime: duration === "lifetime",
+    renewsAt,
+    amount: "Gifted",
+    giftedBy: req.adminUser.username,
+    giftedAt: createdAt,
+    createdAt,
+    updatedAt: createdAt,
+  };
+
+  store.current.unshift(giftedSubscription);
+  writeSubscriptionsStore(store);
+
+  res.status(201).json({
+    ok: true,
+    subscription: giftedSubscription,
   });
 });
 

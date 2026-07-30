@@ -708,6 +708,22 @@ main.page-shell {
   color: #93a4bf;
 }
 
+.subscription-gift-form {
+  margin-top: 0.4rem;
+}
+
+.subscription-gift-form .admin-empty {
+  min-height: 1.2rem;
+}
+
+.subscription-gift-form .admin-empty.success {
+  color: #9ce3b3;
+}
+
+.subscription-gift-form .admin-empty.error {
+  color: #ff9baa;
+}
+
 @media (max-width: 920px) {
   .admin-grid.two-col {
     grid-template-columns: 1fr;
