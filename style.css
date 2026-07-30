@@ -1763,6 +1763,7 @@ body.popup-open {
   padding: 1rem;
   display: grid;
   gap: 0.72rem;
+  position: relative;
 }
 
 .site-popup-card h3 {
@@ -2249,6 +2250,7 @@ body.popup-open {
   border-radius: 0.8rem;
   background: linear-gradient(160deg, #1b2433, #151d29);
   padding: 1rem;
+  position: relative;
 }
 
 .login-modal-card h2 {
@@ -2311,7 +2313,6 @@ body.popup-open {
 .steam-login-copy,
 .steam-login-note { color: var(--muted); line-height: 1.55; }
 
-.modal-close,
 .steam-login-button {
   border: 1px solid var(--line-strong);
   border-radius: 0.68rem;
@@ -2320,6 +2321,26 @@ body.popup-open {
   padding: 0.58rem 0.74rem;
   font-family: "Oxanium", sans-serif;
   font-weight: 700;
+}
+
+.modal-close {
+  position: absolute;
+  top: 0.6rem;
+  right: 0.6rem;
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  color: #f3f8ff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  font-family: "Oxanium", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .steam-login-button {

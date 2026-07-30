@@ -496,7 +496,7 @@ function ensureSteamLoginModal() {
   steamLoginModal.setAttribute("aria-hidden", "true");
   steamLoginModal.innerHTML = `
     <div class="login-modal-card steam-login-card" role="dialog" aria-modal="true" aria-labelledby="steamLoginTitle">
-      <button class="modal-close steam-modal-close" type="button" aria-label="Close login popup">Close</button>
+      <button class="modal-close steam-modal-close" type="button" aria-label="Close login popup">X</button>
       <div class="steam-login-mark">Bloodline RP</div>
       <h2 id="steamLoginTitle">Welcome Back</h2>
       <p class="steam-login-copy">Sign in with your Steam account to access your dashboard, manage applications, and connect Discord for your Bloodline identity.</p>
@@ -668,7 +668,7 @@ function ensureConnectQueueModal() {
   connectQueueModal.setAttribute("aria-hidden", "true");
   connectQueueModal.innerHTML = `
     <div class="login-modal-card connect-modal-card" role="dialog" aria-modal="true" aria-labelledby="connectQueueTitle">
-      <button class="modal-close connect-modal-close" type="button" aria-label="Close queue popup">Close</button>
+      <button class="modal-close connect-modal-close" type="button" aria-label="Close queue popup">X</button>
       <div class="steam-login-mark">Bloodline RP</div>
       <h2 id="connectQueueTitle">Connect Queue</h2>
       <div class="connect-modal-copy">
@@ -687,7 +687,6 @@ function ensureConnectQueueModal() {
         <p class="connect-modal-countdown" id="connectQueueCountdown" hidden></p>
         <div class="connect-modal-actions">
           <button class="connect-action" id="connectQueueModalAction" type="button">Connect</button>
-          <button class="btn btn-ghost" type="button" data-connect-modal-close>Close</button>
         </div>
         <p class="connect-modal-note" id="connectQueueNote">This popup stays small and will only enable connect when you are next in line.</p>
       </div>
@@ -705,11 +704,6 @@ function ensureConnectQueueModal() {
   const closeButton = connectQueueModal.querySelector(".connect-modal-close");
   if (closeButton) {
     closeButton.addEventListener("click", closeConnectQueueModal);
-  }
-
-  const footerCloseButton = connectQueueModal.querySelector("[data-connect-modal-close]");
-  if (footerCloseButton) {
-    footerCloseButton.addEventListener("click", closeConnectQueueModal);
   }
 
   const actionButton = connectQueueModal.querySelector("#connectQueueModalAction");
@@ -1213,7 +1207,7 @@ function ensureStoreCartUi() {
             <p class="eyebrow">Store</p>
             <h2 id="storeCartTitle">Your Cart</h2>
           </div>
-          <button class="modal-close" id="storeCartClose" type="button" aria-label="Close cart">Close</button>
+          <button class="modal-close" id="storeCartClose" type="button" aria-label="Close cart">X</button>
         </div>
         <div class="store-cart-body">
           <p class="store-cart-empty" id="storeCartEmpty">Your cart is empty.</p>
@@ -1697,7 +1691,7 @@ function ensureAdminLoginModal() {
   adminLoginModal.setAttribute("aria-hidden", "true");
   adminLoginModal.innerHTML = `
     <div class="login-modal-card admin-login-card" role="dialog" aria-modal="true" aria-labelledby="adminLoginTitle">
-      <button class="modal-close" type="button" data-admin-close aria-label="Close staff login">Close</button>
+      <button class="modal-close" type="button" data-admin-close aria-label="Close staff login">X</button>
       <div class="steam-login-mark">Bloodline RP</div>
       <h2 id="adminLoginTitle">Staff Login</h2>
       <p class="steam-login-copy">Sign in with your staff credentials.</p>

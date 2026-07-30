@@ -82,7 +82,7 @@
     adminDialogModal.setAttribute("aria-hidden", "true");
     adminDialogModal.innerHTML = `
       <div class="login-modal-card admin-dialog-card" role="dialog" aria-modal="true" aria-labelledby="adminDialogTitle">
-        <button class="modal-close" type="button" data-dialog-close aria-label="Close dialog">Close</button>
+        <button class="modal-close" type="button" data-dialog-close aria-label="Close dialog">X</button>
         <h2 id="adminDialogTitle">Notice</h2>
         <p class="steam-login-copy" data-dialog-message></p>
         <div class="admin-dialog-input-wrap" data-dialog-input-wrap hidden>
