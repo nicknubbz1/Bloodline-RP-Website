@@ -979,6 +979,14 @@ function ensureStoreCartUi() {
     if (!toggleButton.hasAttribute("aria-expanded")) {
       toggleButton.setAttribute("aria-expanded", "false");
     }
+    if (toggleButton instanceof HTMLAnchorElement) {
+      if (!toggleButton.dataset.storeCartHref) {
+        toggleButton.dataset.storeCartHref = toggleButton.getAttribute("href") || "";
+      }
+      toggleButton.removeAttribute("href");
+      toggleButton.setAttribute("role", "button");
+      toggleButton.setAttribute("tabindex", "0");
+    }
 
     let countEl = toggleButton.querySelector("#storeCartCount");
     if (!countEl) {
@@ -1074,6 +1082,25 @@ function initStoreCart() {
     event.preventDefault();
     toggleStoreCartDrawer();
   });
+
+  if (toggleButton instanceof HTMLAnchorElement) {
+    toggleButton.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        toggleStoreCartDrawer();
+      }
+    });
+  }
+
+  document.addEventListener("click", (event) => {
+    const cartTrigger = event.target.closest("a#storeCartToggle, a.store-cart-toggle, a.icon-btn[aria-label='Store']");
+    if (!cartTrigger) {
+      return;
+    }
+
+    event.preventDefault();
+    toggleStoreCartDrawer();
+  }, true);
 
   if (closeButton) {
     closeButton.addEventListener("click", closeStoreCartDrawer);
