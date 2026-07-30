@@ -1268,10 +1268,10 @@ function ensureAdminLoginModal() {
   adminLoginModal.setAttribute("aria-hidden", "true");
   adminLoginModal.innerHTML = `
     <div class="login-modal-card admin-login-card" role="dialog" aria-modal="true" aria-labelledby="adminLoginTitle">
-      <button class="modal-close" type="button" data-admin-close aria-label="Close admin login">Close</button>
+      <button class="modal-close" type="button" data-admin-close aria-label="Close staff login">Close</button>
       <div class="steam-login-mark">Bloodline RP</div>
-      <h2 id="adminLoginTitle">Admin Login</h2>
-      <p class="steam-login-copy">Sign in with your admin credentials.</p>
+      <h2 id="adminLoginTitle">Staff Login</h2>
+      <p class="steam-login-copy">Sign in with your staff credentials.</p>
       <form id="adminLoginForm" class="admin-login-form">
         <label for="adminUsernameInput">Username</label>
         <input id="adminUsernameInput" name="username" type="text" autocomplete="username" required />
@@ -1422,13 +1422,13 @@ function updateAdminJoinButtons() {
   const buttons = getJoinButtons();
   buttons.forEach((button) => {
     if (adminSessionState.loggedIn) {
-      button.textContent = "Admin Dashboard";
+      button.textContent = "Staff";
       button.setAttribute("href", adminDashboardUrl);
-      button.setAttribute("aria-label", "Open admin dashboard");
+      button.setAttribute("aria-label", "Open staff dashboard");
     } else {
-      button.textContent = "Admin Login";
+      button.textContent = "Staff Login";
       button.setAttribute("href", "#admin-login");
-      button.setAttribute("aria-label", "Open admin login");
+      button.setAttribute("aria-label", "Open staff login");
     }
   });
 }

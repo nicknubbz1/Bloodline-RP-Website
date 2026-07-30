@@ -281,15 +281,12 @@
     }
 
     if (!state.admin) {
-      sessionMetaEl.textContent = "No admin session.";
+      sessionMetaEl.textContent = "No staff session.";
       renderAdminAccessControls();
       return;
     }
 
-    const perms = normalizePermissions(state.admin.permissions);
-    sessionMetaEl.textContent = state.admin.isMainAdmin
-      ? `Logged in as ${state.admin.username} (Main Admin)`
-      : `Logged in as ${state.admin.username} | Apps: ${perms.applications ? "Yes" : "No"} | Maintenance: ${perms.websiteMaintenance ? "Yes" : "No"} | Subs: ${perms.subscriptions ? "Yes" : "No"} | Permissions: ${perms.permissions ? "Yes" : "No"}`;
+    sessionMetaEl.textContent = `Logged in as ${state.admin.username}`;
 
     if (changeUsernameBtn) {
       changeUsernameBtn.disabled = !state.admin.isMainAdmin;
@@ -305,12 +302,12 @@
     }
 
     if (!hasPermission("permissions")) {
-      adminUsersList.innerHTML = '<p class="admin-empty">You do not have permissions access.</p>';
+      adminUsersList.innerHTML = '<p class="admin-empty">You do not have staff permissions access.</p>';
       return;
     }
 
     if (!state.users.length) {
-      adminUsersList.innerHTML = '<p class="admin-empty">No admin logins found.</p>';
+      adminUsersList.innerHTML = '<p class="admin-empty">No staff logins found.</p>';
       return;
     }
 
@@ -590,7 +587,7 @@
         const localUsers = ensureLocalAdminUsers();
         const current = localUsers.find((entry) => entry.id === state.admin?.id);
         if (!current) {
-          window.alert("Admin login required.");
+          window.alert("Staff login required.");
           return;
         }
         if (String(current.password || "") !== String(currentPassword)) {
@@ -759,7 +756,7 @@
         createAdminUserForm.reset();
         await loadUsers();
       } catch (error) {
-        window.alert(error.message || "Could not create admin login.");
+        window.alert(error.message || "Could not create staff login.");
       }
     });
   }
