@@ -301,7 +301,7 @@ function ensureMaintenanceGateOverlay() {
   overlay.innerHTML = `
     <div class="maintenance-screen-panel">
       <h1>Website Down For Maintenance</h1>
-      <p>All sections are temporarily unavailable while maintenance mode is enabled by admin.</p>
+      <p>Website will be back up shortly.</p>
     </div>
   `;
 
