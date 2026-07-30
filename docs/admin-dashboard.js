@@ -789,15 +789,6 @@
       if (!currentPassword) {
         return;
       }
-      const newPassword = await showPrompt("Enter your new password.", {
-        title: "Change Password",
-        inputLabel: "New Password",
-        inputType: "password",
-        confirmText: "Update",
-      });
-      if (!newPassword) {
-        return;
-      }
 
       if (state.localMode) {
         const localUsers = ensureLocalAdminUsers();
@@ -811,13 +802,33 @@
           return;
         }
 
+        const newPasswordLocal = await showPrompt("Enter your new password.", {
+          title: "Change Password",
+          inputLabel: "New Password",
+          inputType: "password",
+          confirmText: "Update",
+        });
+        if (!newPasswordLocal) {
+          return;
+        }
+
         updateLocalAdminUser(current.id, function (entry) {
           return {
             ...entry,
-            password: String(newPassword),
+            password: String(newPasswordLocal),
           };
         });
         await showAlert("Password changed.", "Success");
+        return;
+      }
+
+      const newPassword = await showPrompt("Enter your new password.", {
+        title: "Change Password",
+        inputLabel: "New Password",
+        inputType: "password",
+        confirmText: "Update",
+      });
+      if (!newPassword) {
         return;
       }
 
