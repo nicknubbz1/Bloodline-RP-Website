@@ -315,16 +315,19 @@
       const perms = normalizePermissions(user.permissions);
       return `
         <article class="admin-user-card" data-user-id="${user.id}">
-          <div>
+          <div class="admin-user-head">
             <h3>${user.username}${user.isMainAdmin ? " (Main)" : ""}</h3>
-            <p>Applications: ${perms.applications ? "Yes" : "No"} | Maintenance: ${perms.websiteMaintenance ? "Yes" : "No"} | Subscriptions: ${perms.subscriptions ? "Yes" : "No"} | Permissions: ${perms.permissions ? "Yes" : "No"}</p>
+            <p>Profile access controls</p>
           </div>
+          ${user.isMainAdmin ? '<p class="admin-user-main-note">Main admin has all permissions enabled.</p>' : `
+          <ul class="admin-user-permission-list">
+            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="applications" type="checkbox" ${perms.applications ? "checked" : ""} /><span>Applications</span></label></li>
+            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="websiteMaintenance" type="checkbox" ${perms.websiteMaintenance ? "checked" : ""} /><span>Maintenance</span></label></li>
+            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="subscriptions" type="checkbox" ${perms.subscriptions ? "checked" : ""} /><span>Subscriptions</span></label></li>
+            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="permissions" type="checkbox" ${perms.permissions ? "checked" : ""} /><span>Permissions</span></label></li>
+          </ul>`}
           <div class="admin-user-actions">
             ${user.isMainAdmin ? "" : '<button class="btn btn-ghost" data-action="set-password" type="button">Reset Password</button>'}
-            ${user.isMainAdmin ? "" : '<button class="btn btn-ghost" data-action="toggle-applications" type="button">Toggle Apps</button>'}
-            ${user.isMainAdmin ? "" : '<button class="btn btn-ghost" data-action="toggle-maintenance" type="button">Toggle Maintenance</button>'}
-            ${user.isMainAdmin ? "" : '<button class="btn btn-ghost" data-action="toggle-subscriptions" type="button">Toggle Subscriptions</button>'}
-            ${user.isMainAdmin ? "" : '<button class="btn btn-ghost" data-action="toggle-permissions" type="button">Toggle Permissions</button>'}
             ${user.isMainAdmin ? "" : '<button class="btn btn-danger" data-action="delete" type="button">Delete Profile</button>'}
           </div>
         </article>
@@ -813,26 +816,6 @@
           await loadUsers();
           return;
         }
-
-        const permissions = normalizePermissions(target.permissions);
-        if (action === "toggle-applications") {
-          permissions.applications = !permissions.applications;
-        } else if (action === "toggle-maintenance") {
-          permissions.websiteMaintenance = !permissions.websiteMaintenance;
-        } else if (action === "toggle-subscriptions") {
-          permissions.subscriptions = !permissions.subscriptions;
-        } else if (action === "toggle-permissions") {
-          permissions.permissions = !permissions.permissions;
-        }
-
-        updateLocalAdminUser(userId, function (entry) {
-          return {
-            ...entry,
-            permissions,
-          };
-        });
-        await loadUsers();
-        return;
       }
 
       if (action === "delete") {
@@ -863,16 +846,41 @@
         await loadUsers();
         return;
       }
+    });
+
+    adminUsersList.addEventListener("change", async function (event) {
+      const checkbox = event.target.closest('input[data-action="set-permission"]');
+      const card = event.target.closest("[data-user-id]");
+      if (!checkbox || !card) {
+        return;
+      }
+
+      const userId = card.getAttribute("data-user-id");
+      const target = state.users.find(function (entry) {
+        return entry.id === userId;
+      });
+      if (!target || target.isMainAdmin) {
+        checkbox.checked = true;
+        return;
+      }
+
+      const permissionKey = checkbox.getAttribute("data-permission");
+      if (!["applications", "websiteMaintenance", "subscriptions", "permissions"].includes(permissionKey)) {
+        return;
+      }
 
       const permissions = normalizePermissions(target.permissions);
-      if (action === "toggle-applications") {
-        permissions.applications = !permissions.applications;
-      } else if (action === "toggle-maintenance") {
-        permissions.websiteMaintenance = !permissions.websiteMaintenance;
-      } else if (action === "toggle-subscriptions") {
-        permissions.subscriptions = !permissions.subscriptions;
-      } else if (action === "toggle-permissions") {
-        permissions.permissions = !permissions.permissions;
+      permissions[permissionKey] = Boolean(checkbox.checked);
+
+      if (state.localMode) {
+        updateLocalAdminUser(userId, function (entry) {
+          return {
+            ...entry,
+            permissions,
+          };
+        });
+        await loadUsers();
+        return;
       }
 
       await requestJson(`${apiBaseUrl}/admin/users/${encodeURIComponent(userId)}`, {
