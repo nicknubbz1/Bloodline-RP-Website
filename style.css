@@ -351,12 +351,27 @@ main.page-shell {
 
 .connect-modal-card {
   width: min(420px, 94vw);
+  min-height: 420px;
+  border-radius: 1rem;
+  display: grid;
+  align-content: start;
 }
 
 .connect-modal-copy {
   display: grid;
   gap: 0.8rem;
   margin-top: 0.8rem;
+}
+
+.connect-modal-countdown {
+  margin: 0;
+  border: 1px solid rgba(255, 106, 106, 0.45);
+  border-radius: 0.62rem;
+  background: rgba(120, 23, 23, 0.3);
+  color: #ffd6d6;
+  font-family: "Oxanium", sans-serif;
+  letter-spacing: 0.03em;
+  padding: 0.45rem 0.58rem;
 }
 
 .connect-modal-status {

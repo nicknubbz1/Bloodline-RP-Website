@@ -77,12 +77,21 @@ let storeCartState = {
 };
 let connectQueueState = {
   statusText: "Offline",
-  playersText: "-- / --",
-  queuePositionText: "--",
+  playersText: "0/0",
+  queuePositionText: "In queue",
+  queueCountText: "0/0",
   queueActionLabel: "Connect",
   queueActionEnabled: false,
   queueActionHref: queueJoinUrl,
+  messageText: "Open this popup to check your queue status.",
+  noteText: "Connect stays locked until you are next in line.",
+  readyExpiresAt: 0,
+  readySecondsRemaining: 0,
 };
+const connectQueuePollMs = 5000;
+const connectReadyWindowMs = 60000;
+let connectQueuePollTimer = null;
+let connectQueueReadyTimer = null;
 let accountDropdownState = null;
 const socialStats = {
   discord: "16,628 members · 3,054 online",
@@ -669,10 +678,15 @@ function ensureConnectQueueModal() {
           <strong id="connectQueueStatusText">Offline</strong>
         </div>
         <div class="connect-modal-status">
+          <span class="connect-stat-label">Queue</span>
+          <strong id="connectQueueCountText">0/0</strong>
+        </div>
+        <div class="connect-modal-status">
           <span class="connect-stat-label">Queue Position</span>
-          <strong id="connectQueuePositionText">--</strong>
+          <strong id="connectQueuePositionText">In queue</strong>
         </div>
         <p class="connect-modal-message" id="connectQueueMessage">Waiting for live status...</p>
+        <p class="connect-modal-countdown" id="connectQueueCountdown" hidden></p>
         <div class="connect-modal-actions">
           <button class="connect-action" id="connectQueueModalAction" type="button">Connect</button>
           <button class="btn btn-ghost" type="button" data-connect-modal-close>Close</button>
@@ -724,19 +738,217 @@ function closeConnectQueueModal() {
   document.body.classList.remove("modal-open");
 }
 
+function clearConnectReadyCountdown() {
+  if (connectQueueReadyTimer !== null) {
+    clearInterval(connectQueueReadyTimer);
+    connectQueueReadyTimer = null;
+  }
+}
+
+function markConnectWindowExpired() {
+  clearConnectReadyCountdown();
+  connectQueueState = {
+    ...connectQueueState,
+    queueActionEnabled: false,
+    queueActionLabel: "Connect",
+    queuePositionText: "Requeued",
+    messageText: "You did not connect within 60 seconds. You were returned to queue.",
+    noteText: "Wait until you are next in line again to unlock Connect.",
+    readyExpiresAt: 0,
+    readySecondsRemaining: 0,
+  };
+  updateConnectQueueModal();
+}
+
+function beginConnectReadyWindow() {
+  const expiresAt = Date.now() + connectReadyWindowMs;
+  connectQueueState = {
+    ...connectQueueState,
+    readyExpiresAt: expiresAt,
+    readySecondsRemaining: Math.ceil(connectReadyWindowMs / 1000),
+  };
+
+  clearConnectReadyCountdown();
+  connectQueueReadyTimer = window.setInterval(() => {
+    const secondsLeft = Math.max(0, Math.ceil((connectQueueState.readyExpiresAt - Date.now()) / 1000));
+    if (secondsLeft <= 0) {
+      markConnectWindowExpired();
+      return;
+    }
+
+    connectQueueState = {
+      ...connectQueueState,
+      readySecondsRemaining: secondsLeft,
+    };
+    updateConnectQueueModal();
+  }, 1000);
+}
+
+function clearConnectReadyWindow() {
+  clearConnectReadyCountdown();
+  connectQueueState = {
+    ...connectQueueState,
+    readyExpiresAt: 0,
+    readySecondsRemaining: 0,
+  };
+}
+
+function resolveQueueDisplay(payload) {
+  const queuePosition = Number(payload.queuePosition ?? payload.position ?? payload.place ?? payload.queueIndex ?? payload.queueSpot ?? payload.rank ?? null);
+  const queueTotal = Number(payload.queueTotal ?? payload.totalQueued ?? payload.queueSize ?? payload.waiting ?? payload.queueCount ?? payload.queue ?? payload.queued ?? 0);
+
+  const validPosition = Number.isFinite(queuePosition) && queuePosition >= 0 ? queuePosition : null;
+  const validTotal = Number.isFinite(queueTotal) && queueTotal >= 0 ? queueTotal : 0;
+
+  const positionText = validPosition === null
+    ? "In queue"
+    : validPosition === 0
+      ? "You're in"
+      : validPosition === 1
+        ? "You're next"
+        : `#${validPosition}`;
+
+  return {
+    positionValue: validPosition,
+    totalValue: validTotal,
+    queueCountText: `${validPosition ?? 0}/${validTotal}`,
+    queuePositionText: positionText,
+  };
+}
+
+function applyConnectStatusPayload(payload) {
+  const players = Number(payload.players ?? payload.online ?? payload.population ?? 0);
+  const maxPlayers = Number(payload.maxPlayers ?? payload.max ?? payload.capacity ?? 0);
+  const rawStatus = payload.status ?? payload.serverStatus ?? payload.state ?? payload.online ?? payload.isOnline;
+  const isOnline = rawStatus === true || rawStatus === "online" || rawStatus === "running" || rawStatus === "up";
+  const queueInfo = resolveQueueDisplay(payload);
+
+  const isNext = payload.next === true || payload.isNext === true || queueInfo.positionValue === 1 || queueInfo.positionValue === 0;
+  const isIn = payload.in === true || payload.isIn === true || payload.connected === true || payload.ready === true || queueInfo.positionValue === 0;
+  const shouldEnableConnect = Boolean(queueJoinUrl && isOnline && (isNext || isIn));
+
+  if (shouldEnableConnect && !connectQueueState.readyExpiresAt) {
+    beginConnectReadyWindow();
+  }
+
+  if (!shouldEnableConnect && connectQueueState.readyExpiresAt) {
+    clearConnectReadyWindow();
+  }
+
+  const secondsLeft = connectQueueState.readyExpiresAt
+    ? Math.max(0, Math.ceil((connectQueueState.readyExpiresAt - Date.now()) / 1000))
+    : 0;
+
+  connectQueueState = {
+    ...connectQueueState,
+    statusText: isOnline ? "Online" : "Offline",
+    playersText: `${Number.isFinite(players) ? players : 0}/${Number.isFinite(maxPlayers) && maxPlayers > 0 ? maxPlayers : 0}`,
+    queueCountText: queueInfo.queueCountText,
+    queuePositionText: queueInfo.queuePositionText,
+    messageText: isOnline
+      ? (shouldEnableConnect
+        ? "You are ready to connect. You have 60 seconds to join."
+        : "You are currently waiting in queue.")
+      : "The server is currently offline.",
+    noteText: shouldEnableConnect
+      ? "If you do not connect in time, you will be placed back into queue automatically."
+      : "Connect unlocks only when you are next in line and ready.",
+    queueActionLabel: shouldEnableConnect ? "Connect Now" : "Connect",
+    queueActionEnabled: shouldEnableConnect && secondsLeft > 0,
+    queueActionHref: queueJoinUrl,
+    readySecondsRemaining: secondsLeft,
+  };
+}
+
+function applyConnectOfflineFallback(message, note) {
+  clearConnectReadyWindow();
+  connectQueueState = {
+    ...connectQueueState,
+    statusText: "Offline",
+    playersText: "0/0",
+    queueCountText: "0/0",
+    queuePositionText: "In queue",
+    messageText: message,
+    noteText: note,
+    queueActionLabel: "Connect",
+    queueActionEnabled: false,
+  };
+}
+
+function refreshConnectPanelStatus(populationEl, statusEl) {
+  if (forceServerOffline) {
+    applyConnectOfflineFallback(
+      "The server is offline right now.",
+      "Connect unlocks when the server is online and you are next in queue."
+    );
+    populationEl.textContent = "0/0";
+    statusEl.textContent = "Offline";
+    statusEl.classList.remove("status-online");
+    statusEl.classList.add("status-offline");
+    updateConnectQueueModal();
+    return;
+  }
+
+  if (!serverStatusUrl) {
+    applyConnectOfflineFallback(
+      "The live status endpoint is not configured yet.",
+      "Connect unlocks when the server is online and you are next in queue."
+    );
+    populationEl.textContent = "0/0";
+    statusEl.textContent = "Offline";
+    statusEl.classList.remove("status-online");
+    statusEl.classList.add("status-offline");
+    updateConnectQueueModal();
+    return;
+  }
+
+  fetch(serverStatusUrl)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("status-unavailable");
+      }
+      return response.json();
+    })
+    .then((payload) => {
+      applyConnectStatusPayload(payload || {});
+      populationEl.textContent = connectQueueState.playersText;
+      statusEl.textContent = connectQueueState.statusText;
+      statusEl.classList.toggle("status-online", connectQueueState.statusText === "Online");
+      statusEl.classList.toggle("status-offline", connectQueueState.statusText === "Offline");
+      updateConnectQueueModal();
+    })
+    .catch(() => {
+      applyConnectOfflineFallback(
+        "Could not reach the live status endpoint.",
+        "Connect unlocks when the status feed is available and you are next in queue."
+      );
+      populationEl.textContent = "0/0";
+      statusEl.textContent = "Offline";
+      statusEl.classList.remove("status-online");
+      statusEl.classList.add("status-offline");
+      updateConnectQueueModal();
+    });
+}
+
 function updateConnectQueueModal() {
   const modal = ensureConnectQueueModal();
   const statusEl = modal.querySelector("#connectQueueStatusText");
+  const countEl = modal.querySelector("#connectQueueCountText");
   const positionEl = modal.querySelector("#connectQueuePositionText");
   const messageEl = modal.querySelector("#connectQueueMessage");
+  const countdownEl = modal.querySelector("#connectQueueCountdown");
   const noteEl = modal.querySelector("#connectQueueNote");
   const actionButton = modal.querySelector("#connectQueueModalAction");
 
   if (statusEl) {
     statusEl.textContent = connectQueueState.statusText;
-  }
     statusEl.classList.toggle("status-online", connectQueueState.statusText === "Online");
     statusEl.classList.toggle("status-offline", connectQueueState.statusText === "Offline");
+  }
+
+  if (countEl) {
+    countEl.textContent = connectQueueState.queueCountText || "0/0";
+  }
 
   if (positionEl) {
     positionEl.textContent = connectQueueState.queuePositionText;
@@ -744,6 +956,17 @@ function updateConnectQueueModal() {
 
   if (messageEl) {
     messageEl.textContent = connectQueueState.messageText || "Waiting for live status...";
+  }
+
+  if (countdownEl) {
+    const secondsLeft = Number(connectQueueState.readySecondsRemaining || 0);
+    if (connectQueueState.queueActionEnabled && secondsLeft > 0) {
+      countdownEl.hidden = false;
+      countdownEl.textContent = `Ready window: ${secondsLeft}s remaining`;
+    } else {
+      countdownEl.hidden = true;
+      countdownEl.textContent = "";
+    }
   }
 
   if (noteEl) {
@@ -1340,103 +1563,25 @@ function initConnectPanel() {
     return;
   }
 
+  connectButton.disabled = false;
+  connectButton.removeAttribute("aria-disabled");
+
   connectButton.addEventListener("click", (event) => {
     event.preventDefault();
     openConnectQueueModal();
   });
 
-  if (forceServerOffline) {
-    populationEl.textContent = "-- / --";
-    statusEl.textContent = "Offline";
-    statusEl.classList.remove("status-online");
-    statusEl.classList.add("status-offline");
-    connectQueueState = {
-      ...connectQueueState,
-      statusText: "Offline",
-      playersText: "-- / --",
-      queuePositionText: "Unavailable",
-      messageText: "The server is offline right now.",
-      noteText: "Connect will be enabled once the server is brought online.",
-      queueActionLabel: "Connect",
-      queueActionEnabled: false,
-    };
-    updateConnectQueueModal();
-    return;
+  refreshConnectPanelStatus(populationEl, statusEl);
+
+  if (connectQueuePollTimer === null) {
+    connectQueuePollTimer = window.setInterval(() => {
+      refreshConnectPanelStatus(populationEl, statusEl);
+    }, connectQueuePollMs);
   }
 
-  if (!serverStatusUrl) {
-    populationEl.textContent = "Unavailable";
-    connectQueueState = {
-      ...connectQueueState,
-      statusText: "Offline",
-      playersText: "Unavailable",
-      queuePositionText: "Unavailable",
-      messageText: "The live status endpoint is not configured yet.",
-      noteText: "Queue access will enable once the server status feed is live.",
-      queueActionLabel: "Connect",
-      queueActionEnabled: false,
-    };
-    updateConnectQueueModal();
-    return;
-  }
-
-  fetch(serverStatusUrl)
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error("status-unavailable");
-      }
-      return response.json();
-    })
-    .then((payload) => {
-      const players = payload.players ?? payload.online ?? payload.population ?? 0;
-      const maxPlayers = payload.maxPlayers ?? payload.max ?? payload.capacity ?? "?";
-      const queue = payload.queue ?? payload.queued ?? payload.queueCount ?? 0;
-      const queuePosition = payload.queuePosition ?? payload.position ?? payload.place ?? payload.queueIndex ?? payload.queueSpot ?? payload.rank ?? null;
-      const rawStatus = payload.status ?? payload.serverStatus ?? payload.state ?? payload.online ?? payload.isOnline;
-      const isOnline = rawStatus === true || rawStatus === "online" || rawStatus === "running" || rawStatus === "up";
-      const isNext = payload.next === true || payload.isNext === true || queuePosition === 1 || queuePosition === 0;
-      const isIn = payload.in === true || payload.isIn === true || payload.connected === true || payload.ready === true;
-      const actionEnabled = Boolean(queueJoinUrl && (isNext || isIn));
-
-      connectQueueState = {
-        ...connectQueueState,
-        statusText: isOnline ? "Online" : "Offline",
-        playersText: `${players}/${maxPlayers}`,
-        queuePositionText: queuePosition === null || queuePosition === undefined ? `Queue: ${queue}` : (isNext ? "You're next" : queuePosition === 0 ? "You're in" : `#${queuePosition}`),
-        messageText: isOnline
-          ? (isIn ? "You're in. Connect now to join the server." : isNext ? "You're next in line. Keep this popup open and connect when ready." : `You're in queue behind ${queue} player${queue === 1 ? "" : "s"}.`)
-          : "The server is currently offline.",
-        noteText: isOnline
-          ? (actionEnabled ? "Connect is enabled because you are next in line." : "The connect button will unlock when you reach the front of the queue.")
-          : "Queue access will enable once the server comes back online.",
-        queueActionLabel: actionEnabled ? "Connect Now" : "Connect",
-        queueActionEnabled: actionEnabled,
-        queueActionHref: queueJoinUrl,
-      };
-
-      populationEl.textContent = `${players}/${maxPlayers}`;
-      statusEl.textContent = isOnline ? "Online" : "Offline";
-      statusEl.classList.toggle("status-online", isOnline);
-      statusEl.classList.toggle("status-offline", !isOnline);
-      updateConnectQueueModal();
-    })
-    .catch(() => {
-      populationEl.textContent = "Unavailable";
-      statusEl.textContent = "Offline";
-      statusEl.classList.remove("status-online");
-      statusEl.classList.add("status-offline");
-      connectQueueState = {
-        ...connectQueueState,
-        statusText: "Offline",
-        playersText: "Unavailable",
-        queuePositionText: "Unavailable",
-        messageText: "Could not reach the live status endpoint.",
-        noteText: "Queue access will enable once the status feed is available.",
-        queueActionLabel: "Connect",
-        queueActionEnabled: false,
-      };
-      updateConnectQueueModal();
-    });
+  window.addEventListener("focus", () => {
+    refreshConnectPanelStatus(populationEl, statusEl);
+  });
 }
 
 async function syncAccountFromBackend() {
