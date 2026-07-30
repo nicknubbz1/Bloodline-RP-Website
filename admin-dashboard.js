@@ -777,12 +777,20 @@
 
   if (changePasswordBtn) {
     changePasswordBtn.addEventListener("click", async function () {
-      const currentPassword = await showPrompt("Enter your current password.", {
-        title: "Change Password",
-        inputLabel: "Current Password",
-        inputType: "password",
-        confirmText: "Next",
-      });
+      const requestCurrentPassword = async function (retry) {
+        return showPrompt(
+          retry
+            ? "Current password is incorrect. Enter your current password again."
+            : "Enter your current password.",
+          {
+            title: "Change Password",
+            inputType: "password",
+            confirmText: "Next",
+          },
+        );
+      };
+
+      let currentPassword = await requestCurrentPassword(false);
       if (!currentPassword) {
         return;
       }
@@ -794,14 +802,17 @@
           await showAlert("Staff login required.", "Session");
           return;
         }
-        if (String(current.password || "") !== String(currentPassword)) {
+
+        while (String(current.password || "") !== String(currentPassword)) {
           await showAlert("Current password is incorrect.", "Change Password");
-          return;
+          currentPassword = await requestCurrentPassword(true);
+          if (!currentPassword) {
+            return;
+          }
         }
 
         const newPasswordLocal = await showPrompt("Enter your new password.", {
           title: "Change Password",
-          inputLabel: "New Password",
           inputType: "password",
           confirmText: "Update",
         });
@@ -821,7 +832,6 @@
 
       const newPassword = await showPrompt("Enter your new password.", {
         title: "Change Password",
-        inputLabel: "New Password",
         inputType: "password",
         confirmText: "Update",
       });
