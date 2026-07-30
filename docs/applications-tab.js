@@ -76,7 +76,7 @@
     const statusText = open ? "Open" : "Closed";
     const actionMarkup = open
       ? '<a class="btn btn-primary app-directory-open-btn" href="application-view.html?form=' + encodeURIComponent(form.key) + '">Apply</a>'
-      : '<span class="btn btn-danger app-directory-open-btn app-directory-open-btn-disabled" aria-disabled="true">Closed</span>';
+      : '<span class="btn btn-danger app-directory-open-btn app-directory-open-btn-disabled" aria-disabled="true">Apply</span>';
     return ""
       + '<article class="app-directory-item">'
       + '<div class="app-directory-item-main">'

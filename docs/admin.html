@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260730f" />
+  <link rel="stylesheet" href="style.css?v=20260730i" />
 </head>
 <body>
 <header class="site-header">
@@ -58,12 +58,13 @@
 
   <section class="section admin-tabs-wrap">
     <div class="admin-tabs" role="tablist" aria-label="Admin tabs">
-      <button class="admin-tab active" data-admin-tab="permissions" type="button">Permissions</button>
-      <button class="admin-tab" data-admin-tab="applications" type="button">Applications</button>
+      <button class="admin-tab" data-admin-tab="permissions" type="button">Permissions</button>
+      <button class="admin-tab" data-admin-tab="applications" type="button">Moderation</button>
+      <button class="admin-tab active" data-admin-tab="application-access" type="button">Open / Close Apps</button>
       <button class="admin-tab" data-admin-tab="subscriptions" type="button">Subscriptions</button>
     </div>
 
-    <div class="admin-tab-panel active" data-admin-panel="permissions">
+    <div class="admin-tab-panel" data-admin-panel="permissions">
       <div class="admin-grid two-col">
         <article class="panel">
           <div class="panel-head"><h2>Create Login</h2></div>
@@ -104,7 +105,15 @@
             <button class="btn btn-ghost" id="adminApplicationRefreshBtn" type="button">Refresh</button>
           </div>
         </div>
+        <p class="admin-empty">Open / Close controls were moved to the Open / Close Apps tab.</p>
         <div id="adminApplicationsList" class="admin-applications-list"></div>
+      </article>
+    </div>
+
+    <div class="admin-tab-panel active" data-admin-panel="application-access">
+      <article class="panel">
+        <div class="panel-head"><h2>Open / Close Applications</h2></div>
+        <div id="adminApplicationAvailabilityList" class="admin-applications-list"></div>
       </article>
     </div>
 
@@ -123,6 +132,9 @@
             <option value="Silver">Silver</option>
             <option value="Gold">Gold</option>
             <option value="Platinum">Platinum</option>
+            <option value="Emerald">Emerald</option>
+            <option value="Diamond">Diamond</option>
+            <option value="Bloodline">Bloodline</option>
           </select>
 
           <label for="subscriptionGiftDuration">Duration</label>
@@ -161,9 +173,9 @@
 </footer>
 
 <script src="auth-config.js"></script>
-<script src="script.js?v=20260730b"></script>
+<script src="script.js?v=20260730i"></script>
 <script src="application-forms.js?v=20260730a"></script>
-<script src="admin-dashboard.js?v=20260730h"></script>
+<script src="admin-dashboard.js?v=20260730j"></script>
 </body>
 </html>
 

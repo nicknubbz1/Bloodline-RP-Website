@@ -45,6 +45,7 @@
   const applicationSearchEl = document.getElementById("adminApplicationSearch");
   const applicationRefreshBtn = document.getElementById("adminApplicationRefreshBtn");
   const adminApplicationsList = document.getElementById("adminApplicationsList");
+  const adminApplicationAvailabilityList = document.getElementById("adminApplicationAvailabilityList");
   const currentSubscriptionsList = document.getElementById("currentSubscriptionsList");
   const endedSubscriptionsList = document.getElementById("endedSubscriptionsList");
   const subscriptionGiftForm = document.getElementById("subscriptionGiftForm");
@@ -65,6 +66,7 @@
     settings: { maintenanceMode: false },
     source: "active",
     localMode: false,
+    initialTabSet: false,
   };
 
   let adminDialogModal = null;
@@ -459,7 +461,11 @@
     }
 
     if (tabKey === "applications") {
-      return Boolean(state.admin.permissions?.applications || state.admin.permissions?.applicationAvailability);
+      return Boolean(state.admin.permissions?.applications);
+    }
+
+    if (tabKey === "application-access") {
+      return Boolean(state.admin.permissions?.applicationAvailability);
     }
 
     if (tabKey === "subscriptions") {
@@ -490,12 +496,26 @@
       panel.style.display = shouldShow ? "" : "none";
     });
 
-    const firstVisibleTab = tabs.find((tab) => canAccessTab(tab.getAttribute("data-admin-tab")));
-    if (firstVisibleTab) {
-      setActiveTab(firstVisibleTab.getAttribute("data-admin-tab"));
-    } else {
-      setActiveTab(null);
+    if (!state.initialTabSet) {
+      const preferredTabKey = ["application-access", "applications", "permissions", "subscriptions"].find(function (tabKey) {
+        return canAccessTab(tabKey);
+      }) || null;
+      setActiveTab(preferredTabKey);
+      state.initialTabSet = true;
+      return;
     }
+
+    const activeTabKey = tabs.find(function (tab) {
+      return tab.classList.contains("active");
+    })?.getAttribute("data-admin-tab") || null;
+
+    if (activeTabKey && canAccessTab(activeTabKey)) {
+      setActiveTab(activeTabKey);
+      return;
+    }
+
+    const firstVisibleTab = tabs.find((tab) => canAccessTab(tab.getAttribute("data-admin-tab")));
+    setActiveTab(firstVisibleTab ? firstVisibleTab.getAttribute("data-admin-tab") : null);
   }
 
   function setActiveTab(tabKey) {
@@ -740,45 +760,17 @@
       return;
     }
 
-    const canModerateApplications = hasPermission("applications");
-    const canToggleApplications = hasPermission("applicationAvailability");
-
-    if (!canModerateApplications && !canToggleApplications) {
+    if (!hasPermission("applications")) {
       adminApplicationsList.innerHTML = '<p class="admin-empty">You do not have applications access.</p>';
       return;
     }
 
-    const availabilityMarkup = canToggleApplications
-      ? `
-        <article class="admin-application-card admin-application-availability-card">
-          <header>
-            <h3>Application Availability</h3>
-            <span class="admin-badge">Toggle Apps</span>
-          </header>
-          <div class="admin-application-availability-list">
-            ${applicationForms.length ? applicationForms.map(function (form) {
-              const isOpen = isApplicationFormOpen(form.key);
-              const statusClass = isOpen ? "app-form-status-open" : "app-form-status-closed";
-              return `
-                <article class="admin-availability-item" data-form-key="${form.key}">
-                  <div>
-                    <h4>${form.title || form.key}</h4>
-                    <p>${form.description || "Application visibility control."}</p>
-                  </div>
-                  <div class="admin-inline-controls">
-                    <span class="app-form-status-badge ${statusClass}">${isOpen ? "Open" : "Closed"}</span>
-                    <button class="btn ${isOpen ? "btn-danger" : "btn-ghost"}" data-action="toggle-form-open" type="button">${isOpen ? "Close" : "Open"}</button>
-                  </div>
-                </article>
-              `;
-            }).join("") : '<p class="admin-empty">No application forms are configured.</p>'}
-          </div>
-        </article>
-      `
-      : '<article class="admin-application-card"><p class="admin-empty">You do not have Toggle Apps permission.</p></article>';
+    if (!state.applications.length) {
+      adminApplicationsList.innerHTML = '<p class="admin-empty">No applications found for this view.</p>';
+      return;
+    }
 
-    const moderationMarkup = canModerateApplications
-      ? state.applications.map(function (app) {
+    adminApplicationsList.innerHTML = state.applications.map(function (app) {
         return `
         <article class="admin-application-card" data-application-id="${app.id}">
           <header>
@@ -797,20 +789,37 @@
           </div>
         </article>
       `;
+      }).join("");
+  }
+
+  function renderApplicationAvailability() {
+    if (!adminApplicationAvailabilityList) {
+      return;
+    }
+
+    if (!hasPermission("applicationAvailability")) {
+      adminApplicationAvailabilityList.innerHTML = '<p class="admin-empty">You do not have Toggle Apps permission.</p>';
+      return;
+    }
+
+    adminApplicationAvailabilityList.innerHTML = applicationForms.length
+      ? applicationForms.map(function (form) {
+        const isOpen = isApplicationFormOpen(form.key);
+        const statusClass = isOpen ? "app-form-status-open" : "app-form-status-closed";
+        return `
+          <article class="admin-application-card admin-availability-item" data-form-key="${form.key}">
+            <div>
+              <h4>${form.title || form.key}</h4>
+              <p>${form.description || "Application visibility control."}</p>
+            </div>
+            <div class="admin-inline-controls">
+              <span class="app-form-status-badge ${statusClass}">${isOpen ? "Open" : "Closed"}</span>
+              <button class="btn ${isOpen ? "btn-danger" : "btn-ghost app-open-action-btn"}" data-action="toggle-form-open" type="button">${isOpen ? "Close" : "Open"}</button>
+            </div>
+          </article>
+        `;
       }).join("")
-      : '<p class="admin-empty">You do not have Applications moderation permission.</p>';
-
-    const moderationWrap = `
-      <article class="admin-application-card admin-application-moderation-wrap">
-        <header>
-          <h3>Application Moderation Queue</h3>
-          <span class="admin-badge">${state.source === "archived" ? "Archived" : "Active"}</span>
-        </header>
-        ${canModerateApplications && !state.applications.length ? '<p class="admin-empty">No applications found for this view.</p>' : moderationMarkup}
-      </article>
-    `;
-
-    adminApplicationsList.innerHTML = `${availabilityMarkup}${moderationWrap}`;
+      : '<p class="admin-empty">No application forms are configured.</p>';
   }
 
   function renderSubscriptions() {
@@ -944,6 +953,7 @@
       state.applications = [];
       state.applicationAvailability = normalizeApplicationAvailability(readLocalApplicationAvailability());
       renderApplications();
+      renderApplicationAvailability();
       return;
     }
 
@@ -952,12 +962,14 @@
     if (state.localMode) {
       state.applications = [];
       renderApplications();
+      renderApplicationAvailability();
       return;
     }
 
     if (!hasPermission("applications")) {
       state.applications = [];
       renderApplications();
+      renderApplicationAvailability();
       return;
     }
 
@@ -970,6 +982,7 @@
     const payload = await requestJson(`${apiBaseUrl}/admin/applications?${params.toString()}`);
     state.applications = Array.isArray(payload.applications) ? payload.applications : [];
     renderApplications();
+    renderApplicationAvailability();
   }
 
   async function loadSubscriptions() {
@@ -1035,6 +1048,7 @@
       }),
       loadApplications().catch(function () {
         renderApplications();
+        renderApplicationAvailability();
       }),
       loadSubscriptions().catch(function () {
         renderSubscriptions();
@@ -1519,30 +1533,37 @@
     });
   }
 
+  if (adminApplicationAvailabilityList) {
+    adminApplicationAvailabilityList.addEventListener("click", async function (event) {
+      const button = event.target.closest("button[data-action='toggle-form-open']");
+      const availabilityCard = event.target.closest("[data-form-key]");
+      if (!button || !availabilityCard) {
+        return;
+      }
+
+      if (!hasPermission("applicationAvailability")) {
+        await showAlert("You do not have Toggle Apps permission.", "Access Denied");
+        return;
+      }
+
+      const formKey = availabilityCard.getAttribute("data-form-key") || "";
+      if (!formKey) {
+        return;
+      }
+
+      const nextMap = {
+        ...state.applicationAvailability,
+        [formKey]: !isApplicationFormOpen(formKey),
+      };
+      writeLocalApplicationAvailability(nextMap);
+      state.applicationAvailability = normalizeApplicationAvailability(nextMap);
+      renderApplicationAvailability();
+    });
+  }
+
   if (adminApplicationsList) {
     adminApplicationsList.addEventListener("click", async function (event) {
       const button = event.target.closest("button[data-action]");
-      const availabilityCard = event.target.closest("[data-form-key]");
-      if (button && button.getAttribute("data-action") === "toggle-form-open") {
-        if (!hasPermission("applicationAvailability")) {
-          await showAlert("You do not have Toggle Apps permission.", "Access Denied");
-          return;
-        }
-
-        const formKey = availabilityCard?.getAttribute("data-form-key") || "";
-        if (!formKey) {
-          return;
-        }
-
-        const nextMap = {
-          ...state.applicationAvailability,
-          [formKey]: !isApplicationFormOpen(formKey),
-        };
-        writeLocalApplicationAvailability(nextMap);
-        state.applicationAvailability = normalizeApplicationAvailability(nextMap);
-        renderApplications();
-        return;
-      }
 
       const card = event.target.closest("[data-application-id]");
       if (!button || !card) {

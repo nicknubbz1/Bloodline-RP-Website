@@ -56,7 +56,7 @@ const adminSessionUrl = window.BLOODLINE_ADMIN_SESSION_URL || `${apiBaseUrl}/adm
 const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-status`;
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
-const adminDashboardUrl = "admin.html?v=20260729n";
+const adminDashboardUrl = "admin.html?v=20260730j";
 const adminDashboardScriptVersion = "v=20260729p";
 const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:3000/api/discord/stats";
 const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
@@ -66,6 +66,7 @@ const localAdminUsersKey = "bloodline-local-admin-users";
 const localAdminSessionKey = "bloodline-local-admin-session";
 const localAdminSessionTempKey = "bloodline-local-admin-session-temp";
 const localAdminSettingsKey = "bloodline-local-admin-settings";
+const appAvailabilityStorageKey = "bloodline-application-form-availability";
 let steamLoginModal = null;
 let connectQueueModal = null;
 let storeCartState = {
@@ -1565,6 +1566,47 @@ function initAdminEntry() {
   refreshAdminSession();
 }
 
+function readApplicationAvailabilityMap() {
+  return readStoredJson(localStorage, appAvailabilityStorageKey, {});
+}
+
+function isAllowlistOpen() {
+  const availability = readApplicationAvailabilityMap();
+  if (!availability || typeof availability !== "object") {
+    return true;
+  }
+  if (!Object.prototype.hasOwnProperty.call(availability, "allowlist-app")) {
+    return true;
+  }
+  return availability["allowlist-app"] !== false;
+}
+
+function updateAllowlistHeroButtonState() {
+  const page = window.location.pathname.split("/").pop() || "index.html";
+  if (page !== "index.html" && page !== "") {
+    return;
+  }
+
+  const allowlistButton = document.querySelector("a[href^='application-view.html?form=allowlist-app']");
+  if (!allowlistButton) {
+    return;
+  }
+
+  const open = isAllowlistOpen();
+  if (open) {
+    allowlistButton.textContent = "Allowlist Application";
+    allowlistButton.setAttribute("href", "application-view.html?form=allowlist-app");
+    allowlistButton.classList.remove("btn-disabled");
+    allowlistButton.removeAttribute("aria-disabled");
+    return;
+  }
+
+  allowlistButton.textContent = "Closed";
+  allowlistButton.removeAttribute("href");
+  allowlistButton.classList.add("btn-disabled");
+  allowlistButton.setAttribute("aria-disabled", "true");
+}
+
 loginTriggers.forEach((trigger) => {
   trigger.addEventListener("click", (event) => {
     event.preventDefault();
@@ -1629,6 +1671,7 @@ accountDropdownState = createAccountDropdown();
 updateAccountDropdownDetails();
 initAdminEntry();
 applyMaintenanceGate();
+updateAllowlistHeroButtonState();
 initSocialButtons();
 initConnectPanel();
 initStoreCart();
