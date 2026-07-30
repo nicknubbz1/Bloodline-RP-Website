@@ -79,6 +79,19 @@ window.BLOODLINE_APPLICATION_FORMS = [
     ]
   },
   {
+    key: "ban-appeal-app",
+    title: "Ban Appeal",
+    type: "server",
+    description: "Submit an appeal for a server ban.",
+    questions: [
+      { id: "discordName", label: "what is your discord name?", kind: "text", required: true },
+      { id: "banDate", label: "when were you banned?", kind: "text", required: true },
+      { id: "banReason", label: "what was the reason for your ban?", kind: "textarea", required: true },
+      { id: "banDuration", label: "what is the duration of your ban?", kind: "text", required: true },
+      { id: "unbanReason", label: "why do you feel like you should be unbanned?", kind: "textarea", required: true }
+    ]
+  },
+  {
     key: "leo-app",
     title: "LEO Application",
     type: "public-safety",
