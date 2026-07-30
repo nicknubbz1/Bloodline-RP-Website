@@ -26,6 +26,7 @@
   const localAdminUsersKey = "bloodline-local-admin-users";
   const localAdminSessionKey = "bloodline-local-admin-session";
   const localAdminSessionTempKey = "bloodline-local-admin-session-temp";
+  const adminAuthStorageKey = "bloodline-admin-auth";
   const localAdminSettingsKey = "bloodline-local-admin-settings";
   const localSubscriptionsKey = "bloodline-local-subscriptions";
   const localApplicationAvailabilityKey = "bloodline-application-form-availability";
@@ -408,6 +409,25 @@
     }
 
     return sanitizeLocalAdminUser(target);
+  }
+
+  function resolveCachedAdminFromAuthState() {
+    const authState = readStoredJson(localStorage, adminAuthStorageKey, null);
+    const cachedAdmin = authState && typeof authState === "object" ? authState.admin : null;
+    if (!cachedAdmin || typeof cachedAdmin !== "object") {
+      return null;
+    }
+
+    if (!cachedAdmin.id || !cachedAdmin.username) {
+      return null;
+    }
+
+    return {
+      id: cachedAdmin.id,
+      username: cachedAdmin.username,
+      isMainAdmin: Boolean(cachedAdmin.isMainAdmin),
+      permissions: normalizePermissions(cachedAdmin.permissions),
+    };
   }
 
   function updateLocalAdminUser(userId, applyChanges) {
@@ -843,7 +863,6 @@
       adminApplicationsList.innerHTML = '<p class="admin-empty">You do not have applications access.</p>';
       return;
     }
-
     if (!state.applications.length) {
       adminApplicationsList.innerHTML = '<p class="admin-empty">No applications found for this view.</p>';
       return;
@@ -972,21 +991,24 @@
   }
 
   async function loadSession() {
-    const localAdmin = resolveLocalAdminFromSession();
-    if (localAdmin) {
-      state.admin = localAdmin;
-      state.localMode = true;
+    const sessionAdmin = resolveLocalAdminFromSession();
+    const cachedAdmin = resolveCachedAdminFromAuthState();
+    const optimisticAdmin = sessionAdmin || cachedAdmin;
+
+    if (optimisticAdmin) {
+      state.admin = optimisticAdmin;
+      state.localMode = Boolean(sessionAdmin);
       renderAdminMeta();
     }
 
     try {
-      const payload = await requestJson(adminSessionUrl, { timeoutMs: 2500 });
+      const payload = await requestJson(adminSessionUrl, { timeoutMs: 1200 });
       state.admin = payload.admin || null;
       state.localMode = false;
       renderAdminMeta();
       return;
     } catch {
-      if (!localAdmin) {
+      if (!sessionAdmin) {
         throw new Error("Admin session not found.");
       }
     }
@@ -1002,7 +1024,7 @@
       } catch {
         if (attempt < maxAttempts) {
           await new Promise((resolve) => {
-            setTimeout(resolve, 120 * attempt);
+              setTimeout(resolve, 80 * attempt);
           });
         }
       }
@@ -1024,7 +1046,11 @@
       return;
     }
 
-    const payload = await requestJson(`${apiBaseUrl}/admin/users`);
+    if (adminUsersList && !adminUsersList.children.length) {
+      adminUsersList.innerHTML = '<p class="admin-empty">Loading staff profiles...</p>';
+    }
+
+    const payload = await requestJson(`${apiBaseUrl}/admin/users`, { timeoutMs: 1800 });
     state.users = Array.isArray(payload.users) ? payload.users : [];
     renderUsers();
   }
@@ -1060,7 +1086,11 @@
       search,
     });
 
-    const payload = await requestJson(`${apiBaseUrl}/admin/applications?${params.toString()}`);
+    if (adminApplicationsList && !adminApplicationsList.children.length) {
+      adminApplicationsList.innerHTML = '<p class="admin-empty">Loading applications...</p>';
+    }
+
+    const payload = await requestJson(`${apiBaseUrl}/admin/applications?${params.toString()}`, { timeoutMs: 1800 });
     state.applications = Array.isArray(payload.applications) ? payload.applications : [];
     renderApplications();
     renderApplicationAvailability();
@@ -1085,7 +1115,14 @@
       return;
     }
 
-    const payload = await requestJson(`${apiBaseUrl}/admin/subscriptions`);
+    if (currentSubscriptionsList && !currentSubscriptionsList.children.length) {
+      currentSubscriptionsList.innerHTML = '<p class="admin-empty">Loading subscriptions...</p>';
+    }
+    if (endedSubscriptionsList && !endedSubscriptionsList.children.length) {
+      endedSubscriptionsList.innerHTML = '<p class="admin-empty">Loading subscriptions...</p>';
+    }
+
+    const payload = await requestJson(`${apiBaseUrl}/admin/subscriptions`, { timeoutMs: 1800 });
     state.subscriptions = {
       current: Array.isArray(payload.current) ? payload.current : [],
       ended: Array.isArray(payload.ended) ? payload.ended : [],
@@ -1103,7 +1140,7 @@
       return;
     }
 
-    const payload = await requestJson(`${apiBaseUrl}/admin/settings`);
+    const payload = await requestJson(`${apiBaseUrl}/admin/settings`, { timeoutMs: 1800 });
     state.settings = payload.settings || { maintenanceMode: false };
     writeStoredJson(localStorage, localAdminSettingsKey, {
       maintenanceMode: Boolean(state.settings?.maintenanceMode),
@@ -1136,19 +1173,22 @@
       return;
     }
 
-    await Promise.all([
-      loadSettings(),
-      loadUsers().catch(function () {
-        renderUsers();
-      }),
-      loadApplications().catch(function () {
-        renderApplications();
-        renderApplicationAvailability();
-      }),
-      loadSubscriptions().catch(function () {
-        renderSubscriptions();
-      }),
-    ]);
+    loadSettings().catch(function () {
+      renderMaintenance();
+    });
+
+    loadUsers().catch(function () {
+      renderUsers();
+    });
+
+    loadApplications().catch(function () {
+      renderApplications();
+      renderApplicationAvailability();
+    });
+
+    loadSubscriptions().catch(function () {
+      renderSubscriptions();
+    });
   }
 
   tabs.forEach(function (tab) {

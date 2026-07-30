@@ -56,8 +56,8 @@ const adminSessionUrl = window.BLOODLINE_ADMIN_SESSION_URL || `${apiBaseUrl}/adm
 const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-status`;
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
-const adminDashboardUrl = "admin.html?v=20260730j";
-const adminDashboardScriptVersion = "v=20260730k";
+const adminDashboardUrl = "admin.html?v=20260730l";
+const adminDashboardScriptVersion = "v=20260730l";
 const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:3000/api/discord/stats";
 const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
 const storeCartStorageKey = "bloodline-store-cart";
@@ -1426,6 +1426,29 @@ function writeAdminAuthState(nextState) {
   localStorage.setItem(adminAuthStorageKey, JSON.stringify(nextState || {}));
 }
 
+function sanitizeAdminAuthSnapshot(admin) {
+  if (!admin || typeof admin !== "object") {
+    return null;
+  }
+
+  if (!admin.id || !admin.username) {
+    return null;
+  }
+
+  return {
+    id: admin.id,
+    username: admin.username,
+    isMainAdmin: Boolean(admin.isMainAdmin),
+    permissions: {
+      applications: Boolean(admin.permissions?.applications),
+      applicationAvailability: Boolean(admin.permissions?.applicationAvailability),
+      websiteMaintenance: Boolean(admin.permissions?.websiteMaintenance),
+      subscriptions: Boolean(admin.permissions?.subscriptions || admin.permissions?.giftSubscriptions),
+      permissions: Boolean(admin.permissions?.permissions),
+    },
+  };
+}
+
 function ensureAdminLoginModal() {
   if (adminLoginModal) {
     return adminLoginModal;
@@ -1515,7 +1538,12 @@ function ensureAdminLoginModal() {
             loggedIn: true,
             admin: localAdmin,
           };
-          writeAdminAuthState({ staySignedIn });
+          writeAdminAuthState({
+            staySignedIn,
+            loggedIn: true,
+            admin: sanitizeAdminAuthSnapshot(localAdmin),
+            updatedAt: new Date().toISOString(),
+          });
           closeAdminLoginModal();
           updateAdminJoinButtons();
           window.location.href = adminDashboardUrl;
@@ -1531,7 +1559,12 @@ function ensureAdminLoginModal() {
           loggedIn: true,
           admin: remoteAdmin || localShadowAdmin || null,
         };
-        writeAdminAuthState({ staySignedIn });
+        writeAdminAuthState({
+          staySignedIn,
+          loggedIn: true,
+          admin: sanitizeAdminAuthSnapshot(remoteAdmin || localShadowAdmin),
+          updatedAt: new Date().toISOString(),
+        });
         closeAdminLoginModal();
         updateAdminJoinButtons();
         window.location.href = adminDashboardUrl;
@@ -1547,7 +1580,12 @@ function ensureAdminLoginModal() {
           loggedIn: true,
           admin: localAdmin,
         };
-        writeAdminAuthState({ staySignedIn });
+        writeAdminAuthState({
+          staySignedIn,
+          loggedIn: true,
+          admin: sanitizeAdminAuthSnapshot(localAdmin),
+          updatedAt: new Date().toISOString(),
+        });
         closeAdminLoginModal();
         updateAdminJoinButtons();
         window.location.href = adminDashboardUrl;
@@ -1632,6 +1670,12 @@ async function refreshAdminSession() {
           loggedIn: true,
           admin: localAdmin,
         };
+        writeAdminAuthState({
+          ...readAdminAuthState(),
+          loggedIn: true,
+          admin: sanitizeAdminAuthSnapshot(localAdmin),
+          updatedAt: new Date().toISOString(),
+        });
         updateAdminJoinButtons();
         return;
       }
@@ -1640,6 +1684,12 @@ async function refreshAdminSession() {
         loggedIn: false,
         admin: null,
       };
+      writeAdminAuthState({
+        ...readAdminAuthState(),
+        loggedIn: false,
+        admin: null,
+        updatedAt: new Date().toISOString(),
+      });
       updateAdminJoinButtons();
       return;
     }
@@ -1649,6 +1699,12 @@ async function refreshAdminSession() {
       loggedIn: true,
       admin: payload.admin || null,
     };
+    writeAdminAuthState({
+      ...readAdminAuthState(),
+      loggedIn: true,
+      admin: sanitizeAdminAuthSnapshot(payload.admin || null),
+      updatedAt: new Date().toISOString(),
+    });
     updateAdminJoinButtons();
   } catch {
     const localAdmin = resolveLocalAdminFromSession();
@@ -1657,6 +1713,12 @@ async function refreshAdminSession() {
         loggedIn: true,
         admin: localAdmin,
       };
+      writeAdminAuthState({
+        ...readAdminAuthState(),
+        loggedIn: true,
+        admin: sanitizeAdminAuthSnapshot(localAdmin),
+        updatedAt: new Date().toISOString(),
+      });
       updateAdminJoinButtons();
       return;
     }
@@ -1665,6 +1727,12 @@ async function refreshAdminSession() {
       loggedIn: false,
       admin: null,
     };
+    writeAdminAuthState({
+      ...readAdminAuthState(),
+      loggedIn: false,
+      admin: null,
+      updatedAt: new Date().toISOString(),
+    });
     updateAdminJoinButtons();
   }
 }
