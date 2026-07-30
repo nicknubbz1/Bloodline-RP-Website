@@ -2078,6 +2078,7 @@ body.popup-open {
 .rule-entry {
   position: relative;
   padding: 0.62rem 0;
+  scroll-margin-top: 6.2rem;
 }
 
 .rule-entry::after {
