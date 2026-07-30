@@ -2076,8 +2076,19 @@ body.popup-open {
 }
 
 .rule-entry {
-  border-bottom: 1px solid rgba(166, 192, 227, 0.14);
+  position: relative;
   padding: 0.62rem 0;
+}
+
+.rule-entry::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 47, 47, 0.5), rgba(255, 47, 47, 0));
+  opacity: 0.72;
 }
 
 .rule-entry:first-child {
@@ -2085,8 +2096,11 @@ body.popup-open {
 }
 
 .rule-entry:last-child {
-  border-bottom: 0;
   padding-bottom: 0.2rem;
+}
+
+.rule-entry:last-child::after {
+  display: none;
 }
 
 .rule-entry h3 {
