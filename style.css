@@ -2018,6 +2018,44 @@ body.popup-open {
   font-size: 0.95rem;
 }
 
+.team-roster {
+  margin-top: 0.4rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.team-member {
+  width: min(220px, 100%);
+  border: 1px solid rgba(166, 192, 227, 0.14);
+  border-radius: 0.95rem;
+  background:
+    radial-gradient(130px 70px at 84% -10%, rgba(255, 74, 74, 0.12), transparent 70%),
+    linear-gradient(170deg, rgba(21, 28, 41, 0.92), rgba(11, 16, 24, 0.96));
+  padding: 1rem 0.9rem;
+  display: grid;
+  justify-items: center;
+  gap: 0.7rem;
+}
+
+.team-avatar {
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 47, 47, 0.8);
+  box-shadow: 0 0 0 4px rgba(255, 47, 47, 0.17);
+}
+
+.team-role {
+  margin: 0;
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #ffe0e0;
+  font-size: 0.84rem;
+}
+
 .rules-layout {
   display: grid;
   grid-template-columns: 230px 1fr;
