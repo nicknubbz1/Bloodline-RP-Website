@@ -965,7 +965,64 @@ function removeTierFromStoreCart(tier) {
   renderStoreCart();
 }
 
+function ensureStoreCartUi() {
+  let toggleButton = document.getElementById("storeCartToggle");
+  if (!toggleButton) {
+    toggleButton = document.querySelector(".icon-btn[aria-label='Store']");
+  }
+
+  if (toggleButton) {
+    toggleButton.id = "storeCartToggle";
+    toggleButton.classList.add("store-cart-toggle");
+    toggleButton.setAttribute("aria-label", "Open cart");
+    toggleButton.setAttribute("aria-controls", "storeCartDrawer");
+    if (!toggleButton.hasAttribute("aria-expanded")) {
+      toggleButton.setAttribute("aria-expanded", "false");
+    }
+
+    let countEl = toggleButton.querySelector("#storeCartCount");
+    if (!countEl) {
+      countEl = document.createElement("span");
+      countEl.className = "store-cart-count";
+      countEl.id = "storeCartCount";
+      countEl.hidden = true;
+      toggleButton.appendChild(countEl);
+    }
+  }
+
+  let drawer = document.getElementById("storeCartDrawer");
+  if (!drawer) {
+    drawer = document.createElement("div");
+    drawer.className = "store-cart-drawer";
+    drawer.id = "storeCartDrawer";
+    drawer.setAttribute("aria-hidden", "true");
+    drawer.innerHTML = `
+      <div class="store-cart-backdrop" id="storeCartBackdrop" aria-hidden="true"></div>
+      <aside class="store-cart-panel" role="dialog" aria-modal="true" aria-labelledby="storeCartTitle">
+        <div class="store-cart-header">
+          <div>
+            <p class="eyebrow">Store</p>
+            <h2 id="storeCartTitle">Your Cart</h2>
+          </div>
+          <button class="modal-close" id="storeCartClose" type="button" aria-label="Close cart">Close</button>
+        </div>
+        <div class="store-cart-body">
+          <p class="store-cart-empty" id="storeCartEmpty">Your cart is empty.</p>
+          <div class="store-cart-items" id="storeCartItems"></div>
+        </div>
+        <div class="store-cart-footer">
+          <p class="store-cart-total">Total <strong id="storeCartTotal">$0 / month</strong></p>
+          <button class="btn btn-primary" id="storeCartCheckout" type="button">Log in to check out</button>
+        </div>
+      </aside>
+    `;
+    document.body.appendChild(drawer);
+  }
+}
+
 function initStoreCart() {
+  ensureStoreCartUi();
+
   const drawer = document.getElementById("storeCartDrawer");
   const toggleButton = document.getElementById("storeCartToggle");
   const closeButton = document.getElementById("storeCartClose");
@@ -977,9 +1034,21 @@ function initStoreCart() {
   const checkoutButton = document.getElementById("storeCartCheckout");
   const subscribeButtons = document.querySelectorAll(".store-subscribe-btn");
 
-  if (!drawer || !toggleButton || !itemsContainer || !emptyEl || !totalEl || !countEl || !checkoutButton || !subscribeButtons.length) {
+  if (!drawer || !toggleButton || !itemsContainer || !emptyEl || !totalEl || !countEl || !checkoutButton) {
     return;
   }
+
+  if (toggleButton.dataset.cartReady === "true") {
+    storeCartState.items = readStoreCartState().map((item) => ({
+      tier: item.tier,
+      priceLabel: item.priceLabel,
+      value: Number.isFinite(item.value) ? item.value : extractPriceValue(item.priceLabel),
+    })).filter((item) => item.tier && item.priceLabel);
+    renderStoreCart();
+    return;
+  }
+
+  toggleButton.dataset.cartReady = "true";
 
   storeCartState.refs = {
     drawer,
