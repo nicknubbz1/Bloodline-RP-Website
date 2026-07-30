@@ -1178,6 +1178,23 @@
         title: "Change Password",
         inputType: "password",
         confirmText: "Next",
+        requireNonEmpty: true,
+        validatePrompt: async function (value) {
+          try {
+            await requestJson(`${apiBaseUrl}/admin/verify-current-password`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ currentPassword: value }),
+            });
+            return true;
+          } catch (error) {
+            const message = String(error?.message || "");
+            if (message.toLowerCase().includes("current password is incorrect")) {
+              return "Incorrect password.";
+            }
+            return message || "Could not verify current password.";
+          }
+        },
       });
       if (!currentPassword) {
         return;

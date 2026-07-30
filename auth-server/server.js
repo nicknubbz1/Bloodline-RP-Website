@@ -817,6 +817,17 @@ app.get("/api/admin/session", requireAdminSession, (req, res) => {
   });
 });
 
+app.post("/api/admin/verify-current-password", requireAdminSession, (req, res) => {
+  const currentPassword = cleanText(req.body.currentPassword, 120);
+
+  if (!verifyPassword(currentPassword, req.adminUser.passwordSalt, req.adminUser.passwordHash)) {
+    res.status(401).json({ error: "Current password is incorrect." });
+    return;
+  }
+
+  res.json({ ok: true });
+});
+
 app.post("/api/admin/change-password", requireAdminSession, (req, res) => {
   const currentPassword = cleanText(req.body.currentPassword, 120);
   const nextPassword = cleanText(req.body.newPassword, 120);
