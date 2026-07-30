@@ -729,10 +729,32 @@
   }
 
   async function requestJson(url, options) {
-    const response = await fetch(url, {
-      credentials: "include",
-      ...(options || {}),
-    });
+    const requestOptions = options || {};
+    const timeoutMs = Number.isFinite(requestOptions.timeoutMs)
+      ? Math.max(800, Number(requestOptions.timeoutMs))
+      : 8000;
+    const { timeoutMs: _timeoutMs, ...fetchOptions } = requestOptions;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(function () {
+      controller.abort();
+    }, timeoutMs);
+
+    let response;
+    try {
+      response = await fetch(url, {
+        credentials: "include",
+        ...fetchOptions,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (error && error.name === "AbortError") {
+        throw new Error("Request timed out.");
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
+
     const payload = await response.json().catch(function () {
       return {};
     });
@@ -950,26 +972,28 @@
   }
 
   async function loadSession() {
+    const localAdmin = resolveLocalAdminFromSession();
+    if (localAdmin) {
+      state.admin = localAdmin;
+      state.localMode = true;
+      renderAdminMeta();
+    }
+
     try {
-      const payload = await requestJson(adminSessionUrl);
+      const payload = await requestJson(adminSessionUrl, { timeoutMs: 2500 });
       state.admin = payload.admin || null;
       state.localMode = false;
       renderAdminMeta();
       return;
     } catch {
-      const localAdmin = resolveLocalAdminFromSession();
       if (!localAdmin) {
         throw new Error("Admin session not found.");
       }
-
-      state.admin = localAdmin;
-      state.localMode = true;
-      renderAdminMeta();
     }
   }
 
   async function loadSessionWithRetry(attempts) {
-    const maxAttempts = Number.isFinite(attempts) ? Math.max(1, attempts) : 3;
+    const maxAttempts = Number.isFinite(attempts) ? Math.max(1, attempts) : 2;
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       try {
@@ -978,7 +1002,7 @@
       } catch {
         if (attempt < maxAttempts) {
           await new Promise((resolve) => {
-            setTimeout(resolve, 220 * attempt);
+            setTimeout(resolve, 120 * attempt);
           });
         }
       }
@@ -1090,7 +1114,16 @@
   }
 
   async function boot() {
-    const hasSession = await loadSessionWithRetry(3);
+    state.applicationAvailability = normalizeApplicationAvailability(readLocalApplicationAvailability());
+    renderApplicationAvailability();
+
+    const cachedSettings = readStoredJson(localStorage, localAdminSettingsKey, { maintenanceMode: false });
+    state.settings = {
+      maintenanceMode: Boolean(cachedSettings?.maintenanceMode),
+    };
+    renderMaintenance();
+
+    const hasSession = await loadSessionWithRetry(2);
     if (!hasSession) {
       if (sessionMetaEl) {
         sessionMetaEl.textContent = "Admin session not found. Log in again to continue.";
