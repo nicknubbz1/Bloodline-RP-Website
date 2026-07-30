@@ -698,6 +698,9 @@
 
     if (!state.admin) {
       sessionMetaEl.textContent = "No staff session.";
+      if (changeUsernameBtn) {
+        changeUsernameBtn.style.display = "none";
+      }
       renderAdminAccessControls();
       return;
     }
@@ -705,8 +708,10 @@
     sessionMetaEl.textContent = `Logged in as ${state.admin.username}`;
 
     if (changeUsernameBtn) {
-      changeUsernameBtn.disabled = !state.admin.isMainAdmin;
-      changeUsernameBtn.title = state.admin.isMainAdmin ? "Change main admin username" : "Only the main admin can change username";
+      const isMainAdmin = Boolean(state.admin.isMainAdmin);
+      changeUsernameBtn.style.display = isMainAdmin ? "" : "none";
+      changeUsernameBtn.disabled = !isMainAdmin;
+      changeUsernameBtn.title = isMainAdmin ? "Change main admin username" : "";
     }
 
     renderAdminAccessControls();
