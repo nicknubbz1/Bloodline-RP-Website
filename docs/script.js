@@ -55,6 +55,7 @@ const adminLoginUrl = window.BLOODLINE_ADMIN_LOGIN_URL || `${apiBaseUrl}/admin/l
 const adminSessionUrl = window.BLOODLINE_ADMIN_SESSION_URL || `${apiBaseUrl}/admin/session`;
 const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-status`;
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
+const forceServerOffline = true;
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
 const adminDashboardUrl = "admin.html?v=20260730l";
 const adminDashboardScriptVersion = "v=20260730l";
@@ -1343,6 +1344,25 @@ function initConnectPanel() {
     event.preventDefault();
     openConnectQueueModal();
   });
+
+  if (forceServerOffline) {
+    populationEl.textContent = "-- / --";
+    statusEl.textContent = "Offline";
+    statusEl.classList.remove("status-online");
+    statusEl.classList.add("status-offline");
+    connectQueueState = {
+      ...connectQueueState,
+      statusText: "Offline",
+      playersText: "-- / --",
+      queuePositionText: "Unavailable",
+      messageText: "The server is offline right now.",
+      noteText: "Connect will be enabled once the server is brought online.",
+      queueActionLabel: "Connect",
+      queueActionEnabled: false,
+    };
+    updateConnectQueueModal();
+    return;
+  }
 
   if (!serverStatusUrl) {
     populationEl.textContent = "Unavailable";
