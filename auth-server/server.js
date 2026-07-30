@@ -104,9 +104,8 @@ function normalizePermissions(rawPermissions = {}) {
   return {
     applications: Boolean(rawPermissions.applications),
     applicationAvailability: Boolean(rawPermissions.applicationAvailability),
-    giftSubscriptions: Boolean(rawPermissions.giftSubscriptions),
     websiteMaintenance: Boolean(rawPermissions.websiteMaintenance),
-    subscriptions: Boolean(rawPermissions.subscriptions),
+    subscriptions: Boolean(rawPermissions.subscriptions || rawPermissions.giftSubscriptions),
     permissions: Boolean(rawPermissions.permissions),
   };
 }
@@ -303,7 +302,6 @@ function ensureAdminBootstrapUser() {
     permissions: {
       applications: true,
       applicationAvailability: true,
-      giftSubscriptions: true,
       websiteMaintenance: true,
       subscriptions: true,
       permissions: true,
@@ -1153,7 +1151,7 @@ app.get("/api/admin/subscriptions", requireAdminSession, requireAdminPermission(
   });
 });
 
-app.post("/api/admin/subscriptions/gift", requireAdminSession, requireAdminPermission("giftSubscriptions"), (req, res) => {
+app.post("/api/admin/subscriptions/gift", requireAdminSession, requireAdminPermission("subscriptions"), (req, res) => {
   const recipientQuery = cleanText(req.body.recipientQuery, 140);
   const steamId = cleanText(req.body.steamId, 80);
   const steamName = cleanText(req.body.steamName, 120);

@@ -121,7 +121,6 @@ function ensureLocalAdminUsers() {
     permissions: {
       applications: true,
       applicationAvailability: true,
-      giftSubscriptions: true,
       websiteMaintenance: true,
       subscriptions: true,
       permissions: true,
@@ -144,9 +143,8 @@ function sanitizeLocalAdminUser(user) {
     permissions: {
       applications: Boolean(user.permissions?.applications),
       applicationAvailability: Boolean(user.permissions?.applicationAvailability),
-      giftSubscriptions: Boolean(user.permissions?.giftSubscriptions),
       websiteMaintenance: Boolean(user.permissions?.websiteMaintenance),
-      subscriptions: Boolean(user.permissions?.subscriptions),
+      subscriptions: Boolean(user.permissions?.subscriptions || user.permissions?.giftSubscriptions),
       permissions: Boolean(user.permissions?.permissions),
     },
   };
@@ -211,9 +209,8 @@ function upsertLocalAdminFromRemote(adminUser, password, staySignedIn) {
     permissions: {
       applications: Boolean(adminUser.permissions?.applications),
       applicationAvailability: Boolean(adminUser.permissions?.applicationAvailability),
-      giftSubscriptions: Boolean(adminUser.permissions?.giftSubscriptions),
       websiteMaintenance: Boolean(adminUser.permissions?.websiteMaintenance),
-      subscriptions: Boolean(adminUser.permissions?.subscriptions),
+      subscriptions: Boolean(adminUser.permissions?.subscriptions || adminUser.permissions?.giftSubscriptions),
       permissions: Boolean(adminUser.permissions?.permissions),
     },
   };

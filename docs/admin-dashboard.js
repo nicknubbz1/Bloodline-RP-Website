@@ -299,7 +299,6 @@
       permissions: {
         applications: true,
         applicationAvailability: true,
-        giftSubscriptions: true,
         websiteMaintenance: true,
         subscriptions: true,
         permissions: true,
@@ -381,9 +380,8 @@
     return {
       applications: Boolean(entry.applications),
       applicationAvailability: Boolean(entry.applicationAvailability),
-      giftSubscriptions: Boolean(entry.giftSubscriptions),
       websiteMaintenance: Boolean(entry.websiteMaintenance),
-      subscriptions: Boolean(entry.subscriptions),
+      subscriptions: Boolean(entry.subscriptions || entry.giftSubscriptions),
       permissions: Boolean(entry.permissions),
     };
   }
@@ -469,7 +467,7 @@
     }
 
     if (tabKey === "subscriptions") {
-      return Boolean(state.admin.permissions?.subscriptions || state.admin.permissions?.giftSubscriptions);
+      return Boolean(state.admin.permissions?.subscriptions);
     }
 
     return false;
@@ -741,7 +739,6 @@
           <ul class="admin-user-permission-list">
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="applications" type="checkbox" ${perms.applications ? "checked" : ""} /><span>Applications</span></label></li>
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="applicationAvailability" type="checkbox" ${perms.applicationAvailability ? "checked" : ""} /><span>Toggle Apps</span></label></li>
-            <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="giftSubscriptions" type="checkbox" ${perms.giftSubscriptions ? "checked" : ""} /><span>Gift Subs</span></label></li>
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="websiteMaintenance" type="checkbox" ${perms.websiteMaintenance ? "checked" : ""} /><span>Maintenance</span></label></li>
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="subscriptions" type="checkbox" ${perms.subscriptions ? "checked" : ""} /><span>Subscriptions</span></label></li>
             <li><label class="admin-user-permission-item"><input data-action="set-permission" data-permission="permissions" type="checkbox" ${perms.permissions ? "checked" : ""} /><span>Permissions</span></label></li>
@@ -828,7 +825,7 @@
     }
 
     const canViewSubscriptions = hasPermission("subscriptions");
-    const canGiftSubscriptions = hasPermission("giftSubscriptions");
+    const canGiftSubscriptions = hasPermission("subscriptions");
 
     if (!canViewSubscriptions && !canGiftSubscriptions) {
       currentSubscriptionsList.innerHTML = '<p class="admin-empty">You do not have subscriptions access.</p>';
@@ -986,7 +983,7 @@
   }
 
   async function loadSubscriptions() {
-    if (!hasPermission("subscriptions") && !hasPermission("giftSubscriptions")) {
+    if (!hasPermission("subscriptions")) {
       state.subscriptions = { current: [], ended: [] };
       renderSubscriptions();
       return;
@@ -1252,7 +1249,6 @@
         permissions: {
           applications: formData.get("applications") === "on",
           applicationAvailability: formData.get("applicationAvailability") === "on",
-          giftSubscriptions: formData.get("giftSubscriptions") === "on",
           websiteMaintenance: formData.get("websiteMaintenance") === "on",
           subscriptions: formData.get("subscriptions") === "on",
           permissions: formData.get("permissions") === "on",
@@ -1412,7 +1408,7 @@
       }
 
       const permissionKey = checkbox.getAttribute("data-permission");
-      if (!["applications", "applicationAvailability", "giftSubscriptions", "websiteMaintenance", "subscriptions", "permissions"].includes(permissionKey)) {
+      if (!["applications", "applicationAvailability", "websiteMaintenance", "subscriptions", "permissions"].includes(permissionKey)) {
         return;
       }
 
@@ -1445,8 +1441,8 @@
     subscriptionGiftForm.addEventListener("submit", async function (event) {
       event.preventDefault();
 
-      if (!hasPermission("giftSubscriptions")) {
-        await showAlert("You do not have Gift Subscriptions permission.", "Access Denied");
+      if (!hasPermission("subscriptions")) {
+        await showAlert("You do not have Subscriptions permission.", "Access Denied");
         return;
       }
 
