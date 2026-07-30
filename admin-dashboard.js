@@ -70,10 +70,9 @@
         <button class="modal-close" type="button" data-dialog-close aria-label="Close dialog">Close</button>
         <h2 id="adminDialogTitle">Notice</h2>
         <p class="steam-login-copy" data-dialog-message></p>
-        <label class="admin-dialog-input-wrap" data-dialog-input-wrap hidden>
-          <span data-dialog-input-label>Input</span>
+        <div class="admin-dialog-input-wrap" data-dialog-input-wrap hidden>
           <input data-dialog-input type="text" class="admin-dialog-input" />
-        </label>
+        </div>
         <div class="admin-dialog-actions" data-dialog-actions>
           <button class="btn btn-ghost" type="button" data-dialog-cancel>Cancel</button>
           <button class="connect-action" type="button" data-dialog-confirm>Confirm</button>
@@ -118,10 +117,9 @@
     const cancelBtn = modal.querySelector("[data-dialog-cancel]");
     const confirmBtn = modal.querySelector("[data-dialog-confirm]");
     const inputWrap = modal.querySelector("[data-dialog-input-wrap]");
-    const inputLabel = modal.querySelector("[data-dialog-input-label]");
     const inputEl = modal.querySelector("[data-dialog-input]");
 
-    if (!titleEl || !messageEl || !closeBtn || !cancelBtn || !confirmBtn || !inputWrap || !inputLabel || !inputEl) {
+    if (!titleEl || !messageEl || !closeBtn || !cancelBtn || !confirmBtn || !inputWrap || !inputEl) {
       return Promise.resolve(null);
     }
 
@@ -139,7 +137,6 @@
     inputEl.type = inputType;
     inputEl.value = settings.initialValue || "";
     inputEl.placeholder = settings.placeholder || "";
-    inputLabel.textContent = settings.inputLabel || "Value";
 
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");

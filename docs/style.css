@@ -1935,14 +1935,6 @@ body.popup-open {
   gap: 0.35rem;
 }
 
-.admin-dialog-input-wrap span {
-  font-family: "Oxanium", sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  font-size: 0.78rem;
-  color: #c9d8ef;
-}
-
 .admin-dialog-input {
   width: 100%;
   border: 1px solid var(--line-strong);
