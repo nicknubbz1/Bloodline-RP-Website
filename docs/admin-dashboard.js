@@ -86,6 +86,7 @@
         <p class="steam-login-copy" data-dialog-message></p>
         <div class="admin-dialog-input-wrap" data-dialog-input-wrap hidden>
           <input data-dialog-input type="text" class="admin-dialog-input" />
+          <p class="admin-dialog-error" data-dialog-error hidden></p>
         </div>
         <div class="admin-dialog-actions" data-dialog-actions>
           <button class="btn btn-ghost" type="button" data-dialog-cancel>Cancel</button>
@@ -132,8 +133,9 @@
     const confirmBtn = modal.querySelector("[data-dialog-confirm]");
     const inputWrap = modal.querySelector("[data-dialog-input-wrap]");
     const inputEl = modal.querySelector("[data-dialog-input]");
+    const errorEl = modal.querySelector("[data-dialog-error]");
 
-    if (!titleEl || !messageEl || !closeBtn || !cancelBtn || !confirmBtn || !inputWrap || !inputEl) {
+    if (!titleEl || !messageEl || !closeBtn || !cancelBtn || !confirmBtn || !inputWrap || !inputEl || !errorEl) {
       return Promise.resolve(null);
     }
 
@@ -151,6 +153,31 @@
     inputEl.type = inputType;
     inputEl.value = settings.initialValue || "";
     inputEl.placeholder = settings.placeholder || "";
+    inputEl.removeAttribute("aria-invalid");
+
+    const setPromptError = function (message) {
+      if (!isPrompt) {
+        return;
+      }
+      const text = String(message || "").trim();
+      errorEl.textContent = text;
+      errorEl.hidden = !text;
+      if (text) {
+        inputEl.setAttribute("aria-invalid", "true");
+      } else {
+        inputEl.removeAttribute("aria-invalid");
+      }
+    };
+
+    setPromptError(settings.errorText || "");
+
+    const onInputChange = function () {
+      setPromptError("");
+    };
+
+    if (isPrompt) {
+      inputEl.addEventListener("input", onInputChange);
+    }
 
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
@@ -184,6 +211,7 @@
         closeBtn.removeEventListener("click", onClose);
         cancelBtn.removeEventListener("click", onCancel);
         confirmBtn.removeEventListener("click", onConfirm);
+        inputEl.removeEventListener("input", onInputChange);
         document.removeEventListener("keydown", onKeyDown);
         closeAdminDialogModal();
       };
@@ -210,13 +238,35 @@
         resolve(false);
       };
 
-      const onConfirm = function () {
+      const onConfirm = async function () {
         if (isPrompt) {
           const value = String(inputEl.value || "");
           if (settings.requireNonEmpty && !value.trim()) {
+            setPromptError(settings.requiredMessage || "This field is required.");
             inputEl.focus();
             return;
           }
+
+          if (typeof settings.validatePrompt === "function") {
+            let validationResult = true;
+            try {
+              validationResult = await settings.validatePrompt(value);
+            } catch {
+              validationResult = "Could not validate input.";
+            }
+
+            if (validationResult !== true) {
+              setPromptError(
+                typeof validationResult === "string" && validationResult
+                  ? validationResult
+                  : "Invalid value.",
+              );
+              inputEl.focus();
+              inputEl.select();
+              return;
+            }
+          }
+
           cleanup();
           resolve(value);
           return;
@@ -1081,24 +1131,6 @@
 
   if (changePasswordBtn) {
     changePasswordBtn.addEventListener("click", async function () {
-      const requestCurrentPassword = async function (retry) {
-        return showPrompt(
-          retry
-            ? "Current password is incorrect. Enter your current password again."
-            : "Enter your current password.",
-          {
-            title: "Change Password",
-            inputType: "password",
-            confirmText: "Next",
-          },
-        );
-      };
-
-      let currentPassword = await requestCurrentPassword(false);
-      if (!currentPassword) {
-        return;
-      }
-
       if (state.localMode) {
         const localUsers = ensureLocalAdminUsers();
         const current = localUsers.find((entry) => entry.id === state.admin?.id);
@@ -1107,12 +1139,20 @@
           return;
         }
 
-        while (String(current.password || "") !== String(currentPassword)) {
-          await showAlert("Current password is incorrect.", "Change Password");
-          currentPassword = await requestCurrentPassword(true);
-          if (!currentPassword) {
-            return;
-          }
+        const currentPasswordLocal = await showPrompt("Enter your current password.", {
+          title: "Change Password",
+          inputType: "password",
+          confirmText: "Next",
+          requireNonEmpty: true,
+          validatePrompt: function (value) {
+            if (String(current.password || "") !== String(value)) {
+              return "Incorrect password.";
+            }
+            return true;
+          },
+        });
+        if (!currentPasswordLocal) {
+          return;
         }
 
         const newPasswordLocal = await showPrompt("Enter your new password.", {
@@ -1131,6 +1171,15 @@
           };
         });
         await showAlert("Password changed.", "Success");
+        return;
+      }
+
+      const currentPassword = await showPrompt("Enter your current password.", {
+        title: "Change Password",
+        inputType: "password",
+        confirmText: "Next",
+      });
+      if (!currentPassword) {
         return;
       }
 
