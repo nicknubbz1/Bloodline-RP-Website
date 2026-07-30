@@ -2143,7 +2143,7 @@ loginTriggers.forEach((trigger) => {
       return;
     }
 
-    openSteamPopup();
+    openSteamLoginModal();
   });
 });
 
