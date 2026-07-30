@@ -55,6 +55,209 @@
     localMode: false,
   };
 
+  let adminDialogModal = null;
+
+  function ensureAdminDialogModal() {
+    if (adminDialogModal) {
+      return adminDialogModal;
+    }
+
+    adminDialogModal = document.createElement("div");
+    adminDialogModal.className = "login-modal admin-dialog-modal";
+    adminDialogModal.setAttribute("aria-hidden", "true");
+    adminDialogModal.innerHTML = `
+      <div class="login-modal-card admin-dialog-card" role="dialog" aria-modal="true" aria-labelledby="adminDialogTitle">
+        <button class="modal-close" type="button" data-dialog-close aria-label="Close dialog">Close</button>
+        <h2 id="adminDialogTitle">Notice</h2>
+        <p class="steam-login-copy" data-dialog-message></p>
+        <label class="admin-dialog-input-wrap" data-dialog-input-wrap hidden>
+          <span data-dialog-input-label>Input</span>
+          <input data-dialog-input type="text" class="admin-dialog-input" />
+        </label>
+        <div class="admin-dialog-actions" data-dialog-actions>
+          <button class="btn btn-ghost" type="button" data-dialog-cancel>Cancel</button>
+          <button class="connect-action" type="button" data-dialog-confirm>Confirm</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(adminDialogModal);
+    adminDialogModal.addEventListener("click", function (event) {
+      if (event.target === adminDialogModal) {
+        const cancelBtn = adminDialogModal.querySelector("[data-dialog-cancel]");
+        if (cancelBtn && !cancelBtn.hidden) {
+          cancelBtn.click();
+          return;
+        }
+
+        const closeBtn = adminDialogModal.querySelector("[data-dialog-close]");
+        if (closeBtn) {
+          closeBtn.click();
+        }
+      }
+    });
+
+    return adminDialogModal;
+  }
+
+  function closeAdminDialogModal() {
+    if (!adminDialogModal) {
+      return;
+    }
+    adminDialogModal.classList.remove("is-open");
+    adminDialogModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+  }
+
+  function openAdminDialog(options) {
+    const settings = options || {};
+    const modal = ensureAdminDialogModal();
+    const titleEl = modal.querySelector("#adminDialogTitle");
+    const messageEl = modal.querySelector("[data-dialog-message]");
+    const closeBtn = modal.querySelector("[data-dialog-close]");
+    const cancelBtn = modal.querySelector("[data-dialog-cancel]");
+    const confirmBtn = modal.querySelector("[data-dialog-confirm]");
+    const inputWrap = modal.querySelector("[data-dialog-input-wrap]");
+    const inputLabel = modal.querySelector("[data-dialog-input-label]");
+    const inputEl = modal.querySelector("[data-dialog-input]");
+
+    if (!titleEl || !messageEl || !closeBtn || !cancelBtn || !confirmBtn || !inputWrap || !inputLabel || !inputEl) {
+      return Promise.resolve(null);
+    }
+
+    titleEl.textContent = settings.title || "Notice";
+    messageEl.textContent = settings.message || "";
+    confirmBtn.textContent = settings.confirmText || "OK";
+    cancelBtn.textContent = settings.cancelText || "Cancel";
+
+    const isPrompt = settings.type === "prompt";
+    const isConfirm = settings.type === "confirm";
+    const inputType = settings.inputType === "password" ? "password" : "text";
+
+    inputWrap.hidden = !isPrompt;
+    cancelBtn.hidden = !isPrompt && !isConfirm;
+    inputEl.type = inputType;
+    inputEl.value = settings.initialValue || "";
+    inputEl.placeholder = settings.placeholder || "";
+    inputLabel.textContent = settings.inputLabel || "Value";
+
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+
+    if (isPrompt) {
+      inputEl.focus();
+      inputEl.select();
+    } else {
+      confirmBtn.focus();
+    }
+
+    return new Promise(function (resolve) {
+      const onKeyDown = function (event) {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          if (!cancelBtn.hidden) {
+            cancelBtn.click();
+          } else {
+            confirmBtn.click();
+          }
+        }
+
+        if (event.key === "Enter" && isPrompt && event.target === inputEl) {
+          event.preventDefault();
+          confirmBtn.click();
+        }
+      };
+
+      const cleanup = function () {
+        closeBtn.removeEventListener("click", onClose);
+        cancelBtn.removeEventListener("click", onCancel);
+        confirmBtn.removeEventListener("click", onConfirm);
+        document.removeEventListener("keydown", onKeyDown);
+        closeAdminDialogModal();
+      };
+
+      const onClose = function () {
+        cleanup();
+        if (isPrompt) {
+          resolve(null);
+          return;
+        }
+        if (isConfirm) {
+          resolve(false);
+          return;
+        }
+        resolve(true);
+      };
+
+      const onCancel = function () {
+        cleanup();
+        if (isPrompt) {
+          resolve(null);
+          return;
+        }
+        resolve(false);
+      };
+
+      const onConfirm = function () {
+        if (isPrompt) {
+          const value = String(inputEl.value || "");
+          if (settings.requireNonEmpty && !value.trim()) {
+            inputEl.focus();
+            return;
+          }
+          cleanup();
+          resolve(value);
+          return;
+        }
+
+        cleanup();
+        resolve(true);
+      };
+
+      closeBtn.addEventListener("click", onClose);
+      cancelBtn.addEventListener("click", onCancel);
+      confirmBtn.addEventListener("click", onConfirm);
+      document.addEventListener("keydown", onKeyDown);
+    });
+  }
+
+  async function showAlert(message, title) {
+    await openAdminDialog({
+      type: "alert",
+      title: title || "Notice",
+      message,
+      confirmText: "OK",
+    });
+  }
+
+  async function showConfirm(message, title, confirmText) {
+    const accepted = await openAdminDialog({
+      type: "confirm",
+      title: title || "Confirm",
+      message,
+      confirmText: confirmText || "Confirm",
+      cancelText: "Cancel",
+    });
+    return Boolean(accepted);
+  }
+
+  async function showPrompt(message, options) {
+    const promptOptions = options || {};
+    return openAdminDialog({
+      type: "prompt",
+      title: promptOptions.title || "Input",
+      message,
+      confirmText: promptOptions.confirmText || "Save",
+      cancelText: promptOptions.cancelText || "Cancel",
+      inputLabel: promptOptions.inputLabel || "Value",
+      inputType: promptOptions.inputType || "text",
+      initialValue: promptOptions.initialValue || "",
+      placeholder: promptOptions.placeholder || "",
+      requireNonEmpty: Boolean(promptOptions.requireNonEmpty),
+    });
+  }
+
   function readStoredJson(storage, key, fallbackValue) {
     try {
       const raw = storage.getItem(key);
@@ -577,11 +780,21 @@
 
   if (changePasswordBtn) {
     changePasswordBtn.addEventListener("click", async function () {
-      const currentPassword = window.prompt("Enter current password:");
+      const currentPassword = await showPrompt("Enter your current password.", {
+        title: "Change Password",
+        inputLabel: "Current Password",
+        inputType: "password",
+        confirmText: "Next",
+      });
       if (!currentPassword) {
         return;
       }
-      const newPassword = window.prompt("Enter new password:");
+      const newPassword = await showPrompt("Enter your new password.", {
+        title: "Change Password",
+        inputLabel: "New Password",
+        inputType: "password",
+        confirmText: "Update",
+      });
       if (!newPassword) {
         return;
       }
@@ -590,11 +803,11 @@
         const localUsers = ensureLocalAdminUsers();
         const current = localUsers.find((entry) => entry.id === state.admin?.id);
         if (!current) {
-          window.alert("Staff login required.");
+          await showAlert("Staff login required.", "Session");
           return;
         }
         if (String(current.password || "") !== String(currentPassword)) {
-          window.alert("Current password is incorrect.");
+          await showAlert("Current password is incorrect.", "Change Password");
           return;
         }
 
@@ -604,7 +817,7 @@
             password: String(newPassword),
           };
         });
-        window.alert("Password changed.");
+        await showAlert("Password changed.", "Success");
         return;
       }
 
@@ -614,9 +827,9 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ currentPassword, newPassword }),
         });
-        window.alert("Password changed.");
+        await showAlert("Password changed.", "Success");
       } catch (error) {
-        window.alert(error.message || "Could not change password.");
+        await showAlert(error.message || "Could not change password.", "Error");
       }
     });
   }
@@ -624,11 +837,15 @@
   if (changeUsernameBtn) {
     changeUsernameBtn.addEventListener("click", async function () {
       if (!state.admin || !state.admin.isMainAdmin) {
-        window.alert("Only the main admin can change username.");
+        await showAlert("Only the main admin can change username.", "Access Denied");
         return;
       }
 
-      const username = window.prompt("Enter new username for main admin:");
+      const username = await showPrompt("Enter a new username for the main admin.", {
+        title: "Change Username",
+        inputLabel: "Username",
+        confirmText: "Update",
+      });
       if (!username) {
         return;
       }
@@ -636,7 +853,7 @@
       if (state.localMode) {
         const nextUsername = String(username).trim();
         if (!nextUsername) {
-          window.alert("Username is required.");
+          await showAlert("Username is required.", "Change Username");
           return;
         }
 
@@ -645,7 +862,7 @@
           return entry.id !== state.admin.id && String(entry.username || "").toLowerCase() === nextUsername.toLowerCase();
         });
         if (alreadyUsed) {
-          window.alert("Username already exists.");
+          await showAlert("Username already exists.", "Change Username");
           return;
         }
 
@@ -662,7 +879,7 @@
         };
         renderAdminMeta();
         await loadUsers();
-        window.alert("Username changed.");
+        await showAlert("Username changed.", "Success");
         return;
       }
 
@@ -674,9 +891,9 @@
         });
         state.admin = payload.admin || state.admin;
         renderAdminMeta();
-        window.alert("Username changed.");
+        await showAlert("Username changed.", "Success");
       } catch (error) {
-        window.alert(error.message || "Could not change username.");
+        await showAlert(error.message || "Could not change username.", "Error");
       }
     });
   }
@@ -697,7 +914,7 @@
         });
         await loadSettings();
       } catch (error) {
-        window.alert(error.message || "Could not update maintenance mode.");
+        await showAlert(error.message || "Could not update maintenance mode.", "Error");
         maintenanceToggle.checked = !maintenanceToggle.checked;
       }
     });
@@ -724,7 +941,7 @@
 
       if (state.localMode) {
         if (!payload.username || !payload.password) {
-          window.alert("Username and password are required.");
+          await showAlert("Username and password are required.", "Create Login");
           return;
         }
 
@@ -733,7 +950,7 @@
           return String(entry.username || "").toLowerCase() === payload.username.toLowerCase();
         });
         if (duplicate) {
-          window.alert("Username already exists.");
+          await showAlert("Username already exists.", "Create Login");
           return;
         }
 
@@ -759,7 +976,7 @@
         createAdminUserForm.reset();
         await loadUsers();
       } catch (error) {
-        window.alert(error.message || "Could not create staff login.");
+        await showAlert(error.message || "Could not create staff login.", "Error");
       }
     });
   }
@@ -784,12 +1001,12 @@
 
       if (state.localMode) {
         if (action === "delete") {
-          if (!window.confirm("Delete this admin profile?")) {
+          if (!(await showConfirm("Delete this staff profile?", "Delete Profile", "Delete"))) {
             return;
           }
 
           if (target.isMainAdmin) {
-            window.alert("Main admin profile cannot be deleted.");
+            await showAlert("Main admin profile cannot be deleted.", "Delete Profile");
             return;
           }
 
@@ -802,7 +1019,12 @@
         }
 
         if (action === "set-password") {
-          const newPassword = window.prompt("Enter a new password for this profile:");
+          const newPassword = await showPrompt("Enter a new password for this profile.", {
+            title: "Reset Password",
+            inputLabel: "New Password",
+            inputType: "password",
+            confirmText: "Reset",
+          });
           if (!newPassword) {
             return;
           }
@@ -819,20 +1041,25 @@
       }
 
       if (action === "delete") {
-        if (!window.confirm("Delete this admin profile?")) {
+        if (!(await showConfirm("Delete this staff profile?", "Delete Profile", "Delete"))) {
           return;
         }
         await requestJson(`${apiBaseUrl}/admin/users/${encodeURIComponent(userId)}`, {
           method: "DELETE",
         }).catch(function (error) {
-          window.alert(error.message || "Could not delete admin profile.");
+          showAlert(error.message || "Could not delete staff profile.", "Error");
         });
         await loadUsers();
         return;
       }
 
       if (action === "set-password") {
-        const newPassword = window.prompt("Enter a new password for this profile:");
+        const newPassword = await showPrompt("Enter a new password for this profile.", {
+          title: "Reset Password",
+          inputLabel: "New Password",
+          inputType: "password",
+          confirmText: "Reset",
+        });
         if (!newPassword) {
           return;
         }
@@ -841,7 +1068,7 @@
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ newPassword }),
         }).catch(function (error) {
-          window.alert(error.message || "Could not reset password.");
+          showAlert(error.message || "Could not reset password.", "Error");
         });
         await loadUsers();
         return;
@@ -888,7 +1115,7 @@
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ permissions }),
       }).catch(function (error) {
-        window.alert(error.message || "Could not update permissions.");
+        showAlert(error.message || "Could not update permissions.", "Error");
       });
       await loadUsers();
     });
@@ -933,7 +1160,11 @@
             body: JSON.stringify({ decision: action === "accept" ? "accepted" : "denied", note: "" }),
           });
         } else if (action === "reply") {
-          const message = window.prompt("Reply message:");
+          const message = await showPrompt("Enter your reply message.", {
+            title: "Reply To Application",
+            inputLabel: "Reply Message",
+            confirmText: "Send",
+          });
           if (!message) {
             return;
           }
@@ -947,7 +1178,7 @@
             method: "POST",
           });
         } else if (action === "delete") {
-          if (!window.confirm("Delete this archived application permanently?")) {
+          if (!(await showConfirm("Delete this archived application permanently?", "Delete Application", "Delete"))) {
             return;
           }
           await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}`, {
@@ -957,7 +1188,7 @@
 
         await loadApplications();
       } catch (error) {
-        window.alert(error.message || "Could not update application.");
+        await showAlert(error.message || "Could not update application.", "Error");
       }
     });
   }

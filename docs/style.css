@@ -1925,6 +1925,47 @@ body.popup-open {
   font-size: 2.1rem;
 }
 
+.admin-dialog-card {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.admin-dialog-input-wrap {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-dialog-input-wrap span {
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 0.78rem;
+  color: #c9d8ef;
+}
+
+.admin-dialog-input {
+  width: 100%;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.68rem;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  padding: 0.58rem 0.72rem;
+  font-family: "Rajdhani", sans-serif;
+  font-size: 1rem;
+}
+
+.admin-dialog-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.admin-dialog-actions .connect-action {
+  width: auto;
+  margin: 0;
+}
+
 .steam-login-mark {
   font-family: "Oxanium", sans-serif;
   color: var(--green);
