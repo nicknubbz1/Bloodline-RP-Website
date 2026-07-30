@@ -1422,7 +1422,7 @@ function updateAdminJoinButtons() {
   const buttons = getJoinButtons();
   buttons.forEach((button) => {
     if (adminSessionState.loggedIn) {
-      button.textContent = "Staff";
+      button.textContent = "Staff Dashboard";
       button.setAttribute("href", adminDashboardUrl);
       button.setAttribute("aria-label", "Open staff dashboard");
     } else {
