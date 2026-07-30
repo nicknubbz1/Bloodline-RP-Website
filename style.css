@@ -2074,6 +2074,10 @@ body.popup-open {
   gap: 0.35rem;
 }
 
+.admin-dialog-input-wrap[hidden] {
+  display: none !important;
+}
+
 .admin-dialog-input {
   width: 100%;
   border: 1px solid var(--line-strong);
