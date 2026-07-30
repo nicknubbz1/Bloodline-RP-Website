@@ -1271,16 +1271,6 @@ function initStoreCart() {
     });
   }
 
-  document.addEventListener("click", (event) => {
-    const cartTrigger = event.target.closest("a#storeCartToggle, a.store-cart-toggle, a.icon-btn[aria-label='Store']");
-    if (!cartTrigger) {
-      return;
-    }
-
-    event.preventDefault();
-    toggleStoreCartDrawer();
-  }, true);
-
   if (closeButton) {
     closeButton.addEventListener("click", closeStoreCartDrawer);
   }

@@ -1,7 +1,4 @@
-const bloodlineIsLocalHost = /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
-const bloodlineBackendOrigin = bloodlineIsLocalHost
-	? "http://localhost:3000"
-	: window.location.origin;
+const bloodlineBackendOrigin = window.BLOODLINE_BACKEND_ORIGIN || "http://localhost:3000";
 
 window.BLOODLINE_STEAM_AUTH_URL = window.BLOODLINE_STEAM_AUTH_URL || `${bloodlineBackendOrigin}/auth/steam`;
 window.BLOODLINE_DISCORD_AUTH_URL = window.BLOODLINE_DISCORD_AUTH_URL || `${bloodlineBackendOrigin}/auth/discord`;
