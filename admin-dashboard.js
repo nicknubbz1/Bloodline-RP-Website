@@ -180,13 +180,70 @@
     return Boolean(state.admin.permissions && state.admin.permissions[permissionKey]);
   }
 
-  function setActiveTab(tabKey) {
+  function canAccessTab(tabKey) {
+    if (!state.admin) {
+      return false;
+    }
+
+    if (state.admin.isMainAdmin) {
+      return true;
+    }
+
+    if (tabKey === "permissions") {
+      return Boolean(state.admin.permissions?.permissions);
+    }
+
+    if (tabKey === "applications") {
+      return Boolean(state.admin.permissions?.applications);
+    }
+
+    if (tabKey === "subscriptions") {
+      return Boolean(state.admin.permissions?.subscriptions);
+    }
+
+    return false;
+  }
+
+  function renderAdminAccessControls() {
+    const maintenanceSection = document.querySelector(".admin-maintenance-toggle");
+    const canManageMaintenance = hasPermission("websiteMaintenance");
+
+    if (maintenanceSection) {
+      const shouldShowMaintenance = Boolean(state.admin) && (state.admin.isMainAdmin || canManageMaintenance);
+      maintenanceSection.style.display = shouldShowMaintenance ? "" : "none";
+    }
+
     tabs.forEach((tab) => {
-      const isActive = tab.getAttribute("data-admin-tab") === tabKey;
+      const tabKey = tab.getAttribute("data-admin-tab");
+      const shouldShow = canAccessTab(tabKey);
+      tab.style.display = shouldShow ? "" : "none";
+    });
+
+    panels.forEach((panel) => {
+      const panelKey = panel.getAttribute("data-admin-panel");
+      const shouldShow = canAccessTab(panelKey);
+      panel.style.display = shouldShow ? "" : "none";
+    });
+
+    const firstVisibleTab = tabs.find((tab) => canAccessTab(tab.getAttribute("data-admin-tab")));
+    if (firstVisibleTab) {
+      setActiveTab(firstVisibleTab.getAttribute("data-admin-tab"));
+    } else {
+      setActiveTab(null);
+    }
+  }
+
+  function setActiveTab(tabKey) {
+    const resolvedTabKey = tabKey && canAccessTab(tabKey)
+      ? tabKey
+      : tabs.find((tab) => canAccessTab(tab.getAttribute("data-admin-tab")))?.getAttribute("data-admin-tab") || null;
+
+    tabs.forEach((tab) => {
+      const isActive = tab.getAttribute("data-admin-tab") === resolvedTabKey;
       tab.classList.toggle("active", isActive);
     });
     panels.forEach((panel) => {
-      const isActive = panel.getAttribute("data-admin-panel") === tabKey;
+      const isActive = panel.getAttribute("data-admin-panel") === resolvedTabKey;
       panel.classList.toggle("active", isActive);
     });
   }
@@ -225,6 +282,7 @@
 
     if (!state.admin) {
       sessionMetaEl.textContent = "No admin session.";
+      renderAdminAccessControls();
       return;
     }
 
@@ -237,6 +295,8 @@
       changeUsernameBtn.disabled = !state.admin.isMainAdmin;
       changeUsernameBtn.title = state.admin.isMainAdmin ? "Change main admin username" : "Only the main admin can change username";
     }
+
+    renderAdminAccessControls();
   }
 
   function renderUsers() {
