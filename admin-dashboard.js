@@ -316,6 +316,9 @@
       initialValue: promptOptions.initialValue || "",
       placeholder: promptOptions.placeholder || "",
       requireNonEmpty: Boolean(promptOptions.requireNonEmpty),
+      requiredMessage: promptOptions.requiredMessage || "",
+      errorText: promptOptions.errorText || "",
+      validatePrompt: typeof promptOptions.validatePrompt === "function" ? promptOptions.validatePrompt : null,
     });
   }
 
