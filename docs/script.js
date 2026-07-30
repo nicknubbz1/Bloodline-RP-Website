@@ -275,6 +275,14 @@ const maintenanceGatePollMs = 10000;
 const maintenanceGateIgnoredPages = new Set(["admin.html"]);
 let maintenanceGateOverlay = null;
 let maintenanceGateEnabled = null;
+let maintenanceResizeBound = false;
+
+const maintenanceLockedNavSelectors = [
+  ".header-brand",
+  "#navMenu a",
+  ".icon-btn",
+  ".login-trigger",
+];
 
 function isMaintenanceGatePage() {
   const page = window.location.pathname.split("/").pop() || "index.html";
@@ -302,6 +310,81 @@ function ensureMaintenanceGateOverlay() {
   return maintenanceGateOverlay;
 }
 
+function updateMaintenanceOverlayOffset() {
+  if (!maintenanceGateOverlay) {
+    return;
+  }
+
+  const headerEl = document.querySelector(".site-header");
+  const topOffset = headerEl
+    ? Math.ceil(headerEl.getBoundingClientRect().height)
+    : 0;
+  maintenanceGateOverlay.style.setProperty("--maintenance-top-offset", `${topOffset}px`);
+}
+
+function setMaintenanceNavigationLocked(active) {
+  const locked = Boolean(active);
+  const staffLink = document.querySelector(".join-btn");
+  const links = maintenanceLockedNavSelectors
+    .flatMap((selector) => Array.from(document.querySelectorAll(selector)));
+
+  links.forEach((link) => {
+    if (!(link instanceof HTMLAnchorElement)) {
+      return;
+    }
+
+    if (locked) {
+      if (!link.dataset.maintenanceHref) {
+        link.dataset.maintenanceHref = link.getAttribute("href") || "";
+      }
+      link.removeAttribute("href");
+      link.setAttribute("aria-disabled", "true");
+      link.classList.add("maintenance-nav-disabled");
+      return;
+    }
+
+    const originalHref = link.dataset.maintenanceHref;
+    if (originalHref !== undefined) {
+      if (originalHref) {
+        link.setAttribute("href", originalHref);
+      } else {
+        link.removeAttribute("href");
+      }
+      delete link.dataset.maintenanceHref;
+    }
+    link.removeAttribute("aria-disabled");
+    link.classList.remove("maintenance-nav-disabled");
+  });
+
+  if (staffLink instanceof HTMLAnchorElement) {
+    if (locked) {
+      if (!staffLink.dataset.maintenanceHref) {
+        staffLink.dataset.maintenanceHref = staffLink.getAttribute("href") || "";
+      }
+      if (!staffLink.dataset.maintenanceLabel) {
+        staffLink.dataset.maintenanceLabel = staffLink.textContent || "";
+      }
+      staffLink.setAttribute("href", adminDashboardUrl);
+      staffLink.textContent = "Staff Dashboard";
+    } else {
+      const originalHref = staffLink.dataset.maintenanceHref;
+      const originalLabel = staffLink.dataset.maintenanceLabel;
+      if (originalHref !== undefined) {
+        if (originalHref) {
+          staffLink.setAttribute("href", originalHref);
+        } else {
+          staffLink.removeAttribute("href");
+        }
+        delete staffLink.dataset.maintenanceHref;
+      }
+      if (originalLabel !== undefined) {
+        staffLink.textContent = originalLabel;
+        delete staffLink.dataset.maintenanceLabel;
+      }
+    }
+  }
+}
+
 function setMaintenanceGate(enabled) {
   if (!isMaintenanceGatePage()) {
     return;
@@ -317,6 +400,8 @@ function setMaintenanceGate(enabled) {
   const mainEl = document.querySelector("main");
   const footerEl = document.querySelector(".footer");
 
+  updateMaintenanceOverlayOffset();
+
   overlay.hidden = !active;
 
   if (mainEl) {
@@ -327,6 +412,12 @@ function setMaintenanceGate(enabled) {
   }
 
   document.body.classList.toggle("maintenance-gated", active);
+  setMaintenanceNavigationLocked(active);
+
+  if (active && !maintenanceResizeBound) {
+    window.addEventListener("resize", updateMaintenanceOverlayOffset);
+    maintenanceResizeBound = true;
+  }
 }
 
 if (isMaintenanceGatePage() && readLocalMaintenanceMode()) {
@@ -1497,8 +1588,9 @@ function closeAdminLoginModal() {
 
 function updateAdminJoinButtons() {
   const buttons = getJoinButtons();
+  const forceDashboardAccess = Boolean(maintenanceGateEnabled) && isMaintenanceGatePage();
   buttons.forEach((button) => {
-    if (adminSessionState.loggedIn) {
+    if (adminSessionState.loggedIn || forceDashboardAccess) {
       button.textContent = "Staff Dashboard";
       button.setAttribute("href", adminDashboardUrl);
       button.setAttribute("aria-label", "Open staff dashboard");
@@ -1518,7 +1610,7 @@ function attachAdminJoinButtonHandlers() {
 
     button.dataset.adminReady = "true";
     button.addEventListener("click", (event) => {
-      if (adminSessionState.loggedIn) {
+      if (adminSessionState.loggedIn || (Boolean(maintenanceGateEnabled) && isMaintenanceGatePage())) {
         return;
       }
       event.preventDefault();
