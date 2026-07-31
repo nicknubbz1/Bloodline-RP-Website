@@ -2615,6 +2615,22 @@ body.popup-open {
   color: var(--muted);
 }
 
+.dashboard-connection-actions {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.65rem;
+}
+
+.dashboard-connection-actions .btn {
+  width: 100%;
+}
+
+.dashboard-connection-note {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 .dashboard-list {
   margin: 0.5rem 0 0;
   padding-left: 1.1rem;

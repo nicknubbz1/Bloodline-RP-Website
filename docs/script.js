@@ -1874,6 +1874,8 @@ async function initAccountDashboardPage() {
   const stateEl = document.getElementById("dashboardApplicationState");
   const pendingListEl = document.getElementById("dashboardPendingList");
   const closedListEl = document.getElementById("dashboardClosedList");
+  const discordLinkButtonEl = document.getElementById("dashboardDiscordLinkButton");
+  const discordLinkNoteEl = document.getElementById("dashboardDiscordLinkNote");
 
   const state = readAccountState();
   const hasSteam = hasLinkedSteamAccount(state);
@@ -1888,6 +1890,26 @@ async function initAccountDashboardPage() {
   if (discordStatusEl) {
     discordStatusEl.textContent = hasDiscord ? "Linked" : "Unlinked";
     discordStatusEl.className = hasDiscord ? "status-linked" : "status-unlinked";
+  }
+
+  if (discordLinkButtonEl) {
+    discordLinkButtonEl.hidden = !hasSteam || hasDiscord;
+    discordLinkButtonEl.disabled = !hasSteam || hasDiscord;
+    discordLinkButtonEl.onclick = () => {
+      if (!hasLinkedSteamAccount(readAccountState())) {
+        openSteamLoginModal();
+        return;
+      }
+      openDiscordPopup();
+    };
+  }
+
+  if (discordLinkNoteEl) {
+    discordLinkNoteEl.textContent = hasDiscord
+      ? "Discord linked. Allowlist and subscription roles can sync automatically."
+      : (hasSteam
+        ? "Link Discord here so allowlist and subscription roles can be applied automatically."
+        : "Sign in with Steam first, then link Discord to automate role syncing.");
   }
 
   if (subscriptionTierEl) {
@@ -2044,6 +2066,7 @@ async function syncAccountFromBackend() {
     });
     renderAccountState();
     updateAccountDropdownDetails();
+    initAccountDashboardPage();
   } catch {
     // Ignore backend sync issues when the auth server is not running.
   }
@@ -2679,6 +2702,7 @@ window.addEventListener("storage", (event) => {
   if (event.key === accountStorageKey) {
     renderAccountState();
     updateAccountDropdownDetails();
+    initAccountDashboardPage();
   }
 
   if (event.key === localAdminSettingsKey) {
@@ -2701,6 +2725,7 @@ window.addEventListener("message", (event) => {
     syncAccountFromBackend();
     renderAccountState();
     updateAccountDropdownDetails();
+    initAccountDashboardPage();
     closeSteamLoginModal();
   }
 });

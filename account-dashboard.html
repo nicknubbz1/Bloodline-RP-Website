@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260731c3" />
+  <link rel="stylesheet" href="style.css?v=20260731c4" />
 </head>
 <body>
 <header class="site-header">
@@ -62,6 +62,10 @@
           <span class="status-pill">Steam: <strong id="dashboardSteamLinkStatus" class="status-unlinked">Unlinked</strong></span>
           <span class="status-pill">Discord: <strong id="dashboardDiscordLinkStatus" class="status-unlinked">Unlinked</strong></span>
         </div>
+        <div class="dashboard-connection-actions">
+          <button class="btn btn-primary" id="dashboardDiscordLinkButton" type="button" hidden>Link Discord</button>
+          <p class="dashboard-connection-note" id="dashboardDiscordLinkNote">Link Discord here so allowlist and subscription roles can be applied automatically.</p>
+        </div>
       </article>
     </div>
   </section>
@@ -97,6 +101,6 @@
 </footer>
 
 <script src="auth-config.js?v=20260731a3"></script>
-<script src="script.js?v=20260731d0"></script>
+<script src="script.js?v=20260731d1"></script>
 </body>
 </html>
