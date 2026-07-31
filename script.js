@@ -53,6 +53,7 @@ const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3
 const authLogoutUrl = window.BLOODLINE_AUTH_LOGOUT_URL || "http://localhost:3000/auth/logout";
 const authSessionUrl = window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
 const apiBaseUrl = window.BLOODLINE_API_BASE_URL || "http://localhost:3000/api";
+const accountDashboardUrl = "account-dashboard.html";
 const adminLoginUrl = window.BLOODLINE_ADMIN_LOGIN_URL || `${apiBaseUrl}/admin/login`;
 const adminSessionUrl = window.BLOODLINE_ADMIN_SESSION_URL || `${apiBaseUrl}/admin/session`;
 const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-status`;
@@ -1463,6 +1464,15 @@ function formatDateValue(dateValue) {
   return parsed.toLocaleDateString();
 }
 
+function formatSubscriptionTierLabel(rawTier) {
+  const tier = String(rawTier || "").trim();
+  if (!tier) {
+    return "None";
+  }
+
+  return tier.charAt(0).toUpperCase() + tier.slice(1).toLowerCase();
+}
+
 function createAccountDropdown() {
   const headerActions = document.querySelector(".header-actions");
   if (!headerActions) {
@@ -1487,26 +1497,19 @@ function createAccountDropdown() {
   wrapper.innerHTML = `
     <div class="header-account-dropdown" id="headerAccountDropdown" aria-hidden="true">
       <section class="account-dropdown-block">
-        <h4>Account</h4>
-        <p>Steam: <span id="headerSteamLinkStatus" class="status-unlinked">Unlinked</span></p>
-        <p>Discord: <span id="headerDiscordLinkStatus" class="status-unlinked">Unlinked</span></p>
+        <h4>Connections</h4>
+        <p class="account-dropdown-status-row"><span>Steam</span><span id="headerSteamLinkStatus" class="status-unlinked">Unlinked</span></p>
+        <p class="account-dropdown-status-row"><span>Discord</span><span id="headerDiscordLinkStatus" class="status-unlinked">Unlinked</span></p>
       </section>
       <section class="account-dropdown-block">
-        <h4>Application Status</h4>
-        <p id="headerApplicationStatus">Link Steam + Discord to load your applications.</p>
-        <div class="account-dropdown-inline-actions">
-          <a class="btn btn-ghost" href="applications.html">View Applications</a>
-        </div>
+        <h4>Current Subscription</h4>
+        <p id="headerSubscriptionTier">None</p>
       </section>
       <section class="account-dropdown-block">
-        <h4>Manage Subscription</h4>
-        <p id="headerSubscriptionTier">No current subscription</p>
-        <p id="headerSubscriptionRenewal">Auto renew: Not scheduled</p>
-        <p id="headerSubscriptionNextPayment">Next payment: Not scheduled</p>
-        <div class="account-dropdown-inline-actions">
-          <a class="btn btn-primary" href="store.html?manage=upgrade">Upgrade</a>
-          <a class="btn btn-ghost" href="store.html?manage=downgrade">Downgrade</a>
-          <a class="btn btn-ghost" href="store.html?manage=cancel">Cancel</a>
+        <h4>Actions</h4>
+        <div class="account-dropdown-inline-actions account-dropdown-actions-column">
+          <a class="btn btn-primary" id="headerAccountDashboardLink" href="account-dashboard.html">Dashboard</a>
+          <button class="btn btn-ghost" type="button" data-auth-action="logout" disabled>Logout</button>
         </div>
       </section>
     </div>
@@ -1532,10 +1535,8 @@ function createAccountDropdown() {
     dropdownEl: dropdown,
     steamStatusEl: wrapper.querySelector("#headerSteamLinkStatus"),
     discordStatusEl: wrapper.querySelector("#headerDiscordLinkStatus"),
-    appStatusEl: wrapper.querySelector("#headerApplicationStatus"),
     subTierEl: wrapper.querySelector("#headerSubscriptionTier"),
-    subRenewalEl: wrapper.querySelector("#headerSubscriptionRenewal"),
-    subNextPaymentEl: wrapper.querySelector("#headerSubscriptionNextPayment"),
+    dashboardLinkEl: wrapper.querySelector("#headerAccountDashboardLink"),
   };
 }
 
@@ -1560,24 +1561,98 @@ async function updateAccountDropdownDetails() {
 
   const subscription = readSubscriptionState();
   if (accountDropdownState.subTierEl) {
-    accountDropdownState.subTierEl.textContent = subscription.tier
-      ? `Current tier: ${subscription.tier}`
-      : "No current subscription";
+    accountDropdownState.subTierEl.textContent = formatSubscriptionTierLabel(subscription.tier);
   }
 
-  if (accountDropdownState.subRenewalEl) {
-    accountDropdownState.subRenewalEl.textContent = `Auto renew: ${formatDateValue(subscription.renewsAt)}`;
+  if (accountDropdownState.dashboardLinkEl) {
+    accountDropdownState.dashboardLinkEl.setAttribute("href", hasSteam ? accountDashboardUrl : "account.html");
   }
+}
 
-  if (accountDropdownState.subNextPaymentEl) {
-    accountDropdownState.subNextPaymentEl.textContent = `Next payment: ${formatDateValue(subscription.nextPaymentAt)}`;
-  }
-
-  if (!hasSteam || !hasDiscord) {
-    if (accountDropdownState.appStatusEl) {
-      accountDropdownState.appStatusEl.textContent = "Link Steam + Discord to load your applications.";
-    }
+function renderDashboardApplicationList(container, applications, emptyText) {
+  if (!container) {
     return;
+  }
+
+  container.innerHTML = "";
+
+  if (!applications.length) {
+    const item = document.createElement("li");
+    item.textContent = emptyText;
+    container.appendChild(item);
+    return;
+  }
+
+  applications.slice(0, 6).forEach((entry) => {
+    const name = String(entry.formName || entry.title || entry.id || "Application").trim();
+    const status = String(entry.status || "").trim().toLowerCase() || "unknown";
+    const item = document.createElement("li");
+    item.textContent = `${name} - ${status}`;
+    container.appendChild(item);
+  });
+}
+
+async function initAccountDashboardPage() {
+  const currentPage = window.location.pathname.split("/").pop();
+  if (currentPage !== "account-dashboard.html") {
+    return;
+  }
+
+  const steamStatusEl = document.getElementById("dashboardSteamLinkStatus");
+  const discordStatusEl = document.getElementById("dashboardDiscordLinkStatus");
+  const subscriptionTierEl = document.getElementById("dashboardSubscriptionTier");
+  const subscriptionRenewalEl = document.getElementById("dashboardSubscriptionRenewal");
+  const subscriptionNextPaymentEl = document.getElementById("dashboardSubscriptionNextPayment");
+  const pendingCountEl = document.getElementById("dashboardPendingApplications");
+  const closedCountEl = document.getElementById("dashboardClosedApplications");
+  const stateEl = document.getElementById("dashboardApplicationState");
+  const pendingListEl = document.getElementById("dashboardPendingList");
+  const closedListEl = document.getElementById("dashboardClosedList");
+
+  const state = readAccountState();
+  const hasSteam = Boolean(state.steamId || state.steamName);
+  const hasDiscord = Boolean(state.discordId || state.discordName);
+  const subscription = readSubscriptionState();
+
+  if (steamStatusEl) {
+    steamStatusEl.textContent = hasSteam ? "Linked" : "Unlinked";
+    steamStatusEl.className = hasSteam ? "status-linked" : "status-unlinked";
+  }
+
+  if (discordStatusEl) {
+    discordStatusEl.textContent = hasDiscord ? "Linked" : "Unlinked";
+    discordStatusEl.className = hasDiscord ? "status-linked" : "status-unlinked";
+  }
+
+  if (subscriptionTierEl) {
+    subscriptionTierEl.textContent = formatSubscriptionTierLabel(subscription.tier);
+  }
+
+  if (subscriptionRenewalEl) {
+    subscriptionRenewalEl.textContent = `Auto renew: ${formatDateValue(subscription.renewsAt)}`;
+  }
+
+  if (subscriptionNextPaymentEl) {
+    subscriptionNextPaymentEl.textContent = `Next payment: ${formatDateValue(subscription.nextPaymentAt)}`;
+  }
+
+  if (!hasSteam) {
+    if (stateEl) {
+      stateEl.textContent = "Sign in with Steam on the account page to load application data.";
+    }
+    if (pendingCountEl) {
+      pendingCountEl.textContent = "0";
+    }
+    if (closedCountEl) {
+      closedCountEl.textContent = "0";
+    }
+    renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
+    renderDashboardApplicationList(closedListEl, [], "No closed applications.");
+    return;
+  }
+
+  if (stateEl) {
+    stateEl.textContent = "Loading application data...";
   }
 
   try {
@@ -1586,25 +1661,39 @@ async function updateAccountDropdownDetails() {
     });
 
     if (!response.ok) {
-      if (accountDropdownState.appStatusEl) {
-        accountDropdownState.appStatusEl.textContent = "Could not load application statuses right now.";
+      if (stateEl) {
+        stateEl.textContent = "Could not load application statuses right now.";
       }
+      renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
+      renderDashboardApplicationList(closedListEl, [], "No closed applications.");
       return;
     }
 
     const payload = await response.json();
     const applications = Array.isArray(payload.applications) ? payload.applications : [];
-    const pending = applications.filter((entry) => entry.status === "pending").length;
-    const accepted = applications.filter((entry) => entry.status === "accepted").length;
-    const denied = applications.filter((entry) => entry.status === "denied").length;
+    const pendingApplications = applications.filter((entry) => String(entry.status || "").toLowerCase() === "pending");
+    const closedApplications = applications.filter((entry) => String(entry.status || "").toLowerCase() !== "pending");
 
-    if (accountDropdownState.appStatusEl) {
-      accountDropdownState.appStatusEl.textContent = `Pending: ${pending} | Accepted: ${accepted} | Denied: ${denied}`;
+    if (pendingCountEl) {
+      pendingCountEl.textContent = String(pendingApplications.length);
     }
+
+    if (closedCountEl) {
+      closedCountEl.textContent = String(closedApplications.length);
+    }
+
+    if (stateEl) {
+      stateEl.textContent = "Application data is up to date.";
+    }
+
+    renderDashboardApplicationList(pendingListEl, pendingApplications, "No pending applications.");
+    renderDashboardApplicationList(closedListEl, closedApplications, "No closed applications.");
   } catch {
-    if (accountDropdownState.appStatusEl) {
-      accountDropdownState.appStatusEl.textContent = "Could not load application statuses right now.";
+    if (stateEl) {
+      stateEl.textContent = "Could not load application statuses right now.";
     }
+    renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
+    renderDashboardApplicationList(closedListEl, [], "No closed applications.");
   }
 }
 
@@ -2342,6 +2431,7 @@ initRulesPageNavigation();
 initSocialButtons();
 initConnectPanel();
 initStoreCart();
+initAccountDashboardPage();
 
 if (!handleAuthCallbackPage()) {
   syncAccountFromBackend();

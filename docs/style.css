@@ -2489,6 +2489,49 @@ body.popup-open {
 .account-dropdown-block p { margin: 0; color: var(--muted); }
 .account-dropdown-inline-actions { display: flex; gap: 0.34rem; flex-wrap: wrap; margin-top: 0.3rem; }
 .account-dropdown-inline-actions .btn { padding: 0.38rem 0.58rem; font-size: 0.75rem; }
+.account-dropdown-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.account-dropdown-actions-column {
+  flex-direction: column;
+}
+
+.account-dropdown-actions-column .btn {
+  width: 100%;
+}
+
+.dashboard-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-count {
+  margin-top: 0.45rem;
+  font-family: "Oxanium", sans-serif;
+  font-size: 2rem;
+  color: #f5f8ff;
+}
+
+.dashboard-state {
+  margin: 0.2rem 0 0.7rem;
+  color: var(--muted);
+}
+
+.dashboard-list {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  color: #c3cee1;
+  display: grid;
+  gap: 0.28rem;
+}
+
+.dashboard-list li {
+  line-height: 1.45;
+}
+
 .status-linked { color: var(--green); }
 .status-unlinked { color: #ffc7d3; }
 

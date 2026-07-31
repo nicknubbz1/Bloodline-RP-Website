@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bloodline RP | Meet The Team</title>
-  <meta name="description" content="Meet the Bloodline RP team." />
+  <title>Bloodline RP | Account Dashboard</title>
+  <meta name="description" content="Account dashboard for applications and subscription details." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -21,11 +21,11 @@
       <a href="store.html?v=20260730z4">Store</a>
       <a href="applications.html?v=20260730z4">Applications</a>
       <a href="rules.html?v=20260730z4">Rules</a>
-      <a class="active" href="team.html?v=20260730r">MEET THE TEAM</a>
+      <a href="team.html?v=20260730r">MEET THE TEAM</a>
     </nav>
     <div class="header-actions">
       <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">Menu</button>
-      <button class="icon-btn store-cart-toggle" id="storeCartToggle" type="button" aria-label="Open cart" aria-expanded="false" aria-controls="storeCartDrawer"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 4h-2l-1 2v2h2l2.2 7.2a2 2 0 0 0 1.9 1.4h7.3a2 2 0 0 0 1.9-1.4l1.6-5.2a1 1 0 0 0-1-1.3h-10.6l-.5-2h12.1v-2h-13.6l-.4-1.2a1 1 0 0 0-1-.8Zm4 15a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Zm7 0a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Z"/></svg><span class="store-cart-count" id="storeCartCount" hidden></span></button>
+      <a class="icon-btn" href="store.html?v=20260730z4" aria-label="Store"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M7 4h-2l-1 2v2h2l2.2 7.2a2 2 0 0 0 1.9 1.4h7.3a2 2 0 0 0 1.9-1.4l1.6-5.2a1 1 0 0 0-1-1.3h-10.6l-.5-2h12.1v-2h-13.6l-.4-1.2a1 1 0 0 0-1-.8Zm4 15a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Zm7 0a1.5 1.5 0 1 0 0 3a1.5 1.5 0 0 0 0-3Z"/></svg></a>
       <a class="login-trigger" href="#login" aria-label="Login with Steam"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5Zm0 2c-4.4 0-8 2.2-8 5v1h16v-1c0-2.8-3.6-5-8-5Z"/></svg></a>
       <a class="join-btn" href="#admin-login">Admin Login</a>
     </div>
@@ -35,14 +35,36 @@
 <main class="page-shell">
   <section class="section">
     <div class="section-title">
-      <h2>Meet The Team</h2>
+      <h2>Account Dashboard</h2>
+      <p>Track applications and subscription details in one place.</p>
     </div>
-
-    <div class="team-roster" aria-label="Team roster">
-      <article class="team-member">
-        <img class="team-avatar" src="https://pub-17704311c9bd4f38a0026e11211f09af.r2.dev/pfp.png" alt="Bloodline RP owner profile" loading="lazy" />
-        <p class="team-name">NickNubbz</p>
-        <p class="team-role">Owner</p>
+    <p class="dashboard-state" id="dashboardApplicationState">Loading account data...</p>
+    <div class="account-grid dashboard-grid">
+      <article class="account-card">
+        <h3>Pending Applications</h3>
+        <p class="dashboard-count" id="dashboardPendingApplications">0</p>
+        <ul class="dashboard-list" id="dashboardPendingList"></ul>
+      </article>
+      <article class="account-card">
+        <h3>Closed Applications</h3>
+        <p class="dashboard-count" id="dashboardClosedApplications">0</p>
+        <ul class="dashboard-list" id="dashboardClosedList"></ul>
+      </article>
+      <article class="account-card">
+        <h3>Subscription Details</h3>
+        <p><strong>Current subscription:</strong> <span id="dashboardSubscriptionTier">None</span></p>
+        <p id="dashboardSubscriptionRenewal">Auto renew: Not scheduled</p>
+        <p id="dashboardSubscriptionNextPayment">Next payment: Not scheduled</p>
+      </article>
+      <article class="account-card">
+        <h3>Connection Status</h3>
+        <div class="auth-status">
+          <span class="status-pill">Steam: <strong id="dashboardSteamLinkStatus" class="status-unlinked">Unlinked</strong></span>
+          <span class="status-pill">Discord: <strong id="dashboardDiscordLinkStatus" class="status-unlinked">Unlinked</strong></span>
+        </div>
+        <div class="btn-row">
+          <a class="btn btn-ghost" href="account.html">Back to Account</a>
+        </div>
       </article>
     </div>
   </section>
@@ -81,9 +103,3 @@
 <script src="script.js?v=20260731b3"></script>
 </body>
 </html>
-
-
-
-
-
-
