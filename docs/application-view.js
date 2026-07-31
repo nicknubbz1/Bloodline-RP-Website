@@ -282,7 +282,7 @@
       if (formEl) {
         formEl.reset();
       }
-      setMessage("Application submitted. Staff will review it soon.", "success");
+      setMessage("Application submitted. Staff will review it soon. You can view your application status in the dashboard.", "success");
     } catch {
       setMessage("Could not reach the auth server. Try again shortly.", "error");
     }
