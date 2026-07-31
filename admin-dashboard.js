@@ -404,12 +404,10 @@
         }
 
         try {
-          if (action === "accept" || action === "deny" || action === "grant-allowlist") {
+          if (action === "accept" || action === "deny") {
             const actionLabel = action === "accept"
               ? "accept this application"
-              : action === "deny"
-                ? "deny this application"
-                : "grant allowlist role to this applicant";
+              : "deny this application";
             const confirmed = await showConfirm(`Are you sure you want to ${actionLabel}?`, "Confirm Action", "Yes, Continue");
             if (!confirmed) {
               return;
@@ -417,34 +415,32 @@
           }
 
           if (action === "accept" || action === "deny") {
+            const targetApp = getApplicationByIdFromState(appId);
+            const shouldGrantAllowlistRole = action === "accept" && isAllowlistApplication(targetApp);
+            let roleGrantError = null;
+
             await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/decision`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ decision: action === "accept" ? "accepted" : "denied", note: "" }),
             });
+
+            if (shouldGrantAllowlistRole) {
+              try {
+                await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/grant-allowlist-role`, {
+                  method: "POST",
+                });
+              } catch (error) {
+                roleGrantError = error;
+              }
+            }
+
             await loadApplications();
             closeApplicationPopupModal();
-            return;
-          }
 
-          if (action === "grant-allowlist") {
-            const grantPayload = await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/grant-allowlist-role`, {
-              method: "POST",
-            });
-            const grantedDiscordName = String(
-              grantPayload?.application?.applicant?.discordName
-              || grantPayload?.application?.applicant?.discordUsername
-              || grantPayload?.discordId
-              || "linked Discord account"
-            ).trim();
-            await showAlert(
-              grantPayload?.alreadyGranted
-                ? `Allowlist role was already granted to ${grantedDiscordName}.`
-                : `Allowlist role granted to ${grantedDiscordName}.`,
-              "Success"
-            );
-            await loadApplications();
-            openApplicationPopupModal(appId);
+            if (roleGrantError) {
+              await showAlert(`Application accepted, but Discord allowlist role grant failed: ${roleGrantError.message || "unknown error"}`, "Role Grant Failed");
+            }
             return;
           }
 
@@ -537,12 +533,9 @@
       });
     }
 
-    const allowlistAction = isAllowlistApplication(app)
-      ? `<button class="btn btn-ghost" data-action="grant-allowlist" data-application-id="${escapeHtml(app.id)}" type="button">Grant Allowlist Role</button>`
-      : "";
     actionsEl.innerHTML = appSource === "active"
-      ? `<button class="btn btn-ghost" data-action="accept" data-application-id="${escapeHtml(app.id)}" type="button">Accept</button><button class="btn btn-danger" data-action="deny" data-application-id="${escapeHtml(app.id)}" type="button">Deny</button>${allowlistAction}`
-      : `${allowlistAction}<p class="admin-empty">Archived applications are read-only and cannot be deleted.</p>`;
+      ? `<button class="btn btn-ghost" data-action="accept" data-application-id="${escapeHtml(app.id)}" type="button">Accept</button><button class="btn btn-danger" data-action="deny" data-application-id="${escapeHtml(app.id)}" type="button">Deny</button>`
+      : `<p class="admin-empty">Archived applications are read-only and cannot be deleted.</p>`;
 
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
