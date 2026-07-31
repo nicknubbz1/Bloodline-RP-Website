@@ -1215,6 +1215,10 @@ function mergeAccountState(nextPartialState) {
   return nextState;
 }
 
+function hasLinkedSteamAccount(state) {
+  return Boolean(String(state?.steamId || "").trim());
+}
+
 function getAccountLogoutButtons() {
   return document.querySelectorAll('[data-auth-action="logout"]');
 }
@@ -1231,7 +1235,7 @@ function getInitialsFromName(name) {
 }
 
 function renderHeaderAccountTrigger(state) {
-  const hasSteam = Boolean(state.steamId || state.steamName);
+  const hasSteam = hasLinkedSteamAccount(state);
 
   loginTriggers.forEach((trigger) => {
     if (!trigger.dataset.defaultMarkup) {
@@ -1312,7 +1316,7 @@ function renderAccountState() {
   const state = readAccountState();
   const steamName = state.steamName || "Awaiting Steam Login";
   const discordName = state.discordName || "Not Connected";
-  const hasSteam = Boolean(state.steamId || state.steamName);
+  const hasSteam = hasLinkedSteamAccount(state);
   const hasDiscord = Boolean(state.discordName);
 
   renderHeaderAccountTrigger(state);
@@ -1391,7 +1395,7 @@ function getPrimaryCheckoutUrl() {
 
 function hasLoggedInAccount() {
   const state = readAccountState();
-  return Boolean(state.steamId || state.steamName);
+  return hasLinkedSteamAccount(state);
 }
 
 function updateStoreCartAuthState() {
@@ -1772,7 +1776,7 @@ async function updateAccountDropdownDetails() {
   }
 
   const state = readAccountState();
-  const hasSteam = Boolean(state.steamId || state.steamName);
+  const hasSteam = hasLinkedSteamAccount(state);
   const hasDiscord = Boolean(state.discordId || state.discordName);
 
   if (accountDropdownState.dropdownEl) {
@@ -1851,7 +1855,7 @@ async function initAccountDashboardPage() {
   const closedListEl = document.getElementById("dashboardClosedList");
 
   const state = readAccountState();
-  const hasSteam = Boolean(state.steamId || state.steamName);
+  const hasSteam = hasLinkedSteamAccount(state);
   const hasDiscord = Boolean(state.discordId || state.discordName);
   const subscription = readSubscriptionState();
 
