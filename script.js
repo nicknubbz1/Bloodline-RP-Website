@@ -1319,6 +1319,10 @@ function renderAccountState() {
   const hasSteam = hasLinkedSteamAccount(state);
   const hasDiscord = Boolean(state.discordName);
 
+  if (hasSteam) {
+    closeSteamLoginModal();
+  }
+
   renderHeaderAccountTrigger(state);
 
   if (discordButton) {
@@ -2680,6 +2684,7 @@ window.addEventListener("message", (event) => {
     syncAccountFromBackend();
     renderAccountState();
     updateAccountDropdownDetails();
+    closeSteamLoginModal();
   }
 });
 
