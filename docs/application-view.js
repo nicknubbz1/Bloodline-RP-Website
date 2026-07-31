@@ -233,7 +233,8 @@
       }
 
       responses.push({
-        question: field.getAttribute("data-question-label") || field.name,
+        id: field.name,
+        label: field.getAttribute("data-question-label") || field.name,
         answer: value,
       });
     }
@@ -243,7 +244,7 @@
         return entry.answer;
       })
       .map(function (entry) {
-        return entry.question + ": " + entry.answer;
+        return entry.label + ": " + entry.answer;
       })
       .join("\n");
 
