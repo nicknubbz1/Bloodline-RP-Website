@@ -1488,10 +1488,8 @@ function createAccountDropdown() {
       dropdownEl: existingDropdown,
       steamStatusEl: document.getElementById("headerSteamLinkStatus"),
       discordStatusEl: document.getElementById("headerDiscordLinkStatus"),
-      appStatusEl: document.getElementById("headerApplicationStatus"),
       subTierEl: document.getElementById("headerSubscriptionTier"),
-      subRenewalEl: document.getElementById("headerSubscriptionRenewal"),
-      subNextPaymentEl: document.getElementById("headerSubscriptionNextPayment"),
+      dashboardLinkEl: document.getElementById("headerAccountDashboardLink"),
     };
   }
 
@@ -2359,10 +2357,7 @@ loginTriggers.forEach((trigger) => {
   trigger.addEventListener("click", (event) => {
     event.preventDefault();
 
-    const state = readAccountState();
-    const hasSteam = Boolean(state.steamId || state.steamName);
-
-    if (hasSteam && accountDropdownState?.dropdownEl) {
+    if (accountDropdownState?.dropdownEl) {
       toggleAccountDropdown();
       return;
     }
