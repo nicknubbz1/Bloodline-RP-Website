@@ -39,6 +39,7 @@
   const logoutBtn = document.getElementById("adminLogoutBtn");
   const changeUsernameBtn = document.getElementById("adminChangeUsernameBtn");
   const changePasswordBtn = document.getElementById("adminChangePasswordBtn");
+  const changeAvatarBtn = document.getElementById("adminChangeAvatarBtn");
   const maintenanceToggle = document.getElementById("maintenanceEnabled");
   const maintenanceStatusText = document.getElementById("maintenanceStatusText");
   const createAdminUserForm = document.getElementById("createAdminUserForm");
@@ -1085,6 +1086,20 @@
       changeUsernameBtn.style.display = isMainAdmin ? "" : "none";
       changeUsernameBtn.disabled = !isMainAdmin;
       changeUsernameBtn.title = isMainAdmin ? "Change main admin username" : "";
+    }
+
+    if (changeAvatarBtn) {
+      const isLoggedIn = Boolean(state.admin);
+      changeAvatarBtn.style.display = "";
+      changeAvatarBtn.disabled = !isLoggedIn;
+      changeAvatarBtn.title = isLoggedIn ? "Change staff profile picture" : "Log in to change staff profile picture";
+      if (changePasswordBtn && changeAvatarBtn.parentElement) {
+        if (isLoggedIn && Boolean(state.admin?.isMainAdmin)) {
+          changeAvatarBtn.parentElement.insertBefore(changeAvatarBtn, changePasswordBtn);
+        } else {
+          insertAfterNode(changeAvatarBtn, changePasswordBtn);
+        }
+      }
     }
 
     renderAdminAccessControls();
