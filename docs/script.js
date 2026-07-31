@@ -54,7 +54,7 @@ const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3
 const authLogoutUrl = window.BLOODLINE_AUTH_LOGOUT_URL || "http://localhost:3000/auth/logout";
 const authSessionUrl = window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
 const apiBaseUrl = window.BLOODLINE_API_BASE_URL || "http://localhost:3000/api";
-const accountDashboardUrl = "account-dashboard.html?v=20260731e1";
+const accountDashboardUrl = "account-dashboard.html?v=20260731e2";
 const adminLoginUrl = window.BLOODLINE_ADMIN_LOGIN_URL || `${apiBaseUrl}/admin/login`;
 const adminSessionUrl = window.BLOODLINE_ADMIN_SESSION_URL || `${apiBaseUrl}/admin/session`;
 const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-status`;
@@ -1803,7 +1803,7 @@ function createAccountDropdown() {
       <section class="account-dropdown-block">
         <h4>Actions</h4>
         <div class="account-dropdown-inline-actions account-dropdown-actions-column">
-          <a class="btn btn-primary" id="headerAccountDashboardLink" href="account-dashboard.html?v=20260731e1">Dashboard</a>
+          <a class="btn btn-primary" id="headerAccountDashboardLink" href="account-dashboard.html?v=20260731e2">Dashboard</a>
           <button class="btn btn-ghost" type="button" data-auth-action="logout" disabled>Logout</button>
         </div>
       </section>
@@ -1907,6 +1907,15 @@ function getDashboardApplicationStatus(entry) {
 function isDashboardApplicationClosed(entry) {
   const status = getDashboardApplicationStatus(entry);
   return status === "accepted" || status === "denied";
+}
+
+function isDashboardApplicationHidden(entry) {
+  if (!entry || typeof entry !== "object") {
+    return true;
+  }
+
+  const visibility = String(entry.visibility || entry.state || "").trim().toLowerCase();
+  return Boolean(entry.hidden || entry.deleted || entry.removed || visibility === "hidden");
 }
 
 function getDashboardApplicationCommentCount(entry) {
@@ -2055,7 +2064,8 @@ async function initAccountDashboardPage() {
   const subscriptionRenewalEl = document.getElementById("dashboardSubscriptionRenewal");
   const subscriptionNextPaymentEl = document.getElementById("dashboardSubscriptionNextPayment");
   const stateEl = document.getElementById("dashboardApplicationState");
-  const applicationsListEl = document.getElementById("dashboardApplicationsList");
+  const pendingListEl = document.getElementById("dashboardPendingList");
+  const closedListEl = document.getElementById("dashboardClosedList");
   const discordLinkButtonEl = document.getElementById("dashboardDiscordLinkButton");
   const detailPopupEl = document.getElementById("dashboardApplicationDetailPopup");
   const detailPopupCloseEl = document.getElementById("dashboardApplicationPopupClose");
@@ -2063,33 +2073,6 @@ async function initAccountDashboardPage() {
   const detailPopupActionsEl = document.getElementById("dashboardApplicationPopupActions");
   const detailPopupMessageEl = document.getElementById("dashboardApplicationPopupMessage");
   const detailPopupTitleEl = document.getElementById("dashboardApplicationPopupTitle");
-
-  const mergeApplicationsById = (existingApplications, incomingApplications) => {
-    const mergedById = new Map();
-
-    [...(Array.isArray(existingApplications) ? existingApplications : []), ...(Array.isArray(incomingApplications) ? incomingApplications : [])]
-      .filter(Boolean)
-      .forEach((application) => {
-        const id = String(application?.id || "").trim();
-        if (!id) {
-          return;
-        }
-        mergedById.set(id, application);
-      });
-
-    return Array.from(mergedById.values()).sort((left, right) => {
-      return Date.parse(right?.createdAt || 0) - Date.parse(left?.createdAt || 0);
-    });
-  };
-
-  const readCachedApplications = () => {
-    try {
-      const parsed = JSON.parse(localStorage.getItem(accountApplicationsCacheKey) || "[]");
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  };
 
   const clearCachedApplications = () => {
     localStorage.removeItem(accountApplicationsCacheKey);
@@ -2100,12 +2083,12 @@ async function initAccountDashboardPage() {
 
   const writeCachedApplications = (applications) => {
     if (!Array.isArray(applications)) {
-      return readCachedApplications();
+      clearCachedApplications();
+      return [];
     }
 
-    const mergedApplications = mergeApplicationsById(readCachedApplications(), applications);
-    localStorage.setItem(accountApplicationsCacheKey, JSON.stringify(mergedApplications));
-    return mergedApplications;
+    localStorage.setItem(accountApplicationsCacheKey, JSON.stringify(applications));
+    return applications;
   };
 
   const renderApplicationsWithCounts = (applications, stateText) => {
@@ -2113,9 +2096,16 @@ async function initAccountDashboardPage() {
       stateEl.textContent = stateText;
     }
 
-    renderDashboardApplicationList(applicationsListEl, applications, "No applications yet.", {
+    const visibleApplications = (Array.isArray(applications) ? applications : []).filter((entry) => !isDashboardApplicationHidden(entry));
+    const pendingApplications = visibleApplications.filter((entry) => !isDashboardApplicationClosed(entry));
+    const closedApplications = visibleApplications.filter((entry) => isDashboardApplicationClosed(entry));
+
+    renderDashboardApplicationList(pendingListEl, pendingApplications, "No pending applications.", {
       onView: (application) => renderApplicationPopup(application, "view"),
       onEdit: (application) => renderApplicationPopup(application, "edit"),
+    });
+    renderDashboardApplicationList(closedListEl, closedApplications, "No closed applications.", {
+      onView: (application) => renderApplicationPopup(application, "view"),
     });
   };
 
@@ -2431,7 +2421,8 @@ async function initAccountDashboardPage() {
       stateEl.textContent = "Sign in with Steam on the account page to load application data.";
     }
     clearCachedApplications();
-    renderDashboardApplicationList(applicationsListEl, [], "No applications yet.");
+    renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
+    renderDashboardApplicationList(closedListEl, [], "No closed applications.");
     return;
   }
 
@@ -2454,12 +2445,13 @@ async function initAccountDashboardPage() {
           : "Could not load applications right now.";
       }
       clearCachedApplications();
-      renderDashboardApplicationList(applicationsListEl, [], "No applications yet.");
+      renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
+      renderDashboardApplicationList(closedListEl, [], "No closed applications.");
       return;
     }
 
     const payload = await response.json();
-    const applications = Array.isArray(payload.applications) ? payload.applications : [];
+    const applications = Array.isArray(payload.applications) ? payload.applications.filter((entry) => !isDashboardApplicationHidden(entry)) : [];
     if (applications.length === 0) {
       clearCachedApplications();
       renderApplicationsWithCounts([], "Application data is up to date.");
@@ -2473,7 +2465,8 @@ async function initAccountDashboardPage() {
       stateEl.textContent = "Could not load applications right now.";
     }
     clearCachedApplications();
-    renderDashboardApplicationList(applicationsListEl, [], "No applications yet.");
+    renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
+    renderDashboardApplicationList(closedListEl, [], "No closed applications.");
   }
 }
 
