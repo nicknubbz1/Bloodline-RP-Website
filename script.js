@@ -59,12 +59,13 @@ const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-st
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const forceServerOffline = true;
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
-const adminDashboardUrl = "admin.html?v=20260730l";
-const adminDashboardScriptVersion = "v=20260731m2";
+const adminDashboardUrl = "admin.html?v=20260731m3";
+const adminDashboardScriptVersion = "v=20260731m3";
 const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:3000/api/discord/stats";
 const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
 const storeCartStorageKey = "bloodline-store-cart";
 const adminAuthStorageKey = "bloodline-admin-auth";
+const adminApiTokenStorageKey = "bloodline-admin-api-token";
 const localAdminUsersKey = "bloodline-local-admin-users";
 const localAdminSessionKey = "bloodline-local-admin-session";
 const localAdminSessionTempKey = "bloodline-local-admin-session-temp";
@@ -2561,6 +2562,43 @@ function writeAdminAuthState(nextState) {
   localStorage.setItem(adminAuthStorageKey, JSON.stringify(nextState || {}));
 }
 
+function readAdminApiToken() {
+  try {
+    return String(localStorage.getItem(adminApiTokenStorageKey) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function writeAdminApiToken(token) {
+  const normalizedToken = String(token || "").trim();
+  if (!normalizedToken) {
+    localStorage.removeItem(adminApiTokenStorageKey);
+    return;
+  }
+  localStorage.setItem(adminApiTokenStorageKey, normalizedToken);
+}
+
+function clearAdminApiToken() {
+  localStorage.removeItem(adminApiTokenStorageKey);
+}
+
+function shouldAllowLocalAdminFallback() {
+  const hostname = window.location.hostname;
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+function buildAdminAuthHeaders() {
+  const token = readAdminApiToken();
+  if (!token) {
+    return {};
+  }
+
+  return {
+    Authorization: `Bearer ${token}`,
+  };
+}
+
 function sanitizeAdminAuthSnapshot(admin) {
   if (!admin || typeof admin !== "object") {
     return null;
@@ -2656,6 +2694,14 @@ function ensureAdminLoginModal() {
 
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
+          if (!shouldAllowLocalAdminFallback()) {
+            clearLocalAdminSession();
+            clearAdminApiToken();
+            messageEl.textContent = payload.error || "Login failed.";
+            messageEl.hidden = false;
+            return;
+          }
+
           const localAdmin = localAdminLogin(username, password, staySignedIn);
           if (!localAdmin) {
             messageEl.textContent = payload.error || "Login failed.";
@@ -2673,6 +2719,7 @@ function ensureAdminLoginModal() {
             admin: sanitizeAdminAuthSnapshot(localAdmin),
             updatedAt: new Date().toISOString(),
           });
+          clearAdminApiToken();
           closeAdminLoginModal();
           updateAdminJoinButtons();
           window.location.href = adminDashboardUrl;
@@ -2694,10 +2741,19 @@ function ensureAdminLoginModal() {
           admin: sanitizeAdminAuthSnapshot(remoteAdmin || localShadowAdmin),
           updatedAt: new Date().toISOString(),
         });
+        writeAdminApiToken(payload.token || "");
         closeAdminLoginModal();
         updateAdminJoinButtons();
         window.location.href = adminDashboardUrl;
       } catch {
+        if (!shouldAllowLocalAdminFallback()) {
+          clearLocalAdminSession();
+          clearAdminApiToken();
+          messageEl.textContent = "Could not reach admin server.";
+          messageEl.hidden = false;
+          return;
+        }
+
         const localAdmin = localAdminLogin(username, password, staySignedIn);
         if (!localAdmin) {
           messageEl.textContent = "Could not reach admin server.";
@@ -2715,6 +2771,7 @@ function ensureAdminLoginModal() {
           admin: sanitizeAdminAuthSnapshot(localAdmin),
           updatedAt: new Date().toISOString(),
         });
+        clearAdminApiToken();
         closeAdminLoginModal();
         updateAdminJoinButtons();
         window.location.href = adminDashboardUrl;
@@ -2790,9 +2847,27 @@ async function refreshAdminSession() {
   try {
     const response = await fetch(adminSessionUrl, {
       credentials: "include",
+      headers: buildAdminAuthHeaders(),
     });
 
     if (!response.ok) {
+      if (!shouldAllowLocalAdminFallback()) {
+        adminSessionState = {
+          loggedIn: false,
+          admin: null,
+        };
+        clearLocalAdminSession();
+        clearAdminApiToken();
+        writeAdminAuthState({
+          ...readAdminAuthState(),
+          loggedIn: false,
+          admin: null,
+          updatedAt: new Date().toISOString(),
+        });
+        updateAdminJoinButtons();
+        return;
+      }
+
       const localAdmin = resolveLocalAdminFromSession();
       if (localAdmin) {
         adminSessionState = {
@@ -2824,6 +2899,9 @@ async function refreshAdminSession() {
     }
 
     const payload = await response.json();
+    if (payload?.token) {
+      writeAdminApiToken(payload.token);
+    }
     adminSessionState = {
       loggedIn: true,
       admin: payload.admin || null,
@@ -2836,6 +2914,23 @@ async function refreshAdminSession() {
     });
     updateAdminJoinButtons();
   } catch {
+    if (!shouldAllowLocalAdminFallback()) {
+      adminSessionState = {
+        loggedIn: false,
+        admin: null,
+      };
+      clearLocalAdminSession();
+      clearAdminApiToken();
+      writeAdminAuthState({
+        ...readAdminAuthState(),
+        loggedIn: false,
+        admin: null,
+        updatedAt: new Date().toISOString(),
+      });
+      updateAdminJoinButtons();
+      return;
+    }
+
     const localAdmin = resolveLocalAdminFromSession();
     if (localAdmin) {
       adminSessionState = {

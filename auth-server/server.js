@@ -76,6 +76,8 @@ const subscriptionsStorePath = path.join(__dirname, "data", "subscriptions.json"
 const defaultMainAdminUsername = process.env.MAIN_ADMIN_USERNAME || "1234";
 const defaultMainAdminPassword = process.env.MAIN_ADMIN_PASSWORD || "1234";
 const adminSessionDays = Number(process.env.ADMIN_SESSION_DAYS || 30);
+const adminApiTokenSecret = process.env.ADMIN_API_TOKEN_SECRET || sessionSecret;
+const adminApiTokenDays = Number(process.env.ADMIN_API_TOKEN_DAYS || adminSessionDays || 30);
 
 function cleanText(value, maxLength) {
   if (typeof value !== "string") {
@@ -104,6 +106,94 @@ function normalizeResponses(rawResponses) {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function toBase64Url(rawValue) {
+  return Buffer.from(String(rawValue || ""), "utf8")
+    .toString("base64")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+function fromBase64Url(base64UrlValue) {
+  if (!base64UrlValue || typeof base64UrlValue !== "string") {
+    return "";
+  }
+
+  const normalized = base64UrlValue
+    .replace(/-/g, "+")
+    .replace(/_/g, "/");
+  const padLength = normalized.length % 4;
+  const padded = padLength ? `${normalized}${"=".repeat(4 - padLength)}` : normalized;
+  return Buffer.from(padded, "base64").toString("utf8");
+}
+
+function signAdminApiToken(adminUserId, staySignedIn) {
+  const normalizedUserId = cleanText(adminUserId, 120);
+  if (!normalizedUserId) {
+    return "";
+  }
+
+  const nowMs = Date.now();
+  const maxDays = Number.isFinite(adminApiTokenDays) ? Math.max(1, adminApiTokenDays) : 30;
+  const tokenLifetimeMs = Boolean(staySignedIn)
+    ? 1000 * 60 * 60 * 24 * maxDays
+    : 1000 * 60 * 60 * 12;
+  const payload = {
+    id: normalizedUserId,
+    exp: nowMs + tokenLifetimeMs,
+  };
+
+  const payloadRaw = JSON.stringify(payload);
+  const payloadEncoded = toBase64Url(payloadRaw);
+  const signature = crypto
+    .createHmac("sha256", adminApiTokenSecret)
+    .update(payloadEncoded)
+    .digest("hex");
+
+  return `${payloadEncoded}.${signature}`;
+}
+
+function verifyAdminApiToken(token) {
+  if (!token || typeof token !== "string") {
+    return null;
+  }
+
+  const [payloadEncoded, providedSignature] = token.split(".");
+  if (!payloadEncoded || !providedSignature) {
+    return null;
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", adminApiTokenSecret)
+    .update(payloadEncoded)
+    .digest("hex");
+
+  if (providedSignature.length !== expectedSignature.length) {
+    return null;
+  }
+
+  const matches = crypto.timingSafeEqual(
+    Buffer.from(providedSignature, "utf8"),
+    Buffer.from(expectedSignature, "utf8")
+  );
+  if (!matches) {
+    return null;
+  }
+
+  try {
+    const payloadRaw = fromBase64Url(payloadEncoded);
+    const payload = JSON.parse(payloadRaw);
+    const id = cleanText(payload?.id, 120);
+    const exp = Number(payload?.exp || 0);
+    if (!id || !Number.isFinite(exp) || exp <= Date.now()) {
+      return null;
+    }
+    return { id };
+  } catch {
+    return null;
+  }
 }
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString("hex")) {
@@ -697,13 +787,29 @@ function requireLinkedAccount(req, res, next) {
 
 function requireAdminSession(req, res, next) {
   const sessionAdmin = req.session.adminUser;
-  if (!sessionAdmin?.id) {
+  let adminUserId = cleanText(sessionAdmin?.id || "", 120);
+
+  if (!adminUserId) {
+    const authHeader = String(req.headers.authorization || "");
+    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (bearerMatch && bearerMatch[1]) {
+      const verified = verifyAdminApiToken(String(bearerMatch[1]).trim());
+      if (verified?.id) {
+        adminUserId = verified.id;
+        req.session.adminUser = {
+          id: adminUserId,
+        };
+      }
+    }
+  }
+
+  if (!adminUserId) {
     res.status(401).json({ error: "Admin login required." });
     return;
   }
 
   const store = readAdminUsersStore();
-  const adminUser = store.users.find((user) => user.id === sessionAdmin.id) || null;
+  const adminUser = store.users.find((user) => user.id === adminUserId) || null;
   if (!adminUser) {
     req.session.adminUser = null;
     res.status(401).json({ error: "Admin account no longer exists." });
@@ -1176,9 +1282,12 @@ app.post("/api/admin/login", (req, res) => {
     req.session.cookie.expires = false;
   }
 
+  const token = signAdminApiToken(adminUser.id, staySignedIn);
+
   res.json({
     ok: true,
     admin: sanitizeAdminUser(adminUser),
+    token,
   });
 });
 

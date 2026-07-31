@@ -27,6 +27,7 @@
   const localAdminSessionKey = "bloodline-local-admin-session";
   const localAdminSessionTempKey = "bloodline-local-admin-session-temp";
   const adminAuthStorageKey = "bloodline-admin-auth";
+  const adminApiTokenStorageKey = "bloodline-admin-api-token";
   const localAdminSettingsKey = "bloodline-local-admin-settings";
   const localSubscriptionsKey = "bloodline-local-subscriptions";
   const localApplicationAvailabilityKey = "bloodline-application-form-availability";
@@ -316,6 +317,23 @@
 
   function writeStoredJson(storage, key, value) {
     storage.setItem(key, JSON.stringify(value));
+  }
+
+  function readAdminApiToken() {
+    try {
+      return String(localStorage.getItem(adminApiTokenStorageKey) || "").trim();
+    } catch {
+      return "";
+    }
+  }
+
+  function clearAdminApiToken() {
+    localStorage.removeItem(adminApiTokenStorageKey);
+  }
+
+  function shouldAllowLocalAdminFallback() {
+    const hostname = window.location.hostname;
+    return hostname === "localhost" || hostname === "127.0.0.1";
   }
 
   function ensureLocalAdminUsers() {
@@ -749,11 +767,23 @@
       controller.abort();
     }, timeoutMs);
 
+    const token = readAdminApiToken();
+    const existingHeaders = fetchOptions.headers && typeof fetchOptions.headers === "object"
+      ? fetchOptions.headers
+      : {};
+    const headers = {
+      ...existingHeaders,
+    };
+    if (token && !headers.Authorization) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+
     let response;
     try {
       response = await fetch(url, {
         credentials: "include",
         ...fetchOptions,
+        headers,
         signal: controller.signal,
       });
     } catch (error) {
@@ -1017,7 +1047,11 @@
       renderAdminMeta();
       return;
     } catch {
-      if (!sessionAdmin) {
+      if (!sessionAdmin || !shouldAllowLocalAdminFallback()) {
+        state.admin = null;
+        state.localMode = false;
+        clearLocalAdminSession();
+        clearAdminApiToken();
         throw new Error("Admin session not found.");
       }
     }
@@ -1267,6 +1301,7 @@
           return null;
         });
       }
+      clearAdminApiToken();
       window.location.href = "index.html";
     });
   }
