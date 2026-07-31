@@ -2425,8 +2425,9 @@ body.popup-open {
   font-size: 0.92rem;
 }
 
-.steam-login-card .login-modal-card h2 {
+.steam-login-card h2 {
   margin-top: 0.15rem;
+  text-align: center;
 }
 
 .header-account-menu { position: relative; }
