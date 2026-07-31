@@ -990,7 +990,7 @@
     }
 
     try {
-      const payload = await requestJson(adminSessionUrl, { timeoutMs: 1200 });
+      const payload = await requestJson(adminSessionUrl, { timeoutMs: 6000 });
       state.admin = payload.admin || null;
       state.localMode = false;
       renderAdminMeta();
@@ -1012,7 +1012,7 @@
       } catch {
         if (attempt < maxAttempts) {
           await new Promise((resolve) => {
-              setTimeout(resolve, 80 * attempt);
+              setTimeout(resolve, 220 * attempt);
           });
         }
       }
@@ -1078,8 +1078,19 @@
       adminApplicationsList.innerHTML = '<p class="admin-empty">Loading applications...</p>';
     }
 
-    const payload = await requestJson(`${apiBaseUrl}/admin/applications?${params.toString()}`, { timeoutMs: 1800 });
-    state.applications = Array.isArray(payload.applications) ? payload.applications : [];
+    let payload = null;
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        payload = await requestJson(`${apiBaseUrl}/admin/applications?${params.toString()}`, { timeoutMs: 10000 });
+        break;
+      } catch (error) {
+        if (attempt === 2) {
+          throw error;
+        }
+      }
+    }
+
+    state.applications = Array.isArray(payload?.applications) ? payload.applications : [];
     renderApplications();
     renderApplicationAvailability();
   }
@@ -1148,7 +1159,7 @@
     };
     renderMaintenance();
 
-    const hasSession = await loadSessionWithRetry(2);
+    const hasSession = await loadSessionWithRetry(3);
     if (!hasSession) {
       if (sessionMetaEl) {
         sessionMetaEl.textContent = "Admin session not found. Log in again to continue.";
