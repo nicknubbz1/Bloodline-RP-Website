@@ -2,7 +2,7 @@ const bloodlineHostName = window.location.hostname;
 const isLocalBloodlineHost = ["localhost", "127.0.0.1"].includes(bloodlineHostName);
 const isStaticBloodlineHost = /\.github\.io$/i.test(bloodlineHostName);
 const defaultBloodlineBackendOrigin = (isLocalBloodlineHost || isStaticBloodlineHost)
-	? "http://localhost:3000"
+	? "https://bloodline-auth-server.onrender.com"
 	: window.location.origin;
 const bloodlineBackendOrigin = window.BLOODLINE_BACKEND_ORIGIN || defaultBloodlineBackendOrigin;
 
