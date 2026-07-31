@@ -1297,6 +1297,8 @@ function renderHeaderAccountTrigger(state) {
 }
 
 async function logoutAccount() {
+  const currentPage = window.location.pathname.split("/").pop() || "";
+
   try {
     await fetch(authLogoutUrl, {
       credentials: "include",
@@ -1310,6 +1312,10 @@ async function logoutAccount() {
   renderAccountState();
   updateAccountDropdownDetails();
   closeAccountDropdown();
+
+  if (currentPage === accountDashboardUrl) {
+    window.location.href = "index.html";
+  }
 }
 
 function renderAccountState() {
