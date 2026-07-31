@@ -321,37 +321,9 @@
       return;
     }
 
-    const localHasSteam = isLoggedInLocally();
-    const localHasDiscord = hasLinkedDiscordLocally();
-    const backendLinkState = await getBackendLinkState();
-
-    if (backendLinkState.reachable && backendLinkState.unauthorized) {
-      setMessage("Your session expired. Please log in with Steam again, then resubmit.", "error");
+    if (!isLoggedInLocally()) {
       showLoginRequiredPopup();
       return;
-    }
-
-    if (backendLinkState.reachable) {
-      if (!backendLinkState.hasSteam) {
-        setMessage("Please log in with Steam, then try again.", "error");
-        showLoginRequiredPopup();
-        return;
-      }
-
-      if (!backendLinkState.hasDiscord) {
-        setMessage("Please link Discord from your dashboard before submitting.", "error");
-        return;
-      }
-    } else {
-      if (!localHasSteam) {
-        showLoginRequiredPopup();
-        return;
-      }
-
-      if (!localHasDiscord) {
-        setMessage("Please link Discord from your dashboard before submitting.", "error");
-        return;
-      }
     }
 
     const fields = Array.from(fieldsWrap.querySelectorAll("input, textarea, select"));
