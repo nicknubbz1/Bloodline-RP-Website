@@ -311,9 +311,34 @@ function ensureJsonFile(filePath, fallbackData) {
 
 function readJsonFile(filePath, fallbackData) {
   ensureJsonFile(filePath, fallbackData);
+
+  const readParsedJson = (targetPath) => {
+    try {
+      const raw = fs.readFileSync(targetPath, "utf8");
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  };
+
+  const primaryData = readParsedJson(filePath);
+  if (primaryData !== null) {
+    return primaryData;
+  }
+
+  const backupPath = `${filePath}.bak`;
+  const backupData = readParsedJson(backupPath);
+  if (backupData !== null) {
+    try {
+      fs.writeFileSync(filePath, JSON.stringify(backupData, null, 2), "utf8");
+    } catch {
+      // Ignore restoration failures and still return parsed backup data.
+    }
+    return backupData;
+  }
+
   try {
-    const raw = fs.readFileSync(filePath, "utf8");
-    return JSON.parse(raw);
+    return JSON.parse(JSON.stringify(fallbackData));
   } catch {
     return fallbackData;
   }
@@ -321,7 +346,27 @@ function readJsonFile(filePath, fallbackData) {
 
 function writeJsonFile(filePath, nextValue) {
   ensureJsonFile(filePath, nextValue);
-  fs.writeFileSync(filePath, JSON.stringify(nextValue, null, 2), "utf8");
+  const serialized = JSON.stringify(nextValue, null, 2);
+  const tempPath = `${filePath}.tmp`;
+  const backupPath = `${filePath}.bak`;
+
+  try {
+    if (fs.existsSync(filePath)) {
+      fs.copyFileSync(filePath, backupPath);
+    }
+
+    fs.writeFileSync(tempPath, serialized, "utf8");
+    fs.renameSync(tempPath, filePath);
+  } catch (error) {
+    try {
+      if (fs.existsSync(tempPath)) {
+        fs.unlinkSync(tempPath);
+      }
+    } catch {
+      // Ignore temp cleanup errors.
+    }
+    throw error;
+  }
 }
 
 function readArchivedApplicationStore() {
@@ -417,23 +462,16 @@ function ensureAdminBootstrapUser() {
 }
 
 function readApplicationStore() {
-  ensureApplicationStore();
-
-  try {
-    const raw = fs.readFileSync(applicationStorePath, "utf8");
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed.applications)) {
-      return { applications: [] };
-    }
-    return parsed;
-  } catch {
+  const store = readJsonFile(applicationStorePath, { applications: [] });
+  if (!Array.isArray(store.applications)) {
     return { applications: [] };
   }
+
+  return store;
 }
 
 function writeApplicationStore(nextStore) {
-  ensureApplicationStore();
-  fs.writeFileSync(applicationStorePath, JSON.stringify(nextStore, null, 2), "utf8");
+  writeJsonFile(applicationStorePath, nextStore);
 }
 
 function getApplicationById(applications, id) {
@@ -1700,19 +1738,29 @@ app.post("/api/admin/applications/:id/decision", requireAdminSession, requireAdm
 
   if (decision === "accepted" || decision === "denied") {
     const archivedStore = readArchivedApplicationStore();
-    activeStore.applications = activeStore.applications.filter((entry) => entry.id !== application.id);
-
     const archivedApplication = {
       ...application,
       archivedAt: nowIso(),
       archivedBy: req.adminUser.username,
       updatedAt: nowIso(),
     };
-    archivedStore.applications = archivedStore.applications.filter((entry) => entry.id !== archivedApplication.id);
-    archivedStore.applications.unshift(archivedApplication);
 
-    writeApplicationStore(activeStore);
-    writeArchivedApplicationStore(archivedStore);
+    const nextActiveApplications = activeStore.applications.filter((entry) => entry.id !== application.id);
+    const nextArchivedApplications = archivedStore.applications.filter((entry) => entry.id !== archivedApplication.id);
+    nextArchivedApplications.unshift(archivedApplication);
+
+    try {
+      writeArchivedApplicationStore({ applications: nextArchivedApplications });
+      writeApplicationStore({ applications: nextActiveApplications });
+    } catch (error) {
+      try {
+        writeArchivedApplicationStore(archivedStore);
+      } catch {
+        // Ignore rollback failures; preserve original error response.
+      }
+      res.status(500).json({ error: "Could not archive application safely. Please retry." });
+      return;
+    }
 
     const sendResponse = () => {
       res.json({
@@ -1828,16 +1876,29 @@ app.post("/api/admin/applications/:id/archive", requireAdminSession, requireAdmi
     return;
   }
 
-  activeStore.applications = activeStore.applications.filter((entry) => entry.id !== target.id);
-  archivedStore.applications.unshift({
+  const nextArchivedApplication = {
     ...target,
     archivedAt: nowIso(),
     archivedBy: req.adminUser.username,
     updatedAt: nowIso(),
-  });
+  };
 
-  writeApplicationStore(activeStore);
-  writeArchivedApplicationStore(archivedStore);
+  const nextActiveApplications = activeStore.applications.filter((entry) => entry.id !== target.id);
+  const nextArchivedApplications = archivedStore.applications.filter((entry) => entry.id !== target.id);
+  nextArchivedApplications.unshift(nextArchivedApplication);
+
+  try {
+    writeArchivedApplicationStore({ applications: nextArchivedApplications });
+    writeApplicationStore({ applications: nextActiveApplications });
+  } catch {
+    try {
+      writeArchivedApplicationStore(archivedStore);
+    } catch {
+      // Ignore rollback failures.
+    }
+    res.status(500).json({ error: "Could not archive application safely. Please retry." });
+    return;
+  }
 
   res.json({ ok: true });
 });
