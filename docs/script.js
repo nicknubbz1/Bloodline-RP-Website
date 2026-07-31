@@ -2144,36 +2144,73 @@ async function initAccountDashboardPage() {
       detailPopupBodyEl.appendChild(responsesList);
     }
 
+    const commentsSection = document.createElement("section");
+    commentsSection.className = "dashboard-application-comments-section";
+
     const commentsTitle = document.createElement("h4");
     commentsTitle.textContent = "Staff Comments";
-    detailPopupBodyEl.appendChild(commentsTitle);
+    commentsSection.appendChild(commentsTitle);
 
     const comments = Array.isArray(application.replies) ? application.replies : [];
     if (!comments.length) {
       const emptyComments = document.createElement("p");
+      emptyComments.className = "dashboard-application-comments-empty";
       emptyComments.textContent = "No staff comments yet.";
-      detailPopupBodyEl.appendChild(emptyComments);
+      commentsSection.appendChild(emptyComments);
     } else {
       const commentsList = document.createElement("ul");
       commentsList.className = "dashboard-application-comment-list";
       comments.forEach((reply) => {
         const item = document.createElement("li");
+        item.className = "dashboard-application-comment-item";
 
-        const header = document.createElement("p");
-        header.className = "dashboard-application-comment-head";
         const author = String(reply?.authorName || "Staff").trim() || "Staff";
         const created = formatDashboardApplicationDate(reply?.createdAt);
-        header.textContent = `${author} - ${created}`;
+        const avatarUrl = String(reply?.authorAvatar || "").trim();
+
+        const avatar = document.createElement("span");
+        avatar.className = "dashboard-application-comment-avatar";
+        if (avatarUrl) {
+          const avatarImage = document.createElement("img");
+          avatarImage.src = avatarUrl;
+          avatarImage.alt = "";
+          avatarImage.loading = "lazy";
+          avatar.appendChild(avatarImage);
+        } else {
+          avatar.textContent = getInitialsFromName(author);
+        }
+
+        const content = document.createElement("div");
+        content.className = "dashboard-application-comment-content";
+
+        const header = document.createElement("div");
+        header.className = "dashboard-application-comment-head";
+
+        const nameEl = document.createElement("span");
+        nameEl.className = "dashboard-application-comment-author";
+        nameEl.textContent = author;
+
+        const dateEl = document.createElement("span");
+        dateEl.className = "dashboard-application-comment-date";
+        dateEl.textContent = created;
 
         const body = document.createElement("p");
+        body.className = "dashboard-application-comment-body";
         body.textContent = String(reply?.message || "").trim() || "No comment text.";
 
-        item.appendChild(header);
-        item.appendChild(body);
+        header.appendChild(nameEl);
+        header.appendChild(dateEl);
+        content.appendChild(header);
+        content.appendChild(body);
+
+        item.appendChild(avatar);
+        item.appendChild(content);
         commentsList.appendChild(item);
       });
-      detailPopupBodyEl.appendChild(commentsList);
+      commentsSection.appendChild(commentsList);
     }
+
+    detailPopupBodyEl.appendChild(commentsSection);
 
     const closeButton = document.createElement("button");
     closeButton.type = "button";

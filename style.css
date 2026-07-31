@@ -2764,10 +2764,24 @@ body.popup-open {
   margin: 0.4rem 0 0;
 }
 
+.dashboard-application-comments-section {
+  margin-top: 1rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid rgba(128, 146, 178, 0.34);
+  display: grid;
+  gap: 0.65rem;
+}
+
+.dashboard-application-comments-empty {
+  margin: 0;
+  color: #9ca9c1;
+}
+
 .dashboard-application-response-list,
 .dashboard-application-comment-list {
   margin: 0;
-  padding-left: 1.1rem;
+  padding-left: 0;
+  list-style: none;
   display: grid;
   gap: 0.6rem;
 }
@@ -2787,6 +2801,69 @@ body.popup-open {
 .dashboard-application-comment-head {
   color: #f0f5ff;
   font-weight: 700;
+}
+
+.dashboard-application-comment-item {
+  display: grid;
+  grid-template-columns: 2.3rem minmax(0, 1fr);
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.dashboard-application-comment-avatar {
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 999px;
+  border: 1px solid rgba(141, 161, 195, 0.55);
+  background: linear-gradient(180deg, rgba(40, 52, 71, 0.95), rgba(22, 31, 45, 0.95));
+  color: #dbe7ff;
+  font-family: "Oxanium", sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-transform: uppercase;
+}
+
+.dashboard-application-comment-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.dashboard-application-comment-content {
+  border: 1px solid rgba(120, 140, 174, 0.32);
+  border-radius: 0.78rem;
+  background: rgba(16, 25, 39, 0.75);
+  padding: 0.52rem 0.62rem;
+  display: grid;
+  gap: 0.24rem;
+}
+
+.dashboard-application-comment-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+
+.dashboard-application-comment-author {
+  color: #f3f8ff;
+  font-weight: 700;
+}
+
+.dashboard-application-comment-date {
+  color: #9ba9c2;
+  font-size: 0.83rem;
+  font-weight: 600;
+}
+
+.dashboard-application-comment-body {
+  margin: 0;
+  color: #d2dced;
+  white-space: pre-wrap;
 }
 
 .dashboard-application-edit-grid {
