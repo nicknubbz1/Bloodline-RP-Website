@@ -1671,6 +1671,80 @@
     });
   }
 
+  if (changeAvatarBtn) {
+    changeAvatarBtn.addEventListener("click", async function () {
+      if (!state.admin) {
+        await showAlert("Staff login required.", "Session");
+        return;
+      }
+
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/png,image/jpeg,image/jpg,image/webp,image/gif";
+      input.style.position = "fixed";
+      input.style.top = "-9999px";
+      input.style.left = "-9999px";
+      document.body.appendChild(input);
+
+      const handleSelection = async function () {
+        const file = input.files && input.files[0];
+        input.remove();
+
+        if (!file) {
+          return;
+        }
+
+        const croppedAvatar = await openAvatarCropEditor(file);
+        if (!croppedAvatar || !croppedAvatar.startsWith("data:image/")) {
+          return;
+        }
+
+        if (state.localMode) {
+          const updated = updateLocalAdminUser(state.admin.id, function (entry) {
+            return {
+              ...entry,
+              avatar: croppedAvatar,
+            };
+          });
+          state.admin = {
+            ...state.admin,
+            avatar: croppedAvatar,
+          };
+          renderAdminMeta();
+          await showAlert(updated ? "Profile picture updated." : "Profile picture could not be saved locally.", "Success");
+          return;
+        }
+
+        try {
+          const payload = await requestJson(`${apiBaseUrl}/admin/avatar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ avatar: croppedAvatar }),
+          });
+          state.admin = payload.admin || state.admin;
+          renderAdminMeta();
+          await showAlert("Profile picture updated.", "Success");
+        } catch (error) {
+          await showAlert(error.message || "Could not update profile picture.", "Error");
+        }
+      };
+
+      input.addEventListener("change", function () {
+        handleSelection().catch(function () {
+          return null;
+        });
+      });
+
+      try {
+        input.click();
+      } catch (error) {
+        handleSelection().catch(function () {
+          return null;
+        });
+      }
+    });
+  }
+
   if (changeUsernameBtn) {
     changeUsernameBtn.addEventListener("click", async function () {
       if (!state.admin || !state.admin.isMainAdmin) {

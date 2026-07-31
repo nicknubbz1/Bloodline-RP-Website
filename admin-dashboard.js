@@ -1601,8 +1601,15 @@
       const input = document.createElement("input");
       input.type = "file";
       input.accept = "image/png,image/jpeg,image/jpg,image/webp,image/gif";
-      input.addEventListener("change", async function () {
+      input.style.position = "fixed";
+      input.style.top = "-9999px";
+      input.style.left = "-9999px";
+      document.body.appendChild(input);
+
+      const handleSelection = async function () {
         const file = input.files && input.files[0];
+        input.remove();
+
         if (!file) {
           return;
         }
@@ -1640,8 +1647,21 @@
         } catch (error) {
           await showAlert(error.message || "Could not update profile picture.", "Error");
         }
+      };
+
+      input.addEventListener("change", function () {
+        handleSelection().catch(function () {
+          return null;
+        });
       });
-      input.click();
+
+      try {
+        input.click();
+      } catch (error) {
+        handleSelection().catch(function () {
+          return null;
+        });
+      }
     });
   }
 
