@@ -8,6 +8,7 @@ const cors = require("cors");
 const passport = require("passport");
 const SteamStrategy = require("passport-steam").Strategy;
 const DiscordStrategy = require("passport-discord").Strategy;
+const { normalizeAvatarValue } = require("./avatar-utils");
 require("dotenv").config();
 
 const app = express();
@@ -264,6 +265,7 @@ function sanitizeAdminUser(adminUser) {
     username: adminUser.username,
     isMainAdmin: Boolean(adminUser.isMainAdmin),
     permissions: normalizePermissions(adminUser.permissions),
+    avatar: normalizeAvatarValue(adminUser.avatar),
     createdAt: adminUser.createdAt,
     updatedAt: adminUser.updatedAt,
   };
@@ -1361,6 +1363,28 @@ app.post("/api/admin/change-username", requireAdminSession, (req, res) => {
   }
 
   target.username = nextUsername;
+  target.updatedAt = nowIso();
+  writeAdminUsersStore(store);
+
+  req.session.adminUser = { id: target.id };
+  res.json({ ok: true, admin: sanitizeAdminUser(target) });
+});
+
+app.post("/api/admin/avatar", requireAdminSession, (req, res) => {
+  const nextAvatar = normalizeAvatarValue(req.body?.avatar || req.body?.avatarUrl || "", { maxBytes: 1024 * 1024 });
+  if (!nextAvatar) {
+    res.status(400).json({ error: "A valid image is required." });
+    return;
+  }
+
+  const store = readAdminUsersStore();
+  const target = store.users.find((entry) => entry.id === req.adminUser.id);
+  if (!target) {
+    res.status(404).json({ error: "Admin account not found." });
+    return;
+  }
+
+  target.avatar = nextAvatar;
   target.updatedAt = nowIso();
   writeAdminUsersStore(store);
 
