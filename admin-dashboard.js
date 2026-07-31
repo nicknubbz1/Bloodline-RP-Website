@@ -66,6 +66,8 @@
     giftCandidates: [],
     settings: { maintenanceMode: false },
     source: "active",
+    applicationLoadError: "",
+    applicationLoadNotice: "",
     localMode: false,
     initialTabSet: false,
   };
@@ -851,14 +853,28 @@
       adminApplicationsList.innerHTML = '<p class="admin-empty">You do not have applications access.</p>';
       return;
     }
+
+    if (state.applicationLoadError) {
+      adminApplicationsList.innerHTML = '<p class="admin-empty admin-error"></p>';
+      const errorEl = adminApplicationsList.querySelector(".admin-error");
+      if (errorEl) {
+        errorEl.textContent = state.applicationLoadError;
+      }
+      return;
+    }
+
     if (!state.applications.length) {
       adminApplicationsList.innerHTML = '<p class="admin-empty">No applications found for this view.</p>';
       return;
     }
 
-    adminApplicationsList.innerHTML = state.applications.map(function (app) {
+    const cards = state.applications.map(function (app) {
+        const appSource = app && app._storeSource === "archived" ? "archived" : "active";
+        const actions = appSource === "active"
+          ? '<button class="btn btn-ghost" data-action="accept" type="button">Accept</button><button class="btn btn-ghost" data-action="deny" type="button">Deny</button><button class="btn btn-ghost" data-action="reply" type="button">Reply</button><button class="btn btn-ghost" data-action="archive" type="button">Archive</button>'
+          : '<button class="btn btn-danger" data-action="delete" type="button">Delete</button>';
         return `
-        <article class="admin-application-card" data-application-id="${app.id}">
+        <article class="admin-application-card" data-application-id="${app.id}" data-application-source="${appSource}">
           <header>
             <h3>${app.title || "Application"}</h3>
             <span class="admin-badge">${app.status || "pending"}</span>
@@ -866,16 +882,21 @@
           <p><strong>Type:</strong> ${app.type || "unknown"}</p>
           <p><strong>Applicant:</strong> ${formatSteamIdentity(app.applicant)}</p>
           <p><strong>Created:</strong> ${formatDate(app.createdAt)}</p>
+          <p><strong>Source:</strong> ${appSource}</p>
           <p>${app.body || "No details"}</p>
           <div class="admin-inline-controls">
-            <button class="btn btn-ghost" data-action="accept" type="button">Accept</button>
-            <button class="btn btn-ghost" data-action="deny" type="button">Deny</button>
-            <button class="btn btn-ghost" data-action="reply" type="button">Reply</button>
-            ${state.source === "active" ? '<button class="btn btn-ghost" data-action="archive" type="button">Archive</button>' : '<button class="btn btn-danger" data-action="delete" type="button">Delete</button>'}
+            ${actions}
           </div>
         </article>
       `;
       }).join("");
+
+    if (state.applicationLoadNotice) {
+      adminApplicationsList.innerHTML = `<p class="admin-empty">${state.applicationLoadNotice}</p>${cards}`;
+      return;
+    }
+
+    adminApplicationsList.innerHTML = cards;
   }
 
   function renderApplicationAvailability() {
@@ -1044,6 +1065,9 @@
   }
 
   async function loadApplications() {
+    state.applicationLoadError = "";
+    state.applicationLoadNotice = "";
+
     if (!hasPermission("applications") && !hasPermission("applicationAvailability")) {
       state.applications = [];
       state.applicationAvailability = normalizeApplicationAvailability(readLocalApplicationAvailability());
@@ -1056,6 +1080,7 @@
 
     if (state.localMode) {
       state.applications = [];
+      state.applicationLoadNotice = "";
       renderApplications();
       renderApplicationAvailability();
       return;
@@ -1063,34 +1088,71 @@
 
     if (!hasPermission("applications")) {
       state.applications = [];
+      state.applicationLoadNotice = "";
       renderApplications();
       renderApplicationAvailability();
       return;
     }
 
     const search = applicationSearchEl ? String(applicationSearchEl.value || "").trim() : "";
-    const params = new URLSearchParams({
-      source: state.source,
-      search,
-    });
 
     if (adminApplicationsList && !adminApplicationsList.children.length) {
       adminApplicationsList.innerHTML = '<p class="admin-empty">Loading applications...</p>';
     }
 
-    let payload = null;
-    for (let attempt = 1; attempt <= 2; attempt += 1) {
-      try {
-        payload = await requestJson(`${apiBaseUrl}/admin/applications?${params.toString()}`, { timeoutMs: 10000 });
-        break;
-      } catch (error) {
-        if (attempt === 2) {
-          throw error;
+    const fetchBySource = async function (source) {
+      const params = new URLSearchParams({
+        source,
+        search,
+      });
+
+      let payload = null;
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        try {
+          payload = await requestJson(`${apiBaseUrl}/admin/applications?${params.toString()}`, { timeoutMs: 10000 });
+          break;
+        } catch (error) {
+          if (attempt === 2) {
+            throw error;
+          }
         }
       }
+
+      const normalizedSource = source === "archived" ? "archived" : "active";
+      const applications = Array.isArray(payload?.applications)
+        ? payload.applications.map(function (entry) {
+          return {
+            ...entry,
+            _storeSource: normalizedSource,
+          };
+        })
+        : [];
+
+      return {
+        source: normalizedSource,
+        applications,
+      };
+    };
+
+    const selectedSource = state.source === "archived" ? "archived" : "active";
+    const fallbackSource = selectedSource === "active" ? "archived" : "active";
+
+    try {
+      const selectedResult = await fetchBySource(selectedSource);
+      state.applications = selectedResult.applications;
+
+      if (!state.applications.length) {
+        const fallbackResult = await fetchBySource(fallbackSource);
+        if (fallbackResult.applications.length) {
+          state.applications = fallbackResult.applications;
+          state.applicationLoadNotice = `No ${selectedSource} applications found. Showing ${fallbackSource} applications instead.`;
+        }
+      }
+    } catch (error) {
+      state.applications = [];
+      state.applicationLoadError = `Could not load applications: ${error && error.message ? error.message : "Request failed."}`;
     }
 
-    state.applications = Array.isArray(payload?.applications) ? payload.applications : [];
     renderApplications();
     renderApplicationAvailability();
   }
