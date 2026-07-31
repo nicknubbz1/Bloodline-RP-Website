@@ -1,5 +1,9 @@
-const isLocalBloodlineHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
-const defaultBloodlineBackendOrigin = isLocalBloodlineHost ? "http://localhost:3000" : window.location.origin;
+const bloodlineHostName = window.location.hostname;
+const isLocalBloodlineHost = ["localhost", "127.0.0.1"].includes(bloodlineHostName);
+const isStaticBloodlineHost = /\.github\.io$/i.test(bloodlineHostName);
+const defaultBloodlineBackendOrigin = (isLocalBloodlineHost || isStaticBloodlineHost)
+	? "http://localhost:3000"
+	: window.location.origin;
 const bloodlineBackendOrigin = window.BLOODLINE_BACKEND_ORIGIN || defaultBloodlineBackendOrigin;
 
 window.BLOODLINE_STEAM_AUTH_URL = window.BLOODLINE_STEAM_AUTH_URL || `${bloodlineBackendOrigin}/auth/steam`;
