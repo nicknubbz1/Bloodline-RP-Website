@@ -1784,16 +1784,7 @@ app.post("/api/admin/applications/:id/archive", requireAdminSession, requireAdmi
 });
 
 app.delete("/api/admin/applications/:id", requireAdminSession, requireAdminPermission("applications"), (req, res) => {
-  const archivedStore = readArchivedApplicationStore();
-  const before = archivedStore.applications.length;
-  archivedStore.applications = archivedStore.applications.filter((entry) => entry.id !== req.params.id);
-  if (archivedStore.applications.length === before) {
-    res.status(404).json({ error: "Archived application not found." });
-    return;
-  }
-
-  writeArchivedApplicationStore(archivedStore);
-  res.json({ ok: true });
+  res.status(403).json({ error: "Archived applications are read-only and cannot be deleted." });
 });
 
 app.get("/api/admin/subscriptions", requireAdminSession, requireAdminPermission("subscriptions"), (_req, res) => {

@@ -412,14 +412,7 @@
           }
 
           if (action === "delete") {
-            if (!(await showConfirm("Delete this archived application permanently?", "Delete Application", "Delete"))) {
-              return;
-            }
-            await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}`, {
-              method: "DELETE",
-            });
-            await loadApplications();
-            closeApplicationPopupModal();
+            await showAlert("Archived applications are locked and cannot be deleted.", "Action Blocked");
             return;
           }
         } catch (error) {
@@ -512,7 +505,7 @@
       : "";
     actionsEl.innerHTML = appSource === "active"
       ? `<button class="btn btn-ghost" data-action="accept" data-application-id="${escapeHtml(app.id)}" type="button">Accept</button><button class="btn btn-danger" data-action="deny" data-application-id="${escapeHtml(app.id)}" type="button">Deny</button>${allowlistAction}`
-      : `<button class="btn btn-danger" data-action="delete" data-application-id="${escapeHtml(app.id)}" type="button">Delete</button>`;
+      : `<p class="admin-empty">Archived applications are read-only and cannot be deleted.</p>`;
 
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");
