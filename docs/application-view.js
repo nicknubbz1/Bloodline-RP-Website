@@ -179,10 +179,6 @@
       return;
     }
     loginPopupEl.hidden = false;
-    document.body.classList.add("popup-open");
-    if (loginPopupCloseEl) {
-      loginPopupCloseEl.focus();
-    }
   }
 
   function hideLoginRequiredPopup() {
@@ -190,7 +186,6 @@
       return;
     }
     loginPopupEl.hidden = true;
-    document.body.classList.remove("popup-open");
   }
 
   function renderField(question, index) {
