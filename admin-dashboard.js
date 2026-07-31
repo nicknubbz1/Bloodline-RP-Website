@@ -416,9 +416,15 @@
           }
 
           if (action === "grant-allowlist") {
-            await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/grant-allowlist-role`, {
+            const grantPayload = await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/grant-allowlist-role`, {
               method: "POST",
             });
+            await showAlert(
+              grantPayload?.alreadyGranted
+                ? "Allowlist role was already granted to this linked Discord account."
+                : "Allowlist role granted to the linked Discord account.",
+              "Success"
+            );
             await loadApplications();
             openApplicationPopupModal(appId);
             return;
@@ -518,7 +524,7 @@
       : "";
     actionsEl.innerHTML = appSource === "active"
       ? `<button class="btn btn-ghost" data-action="accept" data-application-id="${escapeHtml(app.id)}" type="button">Accept</button><button class="btn btn-danger" data-action="deny" data-application-id="${escapeHtml(app.id)}" type="button">Deny</button>${allowlistAction}`
-      : `<p class="admin-empty">Archived applications are read-only and cannot be deleted.</p>`;
+      : `${allowlistAction}<p class="admin-empty">Archived applications are read-only and cannot be deleted.</p>`;
 
     modal.classList.add("is-open");
     modal.setAttribute("aria-hidden", "false");

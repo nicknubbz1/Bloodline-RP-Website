@@ -1743,6 +1743,11 @@ app.post("/api/admin/applications/:id/grant-allowlist-role", requireAdminSession
     return;
   }
 
+  if (!discordGuildId || !discordBotToken) {
+    res.status(400).json({ error: "Discord role sync is not configured on the backend." });
+    return;
+  }
+
   const record = findApplicationRecordById(req.params.id);
   const application = record?.application || null;
 
@@ -1763,10 +1768,22 @@ app.post("/api/admin/applications/:id/grant-allowlist-role", requireAdminSession
   }
 
   try {
-    await addDiscordRole(discordId, discordAllowlistRoleId);
+    const member = await fetchDiscordGuildMember(discordId);
+    if (!member) {
+      res.status(404).json({ error: "Applicant is not in the configured Discord server." });
+      return;
+    }
+
+    const currentRoles = Array.isArray(member.roles) ? member.roles : [];
+    const alreadyGranted = currentRoles.includes(discordAllowlistRoleId);
+
+    if (!alreadyGranted) {
+      await addDiscordRole(discordId, discordAllowlistRoleId);
+    }
 
     application.allowlistRoleGrantedAt = nowIso();
     application.allowlistRoleGrantedBy = req.adminUser.username;
+    application.allowlistRoleGrantedToDiscordId = discordId;
     application.updatedAt = nowIso();
 
     if (record.source === "archived") {
@@ -1777,10 +1794,13 @@ app.post("/api/admin/applications/:id/grant-allowlist-role", requireAdminSession
 
     res.json({
       ok: true,
+      alreadyGranted,
+      discordId,
+      roleId: discordAllowlistRoleId,
       application,
     });
-  } catch {
-    res.status(502).json({ error: "Could not grant allowlist role right now." });
+  } catch (error) {
+    res.status(502).json({ error: error?.message || "Could not grant allowlist role right now." });
   }
 });
 
