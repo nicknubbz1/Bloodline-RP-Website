@@ -145,32 +145,62 @@
     return window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
   }
 
-  function isLoggedInLocally() {
+  function readLocalAccountState() {
     try {
-      const state = JSON.parse(localStorage.getItem("bloodline-account") || "{}");
-      return Boolean(String(state.steamId || "").trim());
+      return JSON.parse(localStorage.getItem("bloodline-account") || "{}") || {};
     } catch {
-      return false;
+      return {};
     }
   }
 
-  async function hasLinkedAccountOnBackend() {
+  function isLoggedInLocally() {
+    const state = readLocalAccountState();
+    return Boolean(String(state.steamId || "").trim());
+  }
+
+  function hasLinkedDiscordLocally() {
+    const state = readLocalAccountState();
+    return Boolean(
+      String(state.discordId || "").trim()
+      || String(state.discordName || "").trim()
+      || String(state.discordUsername || "").trim()
+    );
+  }
+
+  async function getBackendLinkState() {
     try {
       const response = await fetch(getAuthSessionUrl(), {
         credentials: "include",
       });
 
       if (!response.ok) {
-        return false;
+        return {
+          reachable: true,
+          unauthorized: response.status === 401 || response.status === 403,
+          hasSteam: false,
+          hasDiscord: false,
+        };
       }
 
       const payload = await response.json();
       const account = payload && payload.account ? payload.account : {};
-      const hasSteam = Boolean(String(account.steamId || "").trim());
-      const hasDiscord = Boolean(String(account.discordId || "").trim());
-      return hasSteam && hasDiscord;
+      return {
+        reachable: true,
+        unauthorized: false,
+        hasSteam: Boolean(String(account.steamId || "").trim()),
+        hasDiscord: Boolean(
+          String(account.discordId || "").trim()
+          || String(account.discordName || "").trim()
+          || String(account.discordUsername || "").trim()
+        ),
+      };
     } catch {
-      return false;
+      return {
+        reachable: false,
+        unauthorized: false,
+        hasSteam: false,
+        hasDiscord: false,
+      };
     }
   }
 
@@ -296,9 +326,23 @@
       return;
     }
 
-    const backendLinked = await hasLinkedAccountOnBackend();
-    if (!backendLinked) {
-      setMessage("Please log in with Steam and re-link Discord from the dashboard, then try again.", "error");
+    if (!hasLinkedDiscordLocally()) {
+      setMessage("Please link Discord from your dashboard before submitting.", "error");
+      return;
+    }
+
+    const backendLinkState = await getBackendLinkState();
+    if (backendLinkState.reachable && backendLinkState.unauthorized) {
+      setMessage("Your session expired. Please log in with Steam again, then resubmit.", "error");
+      showLoginRequiredPopup();
+      return;
+    }
+
+    if (
+      backendLinkState.reachable
+      && (!backendLinkState.hasSteam || !backendLinkState.hasDiscord)
+    ) {
+      setMessage("Please log in with Steam and link Discord, then try again.", "error");
       return;
     }
 
@@ -352,6 +396,11 @@
       });
 
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          setMessage("Your session expired. Please log in with Steam again, then resubmit.", "error");
+          showLoginRequiredPopup();
+          return;
+        }
         const data = await response.json().catch(function () {
           return {};
         });

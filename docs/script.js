@@ -2459,11 +2459,21 @@ async function syncAccountFromBackend() {
     });
 
     if (!response.ok) {
+      if (response.status === 401 || response.status === 403) {
+        localStorage.removeItem(accountStorageKey);
+        renderAccountState();
+        updateAccountDropdownDetails();
+        initAccountDashboardPage();
+      }
       return;
     }
 
     const payload = await response.json();
     if (!payload.account) {
+      localStorage.removeItem(accountStorageKey);
+      renderAccountState();
+      updateAccountDropdownDetails();
+      initAccountDashboardPage();
       return;
     }
 
