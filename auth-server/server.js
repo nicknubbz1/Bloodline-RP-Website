@@ -44,6 +44,7 @@ const discordSubscriptionRoleMap = (() => {
 })();
 
 const steamEnabled = Boolean(steamApiKey);
+const steamOpenIdEnabled = true;
 const discordEnabled = Boolean(discordClientId && discordClientSecret);
 const allowedFrontendOrigins = new Set([
   frontendBaseUrl,
@@ -115,6 +116,31 @@ function verifyPassword(password, salt, expectedHash) {
 
 function cleanUsername(value) {
   return cleanText(value, 40).toLowerCase();
+}
+
+function httpsRequest(options, body) {
+  return new Promise((resolve, reject) => {
+    const request = https.request(options, (response) => {
+      let responseBody = "";
+
+      response.on("data", (chunk) => {
+        responseBody += chunk;
+      });
+
+      response.on("end", () => {
+        resolve({
+          statusCode: response.statusCode || 500,
+          body: responseBody,
+        });
+      });
+    });
+
+    request.on("error", reject);
+    if (body !== undefined && body !== null) {
+      request.write(body);
+    }
+    request.end();
+  });
 }
 
 function normalizePermissions(rawPermissions = {}) {
@@ -356,6 +382,102 @@ function getApplicationById(applications, id) {
   return applications.find((application) => application.id === id) || null;
 }
 
+function buildSteamOpenIdUrl() {
+  const returnUrl = `${backendBaseUrl}/auth/steam/return`;
+  const params = new URLSearchParams({
+    "openid.ns": "http://specs.openid.net/auth/2.0",
+    "openid.mode": "checkid_setup",
+    "openid.return_to": returnUrl,
+    "openid.realm": backendBaseUrl,
+    "openid.identity": "http://specs.openid.net/auth/2.0/identifier_select",
+    "openid.claimed_id": "http://specs.openid.net/auth/2.0/identifier_select",
+  });
+
+  return `https://steamcommunity.com/openid/login?${params.toString()}`;
+}
+
+async function verifySteamOpenIdAssertion(searchParams) {
+  const params = new URLSearchParams(searchParams);
+  params.set("openid.mode", "check_authentication");
+
+  const response = await httpsRequest(
+    {
+      method: "POST",
+      hostname: "steamcommunity.com",
+      path: "/openid/login",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    },
+    params.toString()
+  );
+
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    return false;
+  }
+
+  return /is_valid\s*:\s*true/i.test(response.body || "");
+}
+
+async function fetchSteamProfileFallback(steamId) {
+  const normalizedSteamId = cleanText(steamId, 80);
+  if (!/^\d{17}$/.test(normalizedSteamId)) {
+    return {
+      steamId: normalizedSteamId,
+      displayName: "Steam User",
+      avatar: "",
+    };
+  }
+
+  try {
+    const xmlResponse = await httpsRequest({
+      method: "GET",
+      hostname: "steamcommunity.com",
+      path: `/profiles/${normalizedSteamId}/?xml=1`,
+    });
+
+    const xml = String(xmlResponse.body || "");
+    const xmlNameMatch = xml.match(/<steamID><!\[CDATA\[(.*?)\]\]><\/steamID>/i);
+    const xmlAvatarMatch = xml.match(/<avatarFull><!\[CDATA\[(.*?)\]\]><\/avatarFull>/i)
+      || xml.match(/<avatarMedium><!\[CDATA\[(.*?)\]\]><\/avatarMedium>/i)
+      || xml.match(/<avatarIcon><!\[CDATA\[(.*?)\]\]><\/avatarIcon>/i);
+
+    let displayName = cleanText(xmlNameMatch?.[1] || "", 120);
+    let avatar = cleanText(xmlAvatarMatch?.[1] || "", 500);
+
+    if (!displayName || !avatar) {
+      const htmlResponse = await httpsRequest({
+        method: "GET",
+        hostname: "steamcommunity.com",
+        path: `/profiles/${normalizedSteamId}`,
+      });
+      const html = String(htmlResponse.body || "");
+      const titleMatch = html.match(/<title>([^<]+)<\/title>/i);
+      const ogTitleMatch = html.match(/property=["']og:title["']\s+content=["']([^"']+)["']/i);
+      const avatarMatch = html.match(/https:\/\/avatars\.(?:cloudflare\.)?steamstatic\.com\/[a-f0-9]+_(?:full|medium|icon)\.jpg/i);
+
+      if (!displayName) {
+        displayName = cleanText(String(ogTitleMatch?.[1] || titleMatch?.[1] || "").replace(/^Steam Community\s*::\s*/i, ""), 120);
+      }
+      if (!avatar) {
+        avatar = cleanText(avatarMatch?.[0] || "", 500);
+      }
+    }
+
+    return {
+      steamId: normalizedSteamId,
+      displayName: displayName || "Steam User",
+      avatar,
+    };
+  } catch {
+    return {
+      steamId: normalizedSteamId,
+      displayName: "Steam User",
+      avatar: "",
+    };
+  }
+}
+
 function normalizeTierKey(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -411,40 +533,19 @@ function getEntitledSubscriptionRoleIds(account) {
 }
 
 function discordRequest(method, pathname, body) {
-  return new Promise((resolve, reject) => {
-    const request = https.request(
-      {
-        method,
-        hostname: "discord.com",
-        path: `/api/v10${pathname}`,
-        headers: {
-          Authorization: `Bot ${discordBotToken}`,
-          "Content-Type": "application/json",
-          "User-Agent": "BloodlineRP-Website/1.0",
-        },
+  return httpsRequest(
+    {
+      method,
+      hostname: "discord.com",
+      path: `/api/v10${pathname}`,
+      headers: {
+        Authorization: `Bot ${discordBotToken}`,
+        "Content-Type": "application/json",
+        "User-Agent": "BloodlineRP-Website/1.0",
       },
-      (response) => {
-        let responseBody = "";
-
-        response.on("data", (chunk) => {
-          responseBody += chunk;
-        });
-
-        response.on("end", () => {
-          resolve({
-            statusCode: response.statusCode || 500,
-            body: responseBody,
-          });
-        });
-      }
-    );
-
-    request.on("error", (error) => reject(error));
-    if (body !== undefined) {
-      request.write(JSON.stringify(body));
-    }
-    request.end();
-  });
+    },
+    body !== undefined ? JSON.stringify(body) : undefined
+  );
 }
 
 function discordGet(pathname) {
@@ -692,6 +793,7 @@ app.get("/health", (_req, res) => {
   res.json({
     ok: true,
     steamEnabled,
+    steamOpenIdEnabled,
     discordEnabled,
     backendBaseUrl,
     frontendBaseUrl,
@@ -717,7 +819,7 @@ app.get("/auth/logout", (req, res) => {
 
 app.get("/auth/steam", (req, res, next) => {
   if (!steamEnabled) {
-    redirectAuthError(res, "steam", "Steam auth is not configured on the backend yet.");
+    res.redirect(buildSteamOpenIdUrl());
     return;
   }
   passport.authenticate("steam")(req, res, next);
@@ -725,7 +827,46 @@ app.get("/auth/steam", (req, res, next) => {
 
 app.get("/auth/steam/return", (req, res, next) => {
   if (!steamEnabled) {
-    redirectAuthError(res, "steam", "Steam auth is not configured on the backend yet.");
+    (async () => {
+      const params = new URLSearchParams(req.query);
+      const mode = params.get("openid.mode") || "";
+      const claimedId = params.get("openid.claimed_id") || "";
+      const steamIdMatch = claimedId.match(/\/(\d+)$/);
+
+      if (mode === "cancel") {
+        redirectAuthError(res, "steam", "Steam sign-in was cancelled.");
+        return;
+      }
+
+      if (mode !== "id_res" || !steamIdMatch) {
+        redirectAuthError(res, "steam", "Steam authentication could not be completed.");
+        return;
+      }
+
+      const isValid = await verifySteamOpenIdAssertion(params);
+      if (!isValid) {
+        redirectAuthError(res, "steam", "Steam authentication could not be verified.");
+        return;
+      }
+
+      const user = await fetchSteamProfileFallback(steamIdMatch[1]);
+      req.session.account = {
+        ...(req.session.account || {}),
+        steamId: user.steamId,
+        steamName: user.displayName,
+        steamAvatar: user.avatar,
+      };
+
+      res.redirect(buildFrontendUrl("auth-callback.html", {
+        provider: "steam",
+        status: "success",
+        steamId: user.steamId,
+        steamName: user.displayName,
+        steamAvatar: user.avatar,
+      }));
+    })().catch(() => {
+      redirectAuthError(res, "steam", "Steam authentication failed.");
+    });
     return;
   }
 

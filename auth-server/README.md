@@ -10,11 +10,12 @@ This server handles Steam OpenID, Discord OAuth, Discord live stats, application
 - Stores and serves application records for account-linked submissions
 - Provides admin login, permission-managed admin profiles, moderation actions, subscription views, and maintenance mode toggling
 - Redirects the popup back to `auth-callback.html`, where the static site stores the linked account state locally
+- If a Steam Web API key is unavailable, the server can still complete Steam sign-in through an OpenID fallback and create the session needed for Discord linking
 
 ## Setup
 1. Copy `.env.example` to `.env`
 2. Fill in:
-   - `STEAM_API_KEY`
+   - `STEAM_API_KEY` (optional for basic Steam login if you are using the OpenID fallback)
    - `DISCORD_CLIENT_ID`
    - `DISCORD_CLIENT_SECRET`
    - `DISCORD_GUILD_ID`
@@ -47,7 +48,7 @@ This server handles Steam OpenID, Discord OAuth, Discord live stats, application
 4. Render will read `render.yaml` from the repo root and create the `bloodline-auth-server` service automatically.
 5. In the Render environment settings, fill in the secret values:
    - `BACKEND_BASE_URL`
-   - `STEAM_API_KEY`
+   - `STEAM_API_KEY` (optional if you are using the OpenID fallback)
    - `DISCORD_CLIENT_ID`
    - `DISCORD_CLIENT_SECRET`
    - `DISCORD_BOT_TOKEN`
