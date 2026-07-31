@@ -648,6 +648,45 @@ body.maintenance-gated {
 .admin-session-meta {
   margin: 0;
   color: #cdd8ea;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.admin-session-meta__avatar {
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 999px;
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255,255,255,0.24);
+  background: linear-gradient(135deg, rgba(255,255,255,0.16), rgba(255,255,255,0.06));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+  flex-shrink: 0;
+}
+
+.admin-session-meta__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.admin-session-meta__avatar-fallback {
+  font-family: "Oxanium", sans-serif;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.admin-session-meta__text {
+  display: inline-flex;
+  align-items: center;
 }
 
 .admin-maintenance-toggle {

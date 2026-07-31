@@ -1078,25 +1078,45 @@
     return payload;
   }
 
+  function getAdminInitials(value) {
+    const words = String(value || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+    if (!words.length) {
+      return "?";
+    }
+
+    if (words.length === 1) {
+      return String(words[0]).slice(0, 2).toUpperCase();
+    }
+
+    return `${String(words[0]).charAt(0)}${String(words[words.length - 1]).charAt(0)}`.toUpperCase();
+  }
+
   function renderAdminMeta() {
     if (!sessionMetaEl) {
       return;
     }
 
-    if (!state.admin) {
-      sessionMetaEl.textContent = "No staff session.";
-      if (changeUsernameBtn) {
-        changeUsernameBtn.style.display = "none";
-      }
-      renderAdminAccessControls();
-      return;
-    }
+    const adminName = state.admin?.username || "";
+    const avatarValue = state.admin?.avatar || "";
+    const initials = getAdminInitials(adminName || "No staff session");
+    const hasAvatar = Boolean(avatarValue && String(avatarValue).trim());
 
-    sessionMetaEl.textContent = `Logged in as ${state.admin.username}`;
+    sessionMetaEl.innerHTML = `
+      <span class="admin-session-meta__avatar${hasAvatar ? "" : " admin-session-meta__avatar-fallback"}">
+        ${hasAvatar
+          ? `<img src="${escapeHtml(avatarValue)}" alt="${escapeHtml(adminName || "Staff avatar")}" />`
+          : escapeHtml(initials)}
+      </span>
+      <span class="admin-session-meta__text">${escapeHtml(state.admin ? `Logged in as ${adminName}` : "No staff session.")}</span>
+    `;
 
     if (changeUsernameBtn) {
-      const isMainAdmin = Boolean(state.admin.isMainAdmin);
-      changeUsernameBtn.style.display = isMainAdmin ? "" : "none";
+      const isMainAdmin = Boolean(state.admin?.isMainAdmin);
+      changeUsernameBtn.style.display = state.admin ? (isMainAdmin ? "" : "none") : "none";
       changeUsernameBtn.disabled = !isMainAdmin;
       changeUsernameBtn.title = isMainAdmin ? "Change main admin username" : "";
     }
