@@ -458,12 +458,50 @@ function ensureLatestAdminDashboardScript() {
 
 ensureLatestAdminDashboardScript();
 
+function isLocalHostname(hostname) {
+  return hostname === "localhost" || hostname === "127.0.0.1";
+}
+
+function getAuthUrlDetails(url) {
+  try {
+    return new URL(url, window.location.origin);
+  } catch {
+    return null;
+  }
+}
+
+function isInvalidLiveAuthUrl(url) {
+  const parsedUrl = getAuthUrlDetails(url);
+  if (!parsedUrl) {
+    return true;
+  }
+
+  const currentHost = window.location.hostname;
+  const currentPageIsLocal = isLocalHostname(currentHost);
+  if (currentPageIsLocal) {
+    return false;
+  }
+
+  if (isLocalHostname(parsedUrl.hostname)) {
+    return true;
+  }
+
+  const isGithubPagesHost = /\.github\.io$/i.test(currentHost);
+  const isAuthPath = parsedUrl.pathname.startsWith("/auth/");
+  if (isGithubPagesHost && parsedUrl.hostname === currentHost && isAuthPath) {
+    return true;
+  }
+
+  return false;
+}
+
+function showAuthUnavailableMessage() {
+  window.alert("Authentication is not configured for this live site yet. Set BLOODLINE_BACKEND_ORIGIN to your deployed auth server URL.");
+}
+
 function openAuthPopup(url, popupName) {
-  const hostname = window.location.hostname;
-  const isLocalPage = hostname === "localhost" || hostname === "127.0.0.1";
-  const isLocalAuthUrl = typeof url === "string" && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(url);
-  if (!isLocalPage && isLocalAuthUrl) {
-    window.alert("Steam login is not configured for the live site yet. Set BLOODLINE_BACKEND_ORIGIN to your deployed auth server URL.");
+  if (isInvalidLiveAuthUrl(url)) {
+    showAuthUnavailableMessage();
     return;
   }
 
