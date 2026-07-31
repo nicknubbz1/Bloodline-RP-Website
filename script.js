@@ -1570,6 +1570,10 @@ async function updateAccountDropdownDetails() {
   if (accountDropdownState.dashboardLinkEl) {
     accountDropdownState.dashboardLinkEl.setAttribute("href", hasSteam ? accountDashboardUrl : "account.html");
   }
+
+  getAccountLogoutButtons().forEach((button) => {
+    button.disabled = !hasSteam;
+  });
 }
 
 function renderDashboardApplicationList(container, applications, emptyText) {
