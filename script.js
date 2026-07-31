@@ -1869,6 +1869,17 @@ function getDashboardApplicationCommentCount(entry) {
   return Array.isArray(entry?.replies) ? entry.replies.length : 0;
 }
 
+function getDashboardApplicationStatusClass(status) {
+  const normalized = String(status || "").trim().toLowerCase();
+  if (normalized === "accepted") {
+    return "application-status-accepted";
+  }
+  if (normalized === "denied") {
+    return "application-status-denied";
+  }
+  return "application-status-pending";
+}
+
 function renderDashboardApplicationList(container, applications, emptyText, options = {}) {
   if (!container) {
     return;
@@ -1894,18 +1905,32 @@ function renderDashboardApplicationList(container, applications, emptyText, opti
     const commentCount = getDashboardApplicationCommentCount(entry);
     const closed = isDashboardApplicationClosed(entry);
     const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
+    const statusClass = getDashboardApplicationStatusClass(status);
 
     const item = document.createElement("li");
     item.className = "dashboard-application-item";
 
-    const titleEl = document.createElement("h4");
+    const toggleButton = document.createElement("button");
+    toggleButton.type = "button";
+    toggleButton.className = "dashboard-application-toggle";
+    toggleButton.setAttribute("aria-expanded", "false");
+
+    const titleEl = document.createElement("span");
     titleEl.className = "dashboard-application-title";
     titleEl.textContent = title;
 
+    const chevronEl = document.createElement("span");
+    chevronEl.className = "dashboard-application-chevron";
+    chevronEl.textContent = "▾";
+
+    toggleButton.appendChild(titleEl);
+    toggleButton.appendChild(chevronEl);
+
     const details = document.createElement("div");
     details.className = "dashboard-application-details";
+    details.hidden = true;
 
-    const addDetailRow = (label, value) => {
+    const addDetailRow = (label, value, valueClassName = "") => {
       const row = document.createElement("p");
       row.className = "dashboard-application-detail-row";
 
@@ -1915,6 +1940,9 @@ function renderDashboardApplicationList(container, applications, emptyText, opti
 
       const valueEl = document.createElement("span");
       valueEl.className = "dashboard-application-detail-value";
+      if (valueClassName) {
+        valueEl.classList.add(valueClassName);
+      }
       valueEl.textContent = value;
 
       row.appendChild(labelEl);
@@ -1923,7 +1951,7 @@ function renderDashboardApplicationList(container, applications, emptyText, opti
     };
 
     addDetailRow("Submitted", submittedOn);
-    addDetailRow("Status", statusLabel);
+    addDetailRow("Status", statusLabel, statusClass);
     addDetailRow("Staff comments", String(commentCount));
 
     if (closed) {
@@ -1957,9 +1985,16 @@ function renderDashboardApplicationList(container, applications, emptyText, opti
       actions.appendChild(editButton);
     }
 
-    item.appendChild(titleEl);
+    toggleButton.addEventListener("click", () => {
+      const nextExpanded = toggleButton.getAttribute("aria-expanded") !== "true";
+      toggleButton.setAttribute("aria-expanded", String(nextExpanded));
+      details.hidden = !nextExpanded;
+      item.classList.toggle("is-open", nextExpanded);
+    });
+
+    details.appendChild(actions);
+    item.appendChild(toggleButton);
     item.appendChild(details);
-    item.appendChild(actions);
     container.appendChild(item);
   });
 }

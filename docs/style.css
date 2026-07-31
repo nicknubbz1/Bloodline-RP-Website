@@ -2659,6 +2659,28 @@ body.popup-open {
   gap: 0.45rem;
 }
 
+.dashboard-application-toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0;
+  text-align: left;
+}
+
+.dashboard-application-chevron {
+  color: #9ba8bf;
+  transition: transform 0.18s ease;
+}
+
+.dashboard-application-toggle[aria-expanded="true"] .dashboard-application-chevron {
+  transform: rotate(180deg);
+}
+
 .dashboard-application-title {
   margin: 0;
   color: #f2f6ff;
@@ -2670,6 +2692,10 @@ body.popup-open {
 .dashboard-application-details {
   display: grid;
   gap: 0.18rem;
+}
+
+.dashboard-application-details[hidden] {
+  display: none;
 }
 
 .dashboard-application-detail-row {
@@ -2690,6 +2716,18 @@ body.popup-open {
 
 .dashboard-application-detail-value {
   color: #d7e0ef;
+}
+
+.dashboard-application-detail-value.application-status-pending {
+  color: #ffd35f;
+}
+
+.dashboard-application-detail-value.application-status-accepted {
+  color: #69e49b;
+}
+
+.dashboard-application-detail-value.application-status-denied {
+  color: #ff7a88;
 }
 
 .dashboard-application-actions {
