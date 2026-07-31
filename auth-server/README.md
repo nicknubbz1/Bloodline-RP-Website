@@ -24,6 +24,7 @@ This server handles Steam OpenID, Discord OAuth, Discord live stats, application
    - `DISCORD_ALLOWLIST_ROLE_ID`
    - `DISCORD_SUBSCRIPTION_ROLE_MAP` (JSON object mapping subscription tier name to Discord role ID)
    - `SESSION_SECRET`
+      - Optional: `ACCOUNT_SESSION_DAYS` (default: `30`)
    - Optional: `MAIN_ADMIN_USERNAME` (default: `1234`)
    - Optional: `MAIN_ADMIN_PASSWORD` (default: `1234`)
    - Optional: `ADMIN_SESSION_DAYS` (default: `30`)
@@ -40,6 +41,7 @@ This server handles Steam OpenID, Discord OAuth, Discord live stats, application
 - GitHub Pages can host the static website, but not this server
 - Deploy this auth server separately to a Node host
 - Update `auth-config.js` on the frontend to point to the deployed backend URL
+- This server stores sessions and applications on disk (`auth-server/data`). Use persistent disk/storage on your host, or data/sessions can reset after restarts/redeploys.
 
 ## Easiest deploy: Render
 1. Push this repo to GitHub.
@@ -98,4 +100,5 @@ If you do not want to manage role sync yet, leave:
 - `POST /api/admin/applications/:id/decision`: accept/deny/pending decision
 - `POST /api/admin/applications/:id/archive`: move application to archive
 - `DELETE /api/admin/applications/:id`: permanently delete archived application
+ - `DELETE /api/admin/applications/:id`: archived applications are read-only (returns 403)
 - `GET /api/admin/subscriptions`: list current and ended subscriptions

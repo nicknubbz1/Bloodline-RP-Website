@@ -4,6 +4,7 @@ const https = require("https");
 const crypto = require("crypto");
 const express = require("express");
 const session = require("express-session");
+const FileStoreFactory = require("session-file-store");
 const cors = require("cors");
 const passport = require("passport");
 const SteamStrategy = require("passport-steam").Strategy;
@@ -77,8 +78,10 @@ const subscriptionsStorePath = path.join(__dirname, "data", "subscriptions.json"
 const defaultMainAdminUsername = process.env.MAIN_ADMIN_USERNAME || "1234";
 const defaultMainAdminPassword = process.env.MAIN_ADMIN_PASSWORD || "1234";
 const adminSessionDays = Number(process.env.ADMIN_SESSION_DAYS || 30);
+const accountSessionDays = Number(process.env.ACCOUNT_SESSION_DAYS || 30);
 const adminApiTokenSecret = process.env.ADMIN_API_TOKEN_SECRET || sessionSecret;
 const adminApiTokenDays = Number(process.env.ADMIN_API_TOKEN_DAYS || adminSessionDays || 30);
+const sessionDataPath = path.join(__dirname, "data", "sessions");
 
 function cleanText(value, maxLength) {
   if (typeof value !== "string") {
@@ -215,6 +218,14 @@ function verifyPassword(password, salt, expectedHash) {
 
 function cleanUsername(value) {
   return cleanText(value, 40).toLowerCase();
+}
+
+function applyAccountSessionLifetime(req) {
+  if (!req || !req.session || !req.session.cookie) {
+    return;
+  }
+
+  req.session.cookie.maxAge = 1000 * 60 * 60 * 24 * Math.max(1, accountSessionDays);
 }
 
 function httpsRequest(options, body) {
@@ -814,6 +825,15 @@ function requireAdminPermission(permissionKey) {
 }
 
 app.set("trust proxy", 1);
+if (!fs.existsSync(sessionDataPath)) {
+  fs.mkdirSync(sessionDataPath, { recursive: true });
+}
+const FileStore = FileStoreFactory(session);
+const sessionStore = new FileStore({
+  path: sessionDataPath,
+  retries: 1,
+  ttl: 60 * 60 * 24 * Math.max(1, accountSessionDays),
+});
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin || allowedFrontendOrigins.has(origin)) {
@@ -828,8 +848,10 @@ app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 app.use(session({
   secret: sessionSecret,
+  store: sessionStore,
   resave: false,
   saveUninitialized: false,
+  rolling: true,
   cookie: {
     httpOnly: true,
     sameSite: sessionCookieSameSite,
@@ -968,6 +990,7 @@ app.get("/auth/steam/return", (req, res, next) => {
         steamName: user.displayName,
         steamAvatar: user.avatar,
       };
+      applyAccountSessionLifetime(req);
 
       res.redirect(buildFrontendUrl("auth-callback.html", {
         provider: "steam",
@@ -1000,6 +1023,7 @@ app.get("/auth/steam/return", (req, res, next) => {
         steamName: user.displayName,
         steamAvatar: user.avatar,
       };
+      applyAccountSessionLifetime(req);
 
       res.redirect(buildFrontendUrl("auth-callback.html", {
         provider: "steam",
@@ -1048,6 +1072,7 @@ app.get("/auth/discord/callback", requireSteamSession, (req, res, next) => {
       discordAvatar: user.avatar,
       discordRoles: user.discordRoles || [],
     };
+    applyAccountSessionLifetime(req);
 
     syncDiscordEntitlementRoles(req.session.account)
       .then(async () => {

@@ -38,6 +38,7 @@ const observer = new IntersectionObserver(
 revealEls.forEach((el) => observer.observe(el));
 
 const accountStorageKey = "bloodline-account";
+const accountApplicationsCacheKey = "bloodline-account-applications-cache";
 const discordButton = document.getElementById("discordButton");
 const accountNameEl = document.getElementById("accountName");
 const steamStatusEl = document.getElementById("steamStatus");
@@ -2024,6 +2025,47 @@ async function initAccountDashboardPage() {
   const detailPopupMessageEl = document.getElementById("dashboardApplicationPopupMessage");
   const detailPopupTitleEl = document.getElementById("dashboardApplicationPopupTitle");
 
+  const readCachedApplications = () => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(accountApplicationsCacheKey) || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const writeCachedApplications = (applications) => {
+    if (!Array.isArray(applications)) {
+      return;
+    }
+    localStorage.setItem(accountApplicationsCacheKey, JSON.stringify(applications));
+  };
+
+  const renderApplicationsWithCounts = (applications, stateText) => {
+    const pendingApplications = applications.filter((entry) => String(entry.status || "").toLowerCase() === "pending");
+    const closedApplications = applications.filter((entry) => String(entry.status || "").toLowerCase() !== "pending");
+
+    if (pendingCountEl) {
+      pendingCountEl.textContent = String(pendingApplications.length);
+    }
+
+    if (closedCountEl) {
+      closedCountEl.textContent = String(closedApplications.length);
+    }
+
+    if (stateEl) {
+      stateEl.textContent = stateText;
+    }
+
+    renderDashboardApplicationList(pendingListEl, pendingApplications, "No pending applications.", {
+      onView: (application) => renderApplicationPopup(application, "view"),
+      onEdit: (application) => renderApplicationPopup(application, "edit"),
+    });
+    renderDashboardApplicationList(closedListEl, closedApplications, "No closed applications.", {
+      onView: (application) => renderApplicationPopup(application, "view"),
+    });
+  };
+
   const closeDetailPopup = () => {
     if (!detailPopupEl) {
       return;
@@ -2356,8 +2398,28 @@ async function initAccountDashboardPage() {
     });
 
     if (!response.ok) {
+      const cachedApplications = readCachedApplications();
+      const isAuthFailure = response.status === 401 || response.status === 403;
+      if (cachedApplications.length > 0) {
+        renderApplicationsWithCounts(
+          cachedApplications,
+          isAuthFailure
+            ? "Session expired. Showing your last saved applications. Log in again to refresh live data."
+            : "Could not refresh applications. Showing your last saved applications."
+        );
+        return;
+      }
+
       if (stateEl) {
-        stateEl.textContent = "";
+        stateEl.textContent = isAuthFailure
+          ? "Session expired. Log in again to load your applications."
+          : "Could not load applications right now.";
+      }
+      if (pendingCountEl) {
+        pendingCountEl.textContent = "0";
+      }
+      if (closedCountEl) {
+        closedCountEl.textContent = "0";
       }
       renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
       renderDashboardApplicationList(closedListEl, [], "No closed applications.");
@@ -2366,31 +2428,23 @@ async function initAccountDashboardPage() {
 
     const payload = await response.json();
     const applications = Array.isArray(payload.applications) ? payload.applications : [];
-    const pendingApplications = applications.filter((entry) => String(entry.status || "").toLowerCase() === "pending");
-    const closedApplications = applications.filter((entry) => String(entry.status || "").toLowerCase() !== "pending");
-
-    if (pendingCountEl) {
-      pendingCountEl.textContent = String(pendingApplications.length);
-    }
-
-    if (closedCountEl) {
-      closedCountEl.textContent = String(closedApplications.length);
-    }
-
-    if (stateEl) {
-      stateEl.textContent = "Application data is up to date.";
-    }
-
-    renderDashboardApplicationList(pendingListEl, pendingApplications, "No pending applications.", {
-      onView: (application) => renderApplicationPopup(application, "view"),
-      onEdit: (application) => renderApplicationPopup(application, "edit"),
-    });
-    renderDashboardApplicationList(closedListEl, closedApplications, "No closed applications.", {
-      onView: (application) => renderApplicationPopup(application, "view"),
-    });
+    writeCachedApplications(applications);
+    renderApplicationsWithCounts(applications, "Application data is up to date.");
   } catch {
+    const cachedApplications = readCachedApplications();
+    if (cachedApplications.length > 0) {
+      renderApplicationsWithCounts(cachedApplications, "Could not refresh applications. Showing your last saved applications.");
+      return;
+    }
+
     if (stateEl) {
-      stateEl.textContent = "";
+      stateEl.textContent = "Could not load applications right now.";
+    }
+    if (pendingCountEl) {
+      pendingCountEl.textContent = "0";
+    }
+    if (closedCountEl) {
+      closedCountEl.textContent = "0";
     }
     renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
     renderDashboardApplicationList(closedListEl, [], "No closed applications.");
