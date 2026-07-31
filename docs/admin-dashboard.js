@@ -73,6 +73,7 @@
     initialTabSet: false,
   };
 
+  let applicationsLoadRequestId = 0;
   let adminDialogModal = null;
   let applicationPopupModal = null;
 
@@ -1357,8 +1358,12 @@
   async function loadApplications() {
     state.applicationLoadError = "";
     state.applicationLoadNotice = "";
+    const requestId = ++applicationsLoadRequestId;
 
     if (!hasPermission("applications") && !hasPermission("applicationAvailability")) {
+      if (requestId !== applicationsLoadRequestId) {
+        return;
+      }
       state.applications = [];
       state.applicationAvailability = normalizeApplicationAvailability(readLocalApplicationAvailability());
       renderApplications();
@@ -1369,6 +1374,9 @@
     state.applicationAvailability = normalizeApplicationAvailability(readLocalApplicationAvailability());
 
     if (state.localMode) {
+      if (requestId !== applicationsLoadRequestId) {
+        return;
+      }
       state.applications = [];
       state.applicationLoadNotice = "";
       renderApplications();
@@ -1377,6 +1385,9 @@
     }
 
     if (!hasPermission("applications")) {
+      if (requestId !== applicationsLoadRequestId) {
+        return;
+      }
       state.applications = [];
       state.applicationLoadNotice = "";
       renderApplications();
@@ -1390,9 +1401,9 @@
       adminApplicationsList.innerHTML = '<p class="admin-empty">Loading applications...</p>';
     }
 
-    const fetchBySource = async function (source) {
+    try {
       const params = new URLSearchParams({
-        source,
+        source: state.source,
         search,
       });
 
@@ -1408,8 +1419,12 @@
         }
       }
 
-      const normalizedSource = source === "archived" ? "archived" : "active";
-      const applications = Array.isArray(payload?.applications)
+      if (requestId !== applicationsLoadRequestId) {
+        return;
+      }
+
+      const normalizedSource = state.source === "archived" ? "archived" : "active";
+      state.applications = Array.isArray(payload?.applications)
         ? payload.applications.map(function (entry) {
           return {
             ...entry,
@@ -1417,30 +1432,16 @@
           };
         })
         : [];
-
-      return {
-        source: normalizedSource,
-        applications,
-      };
-    };
-
-    const selectedSource = state.source === "archived" ? "archived" : "active";
-    const fallbackSource = selectedSource === "active" ? "archived" : "active";
-
-    try {
-      const selectedResult = await fetchBySource(selectedSource);
-      state.applications = selectedResult.applications;
-
-      if (!state.applications.length) {
-        const fallbackResult = await fetchBySource(fallbackSource);
-        if (fallbackResult.applications.length) {
-          state.applications = fallbackResult.applications;
-          state.applicationLoadNotice = `No ${selectedSource} applications found. Showing ${fallbackSource} applications instead.`;
-        }
-      }
     } catch (error) {
+      if (requestId !== applicationsLoadRequestId) {
+        return;
+      }
       state.applications = [];
       state.applicationLoadError = `Could not load applications: ${error && error.message ? error.message : "Request failed."}`;
+    }
+
+    if (requestId !== applicationsLoadRequestId) {
+      return;
     }
 
     renderApplications();

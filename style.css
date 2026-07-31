@@ -2485,6 +2485,66 @@ body.popup-open {
   gap: 0.7rem;
 }
 
+.admin-avatar-crop-card {
+  display: grid;
+  gap: 0.75rem;
+  width: min(560px, 94vw);
+}
+
+.admin-avatar-crop-stage {
+  display: grid;
+  place-items: center;
+  padding: 0.2rem 0 0;
+}
+
+.admin-avatar-crop-mask {
+  width: min(320px, 74vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: linear-gradient(135deg, rgba(255, 47, 47, 0.14), rgba(255, 255, 255, 0.05));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.admin-avatar-crop-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, rgba(255, 47, 47, 0.16), rgba(255, 255, 255, 0.04));
+}
+
+.admin-avatar-crop-picker,
+.admin-avatar-crop-slider {
+  display: grid;
+  gap: 0.35rem;
+  color: #cdd8ea;
+}
+
+.admin-avatar-crop-picker span,
+.admin-avatar-crop-slider span {
+  font-family: "Oxanium", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78rem;
+  color: #ff8b8b;
+}
+
+.admin-avatar-crop-picker input {
+  display: none;
+}
+
+.admin-avatar-crop-slider input {
+  accent-color: #ff3b3b;
+}
+
+.admin-avatar-crop-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
 .admin-dialog-input-wrap {
   display: grid;
   gap: 0.35rem;

@@ -270,60 +270,7 @@ function sanitizeAdminUser(adminUser) {
 }
 
 function buildSeedApplications() {
-  const createdAt = nowIso();
-  return [
-    {
-      id: "seed-server-staff",
-      type: "server",
-      title: "Staff Application",
-      status: "pending",
-      body: "Applicant wants to help with reports and moderation during NA evening hours.",
-      applicant: {
-        steamId: "76561198000000001",
-        steamName: "Sample Applicant One",
-        discordId: "100000000000000001",
-        discordName: "SampleOne",
-      },
-      replies: [],
-      createdAt,
-      updatedAt: createdAt,
-      reviewedBy: null,
-    },
-    {
-      id: "seed-ems",
-      type: "public-safety",
-      title: "EMS Application",
-      status: "pending",
-      body: "Applicant has prior EMS RP experience and can cover overnight city shifts.",
-      applicant: {
-        steamId: "76561198000000002",
-        steamName: "Sample Applicant Two",
-        discordId: "100000000000000002",
-        discordName: "SampleTwo",
-      },
-      replies: [],
-      createdAt,
-      updatedAt: createdAt,
-      reviewedBy: null,
-    },
-    {
-      id: "seed-business",
-      type: "business-gang",
-      title: "Business Application",
-      status: "pending",
-      body: "Applicant requests approval to operate a custom tuning and towing business.",
-      applicant: {
-        steamId: "76561198000000003",
-        steamName: "Sample Applicant Three",
-        discordId: "100000000000000003",
-        discordName: "SampleThree",
-      },
-      replies: [],
-      createdAt,
-      updatedAt: createdAt,
-      reviewedBy: null,
-    },
-  ];
+  return [];
 }
 
 function ensureApplicationStore() {
@@ -1876,24 +1823,8 @@ app.use((_req, res) => {
 ensureApplicationStore();
 ensureJsonFile(archivedApplicationStorePath, { applications: [] });
 ensureJsonFile(subscriptionsStorePath, {
-  current: [
-    {
-      id: "seed-sub-1",
-      name: "Sample Supporter",
-      tier: "Gold",
-      renewsAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString(),
-      amount: "$14.99 / month",
-    },
-  ],
-  ended: [
-    {
-      id: "seed-sub-ended-1",
-      name: "Expired Supporter",
-      tier: "Silver",
-      endedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 40).toISOString(),
-      amount: "$9.99 / month",
-    },
-  ],
+  current: [],
+  ended: [],
 });
 ensureJsonFile(adminSettingsStorePath, {
   maintenanceMode: false,

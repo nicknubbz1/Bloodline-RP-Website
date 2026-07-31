@@ -39,6 +39,7 @@
   const logoutBtn = document.getElementById("adminLogoutBtn");
   const changeUsernameBtn = document.getElementById("adminChangeUsernameBtn");
   const changePasswordBtn = document.getElementById("adminChangePasswordBtn");
+  const changeAvatarBtn = document.getElementById("adminChangeAvatarBtn");
   const maintenanceToggle = document.getElementById("maintenanceEnabled");
   const maintenanceStatusText = document.getElementById("maintenanceStatusText");
   const createAdminUserForm = document.getElementById("createAdminUserForm");
@@ -73,8 +74,22 @@
     initialTabSet: false,
   };
 
+  let applicationsLoadRequestId = 0;
   let adminDialogModal = null;
   let applicationPopupModal = null;
+
+  function insertAfterNode(node, referenceNode) {
+    if (!node || !referenceNode || !referenceNode.parentNode) {
+      return;
+    }
+
+    if (referenceNode.nextSibling) {
+      referenceNode.parentNode.insertBefore(node, referenceNode.nextSibling);
+      return;
+    }
+
+    referenceNode.parentNode.appendChild(node);
+  }
 
   function ensureAdminDialogModal() {
     if (adminDialogModal) {
@@ -1086,6 +1101,20 @@
       changeUsernameBtn.title = isMainAdmin ? "Change main admin username" : "";
     }
 
+    if (changeAvatarBtn) {
+      const isLoggedIn = Boolean(state.admin);
+      changeAvatarBtn.style.display = "";
+      changeAvatarBtn.disabled = !isLoggedIn;
+      changeAvatarBtn.title = isLoggedIn ? "Change staff profile picture" : "Log in to change staff profile picture";
+      if (changePasswordBtn && changeAvatarBtn.parentElement) {
+        if (isLoggedIn && Boolean(state.admin?.isMainAdmin)) {
+          changeAvatarBtn.parentElement.insertBefore(changeAvatarBtn, changePasswordBtn);
+        } else {
+          insertAfterNode(changeAvatarBtn, changePasswordBtn);
+        }
+      }
+    }
+
     renderAdminAccessControls();
   }
 
@@ -1357,8 +1386,12 @@
   async function loadApplications() {
     state.applicationLoadError = "";
     state.applicationLoadNotice = "";
+    const requestId = ++applicationsLoadRequestId;
 
     if (!hasPermission("applications") && !hasPermission("applicationAvailability")) {
+      if (requestId !== applicationsLoadRequestId) {
+        return;
+      }
       state.applications = [];
       state.applicationAvailability = normalizeApplicationAvailability(readLocalApplicationAvailability());
       renderApplications();
@@ -1369,6 +1402,9 @@
     state.applicationAvailability = normalizeApplicationAvailability(readLocalApplicationAvailability());
 
     if (state.localMode) {
+      if (requestId !== applicationsLoadRequestId) {
+        return;
+      }
       state.applications = [];
       state.applicationLoadNotice = "";
       renderApplications();
@@ -1377,6 +1413,9 @@
     }
 
     if (!hasPermission("applications")) {
+      if (requestId !== applicationsLoadRequestId) {
+        return;
+      }
       state.applications = [];
       state.applicationLoadNotice = "";
       renderApplications();
@@ -1390,9 +1429,9 @@
       adminApplicationsList.innerHTML = '<p class="admin-empty">Loading applications...</p>';
     }
 
-    const fetchBySource = async function (source) {
+    try {
       const params = new URLSearchParams({
-        source,
+        source: state.source,
         search,
       });
 
@@ -1408,8 +1447,12 @@
         }
       }
 
-      const normalizedSource = source === "archived" ? "archived" : "active";
-      const applications = Array.isArray(payload?.applications)
+      if (requestId !== applicationsLoadRequestId) {
+        return;
+      }
+
+      const normalizedSource = state.source === "archived" ? "archived" : "active";
+      state.applications = Array.isArray(payload?.applications)
         ? payload.applications.map(function (entry) {
           return {
             ...entry,
@@ -1417,30 +1460,16 @@
           };
         })
         : [];
-
-      return {
-        source: normalizedSource,
-        applications,
-      };
-    };
-
-    const selectedSource = state.source === "archived" ? "archived" : "active";
-    const fallbackSource = selectedSource === "active" ? "archived" : "active";
-
-    try {
-      const selectedResult = await fetchBySource(selectedSource);
-      state.applications = selectedResult.applications;
-
-      if (!state.applications.length) {
-        const fallbackResult = await fetchBySource(fallbackSource);
-        if (fallbackResult.applications.length) {
-          state.applications = fallbackResult.applications;
-          state.applicationLoadNotice = `No ${selectedSource} applications found. Showing ${fallbackSource} applications instead.`;
-        }
-      }
     } catch (error) {
+      if (requestId !== applicationsLoadRequestId) {
+        return;
+      }
       state.applications = [];
       state.applicationLoadError = `Could not load applications: ${error && error.message ? error.message : "Request failed."}`;
+    }
+
+    if (requestId !== applicationsLoadRequestId) {
+      return;
     }
 
     renderApplications();
@@ -1559,6 +1588,60 @@
       }
       clearAdminApiToken();
       window.location.href = "index.html";
+    });
+  }
+
+  if (changeAvatarBtn) {
+    changeAvatarBtn.addEventListener("click", async function () {
+      if (!state.admin) {
+        await showAlert("Staff login required.", "Session");
+        return;
+      }
+
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = "image/png,image/jpeg,image/jpg,image/webp,image/gif";
+      input.addEventListener("change", async function () {
+        const file = input.files && input.files[0];
+        if (!file) {
+          return;
+        }
+
+        const croppedAvatar = await openAvatarCropEditor(file);
+        if (!croppedAvatar || !croppedAvatar.startsWith("data:image/")) {
+          return;
+        }
+
+        if (state.localMode) {
+          const updated = updateLocalAdminUser(state.admin.id, function (entry) {
+            return {
+              ...entry,
+              avatar: croppedAvatar,
+            };
+          });
+          state.admin = {
+            ...state.admin,
+            avatar: croppedAvatar,
+          };
+          renderAdminMeta();
+          await showAlert(updated ? "Profile picture updated." : "Profile picture could not be saved locally.", "Success");
+          return;
+        }
+
+        try {
+          const payload = await requestJson(`${apiBaseUrl}/admin/avatar`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ avatar: croppedAvatar }),
+          });
+          state.admin = payload.admin || state.admin;
+          renderAdminMeta();
+          await showAlert("Profile picture updated.", "Success");
+        } catch (error) {
+          await showAlert(error.message || "Could not update profile picture.", "Error");
+        }
+      });
+      input.click();
     });
   }
 
