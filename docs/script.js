@@ -1941,7 +1941,7 @@ async function initAccountDashboardPage() {
 
     if (!response.ok) {
       if (stateEl) {
-        stateEl.textContent = "Could not load application statuses right now.";
+        stateEl.textContent = "";
       }
       renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
       renderDashboardApplicationList(closedListEl, [], "No closed applications.");
@@ -1969,7 +1969,7 @@ async function initAccountDashboardPage() {
     renderDashboardApplicationList(closedListEl, closedApplications, "No closed applications.");
   } catch {
     if (stateEl) {
-      stateEl.textContent = "Could not load application statuses right now.";
+      stateEl.textContent = "";
     }
     renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
     renderDashboardApplicationList(closedListEl, [], "No closed applications.");
