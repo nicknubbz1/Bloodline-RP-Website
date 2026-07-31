@@ -60,7 +60,7 @@
   function isLoggedInLocally() {
     try {
       const state = JSON.parse(localStorage.getItem("bloodline-account") || "{}");
-      return Boolean(state.steamId || state.steamName);
+      return Boolean(String(state.steamId || "").trim());
     } catch {
       return false;
     }

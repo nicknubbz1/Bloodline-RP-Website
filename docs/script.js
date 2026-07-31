@@ -1219,6 +1219,17 @@ function hasLinkedSteamAccount(state) {
   return Boolean(String(state?.steamId || "").trim());
 }
 
+function formatSteamIdentityLabel(state) {
+  const steamId = String(state?.steamId || "").trim();
+  const steamName = String(state?.steamName || "").trim();
+
+  if (steamName && steamId) {
+    return `${steamName} (${steamId})`;
+  }
+
+  return steamName || steamId || "Awaiting Steam Login";
+}
+
 function getAccountLogoutButtons() {
   return document.querySelectorAll('[data-auth-action="logout"]');
 }
@@ -1320,7 +1331,7 @@ async function logoutAccount() {
 
 function renderAccountState() {
   const state = readAccountState();
-  const steamName = state.steamName || "Awaiting Steam Login";
+  const steamIdentityLabel = formatSteamIdentityLabel(state);
   const discordName = state.discordName || "Not Connected";
   const hasSteam = hasLinkedSteamAccount(state);
   const hasDiscord = Boolean(state.discordName);
@@ -1344,11 +1355,11 @@ function renderAccountState() {
   });
 
   if (accountNameEl) {
-    accountNameEl.textContent = steamName;
+    accountNameEl.textContent = steamIdentityLabel;
   }
 
   if (steamStatusEl) {
-    steamStatusEl.textContent = hasSteam ? `Steam Connected: ${state.steamName}` : "Steam Pending";
+    steamStatusEl.textContent = hasSteam ? `Steam Connected: ${steamIdentityLabel}` : "Steam Pending";
   }
 
   if (discordStatusEl) {

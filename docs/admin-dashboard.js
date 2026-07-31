@@ -635,6 +635,17 @@
     }
   }
 
+  function formatSteamIdentity(raw) {
+    const steamId = String(raw?.steamId || "").trim();
+    const steamName = String(raw?.steamName || "").trim();
+
+    if (steamName && steamId) {
+      return `${steamName} (${steamId})`;
+    }
+
+    return steamName || steamId || "Unknown Steam User";
+  }
+
   function buildGiftCandidates() {
     const map = new Map();
 
@@ -648,7 +659,7 @@
       const discordId = String(raw.discordId || "").trim();
       const discordName = String(raw.discordName || "").trim();
       const fallbackName = String(raw.name || raw.displayName || "").trim();
-      const displayName = steamName || discordName || fallbackName;
+      const displayName = steamName || steamId || discordName || fallbackName;
 
       if (!displayName && !steamId && !discordId) {
         return;
@@ -853,7 +864,7 @@
             <span class="admin-badge">${app.status || "pending"}</span>
           </header>
           <p><strong>Type:</strong> ${app.type || "unknown"}</p>
-          <p><strong>Applicant:</strong> ${app.applicant?.steamName || "Unknown"} / ${app.applicant?.discordName || "Unknown"}</p>
+          <p><strong>Applicant:</strong> ${formatSteamIdentity(app.applicant)}</p>
           <p><strong>Created:</strong> ${formatDate(app.createdAt)}</p>
           <p>${app.body || "No details"}</p>
           <div class="admin-inline-controls">
@@ -943,13 +954,13 @@
 
     currentSubscriptionsList.innerHTML = current.length
       ? current.map(function (entry) {
-        return `<article class="admin-subscription-card"><h3>${entry.name || "Unknown"}</h3><p>Tier: ${entry.tier || "Unknown"}</p><p>Steam: ${entry.steamId || "Not set"}</p><p>Discord: ${entry.discordId || "Not set"}</p><p>Duration: ${entry.lifetime ? "Lifetime" : durationLabel(entry.duration)}</p><p>Renews: ${entry.lifetime ? "Lifetime" : formatDate(entry.renewsAt)}</p><p>Amount: ${entry.amount || "Not set"}</p></article>`;
+        return `<article class="admin-subscription-card"><h3>${formatSteamIdentity(entry)}</h3><p>Tier: ${entry.tier || "Unknown"}</p><p>Steam ID: ${entry.steamId || "Not set"}</p><p>Steam Username: ${entry.steamName || "Not set"}</p><p>Duration: ${entry.lifetime ? "Lifetime" : durationLabel(entry.duration)}</p><p>Renews: ${entry.lifetime ? "Lifetime" : formatDate(entry.renewsAt)}</p><p>Amount: ${entry.amount || "Not set"}</p></article>`;
       }).join("")
       : '<p class="admin-empty">No current subscriptions.</p>';
 
     endedSubscriptionsList.innerHTML = ended.length
       ? ended.map(function (entry) {
-        return `<article class="admin-subscription-card"><h3>${entry.name || "Unknown"}</h3><p>Tier: ${entry.tier || "Unknown"}</p><p>Ended: ${formatDate(entry.endedAt)}</p><p>Amount: ${entry.amount || "Not set"}</p></article>`;
+        return `<article class="admin-subscription-card"><h3>${formatSteamIdentity(entry)}</h3><p>Tier: ${entry.tier || "Unknown"}</p><p>Steam ID: ${entry.steamId || "Not set"}</p><p>Steam Username: ${entry.steamName || "Not set"}</p><p>Ended: ${formatDate(entry.endedAt)}</p><p>Amount: ${entry.amount || "Not set"}</p></article>`;
       }).join("")
       : '<p class="admin-empty">No ended subscriptions.</p>';
   }
@@ -1604,7 +1615,7 @@
       }
 
       const candidate = findGiftCandidate(query);
-      const recipientName = candidate?.displayName || query;
+      const recipientName = candidate?.steamName || candidate?.steamId || candidate?.displayName || query;
       const payload = {
         recipientQuery: query,
         steamId: candidate?.steamId || "",
