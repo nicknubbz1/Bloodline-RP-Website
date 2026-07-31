@@ -474,6 +474,43 @@ function writeApplicationStore(nextStore) {
   writeJsonFile(applicationStorePath, nextStore);
 }
 
+function cloneStoreApplications(store) {
+  return Array.isArray(store?.applications) ? store.applications.slice() : [];
+}
+
+function removeApplicationFromStore(store, applicationId) {
+  const nextApplications = cloneStoreApplications(store).filter((entry) => entry?.id !== applicationId);
+  return {
+    ...store,
+    applications: nextApplications,
+  };
+}
+
+function upsertApplicationInStore(store, application) {
+  const nextApplications = cloneStoreApplications(store);
+  const existingIndex = nextApplications.findIndex((entry) => entry?.id === application?.id);
+
+  if (existingIndex >= 0) {
+    nextApplications[existingIndex] = application;
+  } else {
+    nextApplications.unshift(application);
+  }
+
+  return {
+    ...store,
+    applications: nextApplications,
+  };
+}
+
+function buildArchivedApplicationCopy(application, adminName) {
+  return {
+    ...application,
+    archivedAt: nowIso(),
+    archivedBy: adminName,
+    updatedAt: nowIso(),
+  };
+}
+
 function getApplicationById(applications, id) {
   return applications.find((application) => application.id === id) || null;
 }
@@ -1756,20 +1793,13 @@ app.post("/api/admin/applications/:id/decision", requireAdminSession, requireAdm
 
   if (decision === "accepted" || decision === "denied") {
     const archivedStore = readArchivedApplicationStore();
-    const archivedApplication = {
-      ...application,
-      archivedAt: nowIso(),
-      archivedBy: req.adminUser.username,
-      updatedAt: nowIso(),
-    };
-
-    const nextActiveApplications = activeStore.applications.filter((entry) => entry.id !== application.id);
-    const nextArchivedApplications = archivedStore.applications.filter((entry) => entry.id !== archivedApplication.id);
-    nextArchivedApplications.unshift(archivedApplication);
+    const archivedApplication = buildArchivedApplicationCopy(application, req.adminUser.username);
+    const nextActiveStore = removeApplicationFromStore(activeStore, application.id);
+    const nextArchivedStore = upsertApplicationInStore(archivedStore, archivedApplication);
 
     try {
-      writeArchivedApplicationStore({ applications: nextArchivedApplications });
-      writeApplicationStore({ applications: nextActiveApplications });
+      writeArchivedApplicationStore(nextArchivedStore);
+      writeApplicationStore(nextActiveStore);
     } catch (error) {
       try {
         writeArchivedApplicationStore(archivedStore);
@@ -1894,20 +1924,13 @@ app.post("/api/admin/applications/:id/archive", requireAdminSession, requireAdmi
     return;
   }
 
-  const nextArchivedApplication = {
-    ...target,
-    archivedAt: nowIso(),
-    archivedBy: req.adminUser.username,
-    updatedAt: nowIso(),
-  };
-
-  const nextActiveApplications = activeStore.applications.filter((entry) => entry.id !== target.id);
-  const nextArchivedApplications = archivedStore.applications.filter((entry) => entry.id !== target.id);
-  nextArchivedApplications.unshift(nextArchivedApplication);
+  const nextArchivedApplication = buildArchivedApplicationCopy(target, req.adminUser.username);
+  const nextActiveStore = removeApplicationFromStore(activeStore, target.id);
+  const nextArchivedStore = upsertApplicationInStore(archivedStore, nextArchivedApplication);
 
   try {
-    writeArchivedApplicationStore({ applications: nextArchivedApplications });
-    writeApplicationStore({ applications: nextActiveApplications });
+    writeArchivedApplicationStore(nextArchivedStore);
+    writeApplicationStore(nextActiveStore);
   } catch {
     try {
       writeArchivedApplicationStore(archivedStore);

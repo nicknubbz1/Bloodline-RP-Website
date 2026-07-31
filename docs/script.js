@@ -39,6 +39,7 @@ revealEls.forEach((el) => observer.observe(el));
 
 const accountStorageKey = "bloodline-account";
 const accountApplicationsCacheKey = "bloodline-account-applications-cache";
+const legacyAccountApplicationsCacheKeys = ["bloodline-account-applications-cache"];
 const discordButton = document.getElementById("discordButton");
 const accountNameEl = document.getElementById("accountName");
 const steamStatusEl = document.getElementById("steamStatus");
@@ -53,7 +54,7 @@ const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3
 const authLogoutUrl = window.BLOODLINE_AUTH_LOGOUT_URL || "http://localhost:3000/auth/logout";
 const authSessionUrl = window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
 const apiBaseUrl = window.BLOODLINE_API_BASE_URL || "http://localhost:3000/api";
-const accountDashboardUrl = "account-dashboard.html";
+const accountDashboardUrl = "account-dashboard.html?v=20260731e1";
 const adminLoginUrl = window.BLOODLINE_ADMIN_LOGIN_URL || `${apiBaseUrl}/admin/login`;
 const adminSessionUrl = window.BLOODLINE_ADMIN_SESSION_URL || `${apiBaseUrl}/admin/session`;
 const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-status`;
@@ -1209,10 +1210,41 @@ function writeAccountState(nextState) {
 }
 
 function mergeAccountState(nextPartialState) {
+  const currentState = readAccountState();
   const nextState = {
-    ...readAccountState(),
+    ...currentState,
     ...nextPartialState,
   };
+
+  const hasExistingSteam = hasLinkedSteamAccount(currentState);
+  const hasExistingDiscord = Boolean(
+    String(currentState?.discordId || "").trim()
+    || String(currentState?.discordName || "").trim()
+    || String(currentState?.discordUsername || "").trim()
+  );
+
+  if (!hasLinkedSteamAccount(nextState) && hasExistingSteam) {
+    return currentState;
+  }
+
+  if (hasExistingSteam && hasExistingDiscord) {
+    const incomingDiscordId = String(nextPartialState?.discordId ?? currentState?.discordId ?? "").trim();
+    const incomingDiscordName = String(nextPartialState?.discordName ?? currentState?.discordName ?? "").trim();
+    const incomingDiscordUsername = String(nextPartialState?.discordUsername ?? currentState?.discordUsername ?? "").trim();
+    const incomingDiscordAvatar = String(nextPartialState?.discordAvatar ?? currentState?.discordAvatar ?? "").trim();
+    const shouldPreserveDiscord = !incomingDiscordId && !incomingDiscordName && !incomingDiscordUsername && !incomingDiscordAvatar;
+
+    if (shouldPreserveDiscord) {
+      return {
+        ...nextState,
+        discordId: currentState.discordId || "",
+        discordName: currentState.discordName || "",
+        discordUsername: currentState.discordUsername || "",
+        discordAvatar: currentState.discordAvatar || "",
+      };
+    }
+  }
+
   writeAccountState(nextState);
   return nextState;
 }
@@ -1321,7 +1353,17 @@ async function logoutAccount() {
     // Ignore backend logout failures when running static-only.
   }
 
-  localStorage.removeItem(accountStorageKey);
+  const nextState = {
+    ...readAccountState(),
+    steamId: "",
+    steamName: "",
+    steamAvatar: "",
+    discordId: "",
+    discordName: "",
+    discordUsername: "",
+    discordAvatar: "",
+  };
+  writeAccountState(nextState);
   renderAccountState();
   updateAccountDropdownDetails();
   closeAccountDropdown();
@@ -1761,7 +1803,7 @@ function createAccountDropdown() {
       <section class="account-dropdown-block">
         <h4>Actions</h4>
         <div class="account-dropdown-inline-actions account-dropdown-actions-column">
-          <a class="btn btn-primary" id="headerAccountDashboardLink" href="account-dashboard.html">Dashboard</a>
+          <a class="btn btn-primary" id="headerAccountDashboardLink" href="account-dashboard.html?v=20260731e1">Dashboard</a>
           <button class="btn btn-ghost" type="button" data-auth-action="logout" disabled>Logout</button>
         </div>
       </section>
@@ -2012,11 +2054,8 @@ async function initAccountDashboardPage() {
   const subscriptionTierEl = document.getElementById("dashboardSubscriptionTier");
   const subscriptionRenewalEl = document.getElementById("dashboardSubscriptionRenewal");
   const subscriptionNextPaymentEl = document.getElementById("dashboardSubscriptionNextPayment");
-  const pendingCountEl = document.getElementById("dashboardPendingApplications");
-  const closedCountEl = document.getElementById("dashboardClosedApplications");
   const stateEl = document.getElementById("dashboardApplicationState");
-  const pendingListEl = document.getElementById("dashboardPendingList");
-  const closedListEl = document.getElementById("dashboardClosedList");
+  const applicationsListEl = document.getElementById("dashboardApplicationsList");
   const discordLinkButtonEl = document.getElementById("dashboardDiscordLinkButton");
   const detailPopupEl = document.getElementById("dashboardApplicationDetailPopup");
   const detailPopupCloseEl = document.getElementById("dashboardApplicationPopupClose");
@@ -2024,6 +2063,24 @@ async function initAccountDashboardPage() {
   const detailPopupActionsEl = document.getElementById("dashboardApplicationPopupActions");
   const detailPopupMessageEl = document.getElementById("dashboardApplicationPopupMessage");
   const detailPopupTitleEl = document.getElementById("dashboardApplicationPopupTitle");
+
+  const mergeApplicationsById = (existingApplications, incomingApplications) => {
+    const mergedById = new Map();
+
+    [...(Array.isArray(existingApplications) ? existingApplications : []), ...(Array.isArray(incomingApplications) ? incomingApplications : [])]
+      .filter(Boolean)
+      .forEach((application) => {
+        const id = String(application?.id || "").trim();
+        if (!id) {
+          return;
+        }
+        mergedById.set(id, application);
+      });
+
+    return Array.from(mergedById.values()).sort((left, right) => {
+      return Date.parse(right?.createdAt || 0) - Date.parse(left?.createdAt || 0);
+    });
+  };
 
   const readCachedApplications = () => {
     try {
@@ -2034,35 +2091,31 @@ async function initAccountDashboardPage() {
     }
   };
 
+  const clearCachedApplications = () => {
+    localStorage.removeItem(accountApplicationsCacheKey);
+    legacyAccountApplicationsCacheKeys.forEach((key) => {
+      localStorage.removeItem(key);
+    });
+  };
+
   const writeCachedApplications = (applications) => {
     if (!Array.isArray(applications)) {
-      return;
+      return readCachedApplications();
     }
-    localStorage.setItem(accountApplicationsCacheKey, JSON.stringify(applications));
+
+    const mergedApplications = mergeApplicationsById(readCachedApplications(), applications);
+    localStorage.setItem(accountApplicationsCacheKey, JSON.stringify(mergedApplications));
+    return mergedApplications;
   };
 
   const renderApplicationsWithCounts = (applications, stateText) => {
-    const pendingApplications = applications.filter((entry) => String(entry.status || "").toLowerCase() === "pending");
-    const closedApplications = applications.filter((entry) => String(entry.status || "").toLowerCase() !== "pending");
-
-    if (pendingCountEl) {
-      pendingCountEl.textContent = String(pendingApplications.length);
-    }
-
-    if (closedCountEl) {
-      closedCountEl.textContent = String(closedApplications.length);
-    }
-
     if (stateEl) {
       stateEl.textContent = stateText;
     }
 
-    renderDashboardApplicationList(pendingListEl, pendingApplications, "No pending applications.", {
+    renderDashboardApplicationList(applicationsListEl, applications, "No applications yet.", {
       onView: (application) => renderApplicationPopup(application, "view"),
       onEdit: (application) => renderApplicationPopup(application, "edit"),
-    });
-    renderDashboardApplicationList(closedListEl, closedApplications, "No closed applications.", {
-      onView: (application) => renderApplicationPopup(application, "view"),
     });
   };
 
@@ -2377,16 +2430,12 @@ async function initAccountDashboardPage() {
     if (stateEl) {
       stateEl.textContent = "Sign in with Steam on the account page to load application data.";
     }
-    if (pendingCountEl) {
-      pendingCountEl.textContent = "0";
-    }
-    if (closedCountEl) {
-      closedCountEl.textContent = "0";
-    }
-    renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
-    renderDashboardApplicationList(closedListEl, [], "No closed applications.");
+    clearCachedApplications();
+    renderDashboardApplicationList(applicationsListEl, [], "No applications yet.");
     return;
   }
+
+  clearCachedApplications();
 
   if (stateEl) {
     stateEl.textContent = "Loading application data...";
@@ -2398,65 +2447,33 @@ async function initAccountDashboardPage() {
     });
 
     if (!response.ok) {
-      const cachedApplications = readCachedApplications();
       const isAuthFailure = response.status === 401 || response.status === 403;
-      if (cachedApplications.length > 0) {
-        renderApplicationsWithCounts(
-          cachedApplications,
-          isAuthFailure
-            ? "Session expired. Showing your last saved applications. Log in again to refresh live data."
-            : "Could not refresh applications. Showing your last saved applications."
-        );
-        return;
-      }
-
       if (stateEl) {
         stateEl.textContent = isAuthFailure
           ? "Session expired. Log in again to load your applications."
           : "Could not load applications right now.";
       }
-      if (pendingCountEl) {
-        pendingCountEl.textContent = "0";
-      }
-      if (closedCountEl) {
-        closedCountEl.textContent = "0";
-      }
-      renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
-      renderDashboardApplicationList(closedListEl, [], "No closed applications.");
+      clearCachedApplications();
+      renderDashboardApplicationList(applicationsListEl, [], "No applications yet.");
       return;
     }
 
     const payload = await response.json();
     const applications = Array.isArray(payload.applications) ? payload.applications : [];
-    const cachedApplications = readCachedApplications();
-    if (applications.length === 0 && cachedApplications.length > 0) {
-      renderApplicationsWithCounts(
-        cachedApplications,
-        "Live data returned empty. Showing your last saved applications to prevent data loss."
-      );
+    if (applications.length === 0) {
+      clearCachedApplications();
+      renderApplicationsWithCounts([], "Application data is up to date.");
       return;
     }
 
-    writeCachedApplications(applications);
-    renderApplicationsWithCounts(applications, "Application data is up to date.");
+    const mergedApplications = writeCachedApplications(applications);
+    renderApplicationsWithCounts(mergedApplications, "Application data is up to date.");
   } catch {
-    const cachedApplications = readCachedApplications();
-    if (cachedApplications.length > 0) {
-      renderApplicationsWithCounts(cachedApplications, "Could not refresh applications. Showing your last saved applications.");
-      return;
-    }
-
     if (stateEl) {
       stateEl.textContent = "Could not load applications right now.";
     }
-    if (pendingCountEl) {
-      pendingCountEl.textContent = "0";
-    }
-    if (closedCountEl) {
-      closedCountEl.textContent = "0";
-    }
-    renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
-    renderDashboardApplicationList(closedListEl, [], "No closed applications.");
+    clearCachedApplications();
+    renderDashboardApplicationList(applicationsListEl, [], "No applications yet.");
   }
 }
 
