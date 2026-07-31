@@ -283,7 +283,6 @@
         formEl.reset();
       }
       setMessage("Application submitted. Staff will review it soon.", "success");
-      window.scrollTo({ top: 0, behavior: "smooth" });
     } catch {
       setMessage("Could not reach the auth server. Try again shortly.", "error");
     }
