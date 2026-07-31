@@ -1104,6 +1104,42 @@ app.get("/api/my-applications", requireLinkedAccount, (req, res) => {
   });
 });
 
+app.patch("/api/my-applications/:id", requireLinkedAccount, (req, res) => {
+  const store = readApplicationStore();
+  const application = getApplicationById(store.applications, req.params.id);
+
+  if (!application || application.applicant?.steamId !== req.session.account.steamId) {
+    res.status(404).json({ error: "Application not found." });
+    return;
+  }
+
+  const status = String(application.status || "").toLowerCase();
+  if (status === "accepted" || status === "denied") {
+    res.status(409).json({ error: "Closed applications can no longer be edited." });
+    return;
+  }
+
+  const responses = normalizeResponses(req.body.responses);
+  if (responses.length === 0) {
+    res.status(400).json({ error: "Application responses are required." });
+    return;
+  }
+
+  application.responses = responses;
+  application.body = responses
+    .filter((entry) => entry.answer)
+    .map((entry) => `${entry.label}: ${entry.answer}`)
+    .join("\n");
+  application.updatedAt = nowIso();
+
+  writeApplicationStore(store);
+
+  res.json({
+    ok: true,
+    application,
+  });
+});
+
 app.get("/api/site-status", (_req, res) => {
   const settings = readAdminSettingsStore();
   res.json({

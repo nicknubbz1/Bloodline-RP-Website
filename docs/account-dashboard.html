@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Oxanium:wght@500;600;700;800&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20260731c4" />
+  <link rel="stylesheet" href="style.css?v=20260731c5" />
 </head>
 <body>
 <header class="site-header">
@@ -70,6 +70,16 @@
   </section>
 </main>
 
+<div id="dashboardApplicationDetailPopup" class="site-popup" hidden>
+  <div class="site-popup-card dashboard-application-popup-card" role="dialog" aria-modal="true" aria-labelledby="dashboardApplicationPopupTitle">
+    <button id="dashboardApplicationPopupClose" class="modal-close" type="button" aria-label="Close application details">X</button>
+    <h3 id="dashboardApplicationPopupTitle">Application Details</h3>
+    <div id="dashboardApplicationPopupBody" class="dashboard-application-popup-body"></div>
+    <p id="dashboardApplicationPopupMessage" class="app-view-message" hidden></p>
+    <div class="site-popup-actions" id="dashboardApplicationPopupActions"></div>
+  </div>
+</div>
+
 <footer class="footer">
   <div class="footer-inner">
     <div class="footer-grid">
@@ -100,6 +110,6 @@
 </footer>
 
 <script src="auth-config.js?v=20260731a3"></script>
-<script src="script.js?v=20260731d2"></script>
+<script src="script.js?v=20260731d3"></script>
 </body>
 </html>

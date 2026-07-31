@@ -1119,7 +1119,7 @@ function refreshConnectPanelStatus(populationEl, statusEl) {
     return;
   }
 
-  fetch(serverStatusUrl)
+    fetch(serverStatusUrl)
     .then((response) => {
       if (!response.ok) {
         throw new Error("status-unavailable");
@@ -1835,7 +1835,41 @@ async function updateAccountDropdownDetails() {
   });
 }
 
-function renderDashboardApplicationList(container, applications, emptyText) {
+function formatDashboardApplicationDate(dateValue) {
+  if (!dateValue) {
+    return "Unknown date";
+  }
+
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) {
+    return "Unknown date";
+  }
+
+  return parsed.toLocaleDateString("en-US", {
+    month: "numeric",
+    day: "numeric",
+    year: "2-digit",
+  });
+}
+
+function getDashboardApplicationTitle(entry) {
+  return String(entry?.formName || entry?.title || entry?.id || "Application").trim() || "Application";
+}
+
+function getDashboardApplicationStatus(entry) {
+  return String(entry?.status || "pending").trim().toLowerCase() || "pending";
+}
+
+function isDashboardApplicationClosed(entry) {
+  const status = getDashboardApplicationStatus(entry);
+  return status === "accepted" || status === "denied";
+}
+
+function getDashboardApplicationCommentCount(entry) {
+  return Array.isArray(entry?.replies) ? entry.replies.length : 0;
+}
+
+function renderDashboardApplicationList(container, applications, emptyText, options = {}) {
   if (!container) {
     return;
   }
@@ -1849,11 +1883,60 @@ function renderDashboardApplicationList(container, applications, emptyText) {
     return;
   }
 
-  applications.slice(0, 6).forEach((entry) => {
-    const name = String(entry.formName || entry.title || entry.id || "Application").trim();
-    const status = String(entry.status || "").trim().toLowerCase() || "unknown";
+  const onView = typeof options.onView === "function" ? options.onView : null;
+  const onEdit = typeof options.onEdit === "function" ? options.onEdit : null;
+
+  applications.forEach((entry) => {
+    const title = getDashboardApplicationTitle(entry);
+    const status = getDashboardApplicationStatus(entry);
+    const submittedOn = formatDashboardApplicationDate(entry?.createdAt);
+    const reviewedOn = formatDashboardApplicationDate(entry?.reviewedBy?.reviewedAt || entry?.updatedAt);
+    const commentCount = getDashboardApplicationCommentCount(entry);
+    const closed = isDashboardApplicationClosed(entry);
+
     const item = document.createElement("li");
-    item.textContent = `${name} - ${status}`;
+    item.className = "dashboard-application-item";
+
+    const summary = document.createElement("p");
+    summary.className = "dashboard-application-summary";
+    summary.textContent = closed
+      ? `${title} submitted on ${submittedOn}, ${status} on ${reviewedOn}.`
+      : `${title} submitted on ${submittedOn} status ${status}.`;
+
+    const meta = document.createElement("p");
+    meta.className = "dashboard-application-meta";
+    meta.textContent = `Staff comments: ${commentCount}`;
+
+    const actions = document.createElement("div");
+    actions.className = "dashboard-application-actions";
+
+    const viewButton = document.createElement("button");
+    viewButton.type = "button";
+    viewButton.className = "btn btn-ghost";
+    viewButton.textContent = "View";
+    viewButton.addEventListener("click", () => {
+      if (onView) {
+        onView(entry);
+      }
+    });
+    actions.appendChild(viewButton);
+
+    if (!closed) {
+      const editButton = document.createElement("button");
+      editButton.type = "button";
+      editButton.className = "btn btn-primary";
+      editButton.textContent = "Edit";
+      editButton.addEventListener("click", () => {
+        if (onEdit) {
+          onEdit(entry);
+        }
+      });
+      actions.appendChild(editButton);
+    }
+
+    item.appendChild(summary);
+    item.appendChild(meta);
+    item.appendChild(actions);
     container.appendChild(item);
   });
 }
@@ -1875,6 +1958,243 @@ async function initAccountDashboardPage() {
   const pendingListEl = document.getElementById("dashboardPendingList");
   const closedListEl = document.getElementById("dashboardClosedList");
   const discordLinkButtonEl = document.getElementById("dashboardDiscordLinkButton");
+  const detailPopupEl = document.getElementById("dashboardApplicationDetailPopup");
+  const detailPopupCloseEl = document.getElementById("dashboardApplicationPopupClose");
+  const detailPopupBodyEl = document.getElementById("dashboardApplicationPopupBody");
+  const detailPopupActionsEl = document.getElementById("dashboardApplicationPopupActions");
+  const detailPopupMessageEl = document.getElementById("dashboardApplicationPopupMessage");
+  const detailPopupTitleEl = document.getElementById("dashboardApplicationPopupTitle");
+
+  const closeDetailPopup = () => {
+    if (!detailPopupEl) {
+      return;
+    }
+    detailPopupEl.hidden = true;
+    document.body.classList.remove("modal-open");
+  };
+
+  const openDetailPopup = () => {
+    if (!detailPopupEl) {
+      return;
+    }
+    detailPopupEl.hidden = false;
+    document.body.classList.add("modal-open");
+  };
+
+  if (detailPopupCloseEl) {
+    detailPopupCloseEl.onclick = closeDetailPopup;
+  }
+
+  if (detailPopupEl) {
+    detailPopupEl.onclick = (event) => {
+      if (event.target === detailPopupEl) {
+        closeDetailPopup();
+      }
+    };
+  }
+
+  const renderApplicationPopup = (application, mode) => {
+    if (!detailPopupBodyEl || !detailPopupActionsEl || !detailPopupTitleEl) {
+      return;
+    }
+
+    const title = getDashboardApplicationTitle(application);
+    const status = getDashboardApplicationStatus(application);
+    const closed = isDashboardApplicationClosed(application);
+    const editable = mode === "edit" && !closed;
+
+    detailPopupTitleEl.textContent = editable ? `Edit ${title}` : `View ${title}`;
+    detailPopupBodyEl.innerHTML = "";
+    detailPopupActionsEl.innerHTML = "";
+
+    if (detailPopupMessageEl) {
+      detailPopupMessageEl.hidden = true;
+      detailPopupMessageEl.textContent = "";
+      detailPopupMessageEl.classList.remove("error", "success");
+    }
+
+    const summary = document.createElement("p");
+    summary.className = "dashboard-application-popup-summary";
+    summary.textContent = `Submitted on ${formatDashboardApplicationDate(application.createdAt)}. Status: ${status}.`;
+    detailPopupBodyEl.appendChild(summary);
+
+    if (closed) {
+      const decisionLine = document.createElement("p");
+      decisionLine.className = "dashboard-application-popup-summary";
+      decisionLine.textContent = `${status} on ${formatDashboardApplicationDate(application?.reviewedBy?.reviewedAt || application?.updatedAt)}.`;
+      detailPopupBodyEl.appendChild(decisionLine);
+    }
+
+    const responsesTitle = document.createElement("h4");
+    responsesTitle.textContent = "Application Answers";
+    detailPopupBodyEl.appendChild(responsesTitle);
+
+    const responses = Array.isArray(application.responses) ? application.responses : [];
+
+    if (!responses.length) {
+      const emptyResponses = document.createElement("p");
+      emptyResponses.textContent = "No saved answers found.";
+      detailPopupBodyEl.appendChild(emptyResponses);
+    } else if (editable) {
+      const editGrid = document.createElement("div");
+      editGrid.className = "dashboard-application-edit-grid";
+
+      responses.forEach((response, index) => {
+        const responseId = String(response?.id || `question-${index + 1}`).trim() || `question-${index + 1}`;
+        const responseLabel = String(response?.label || responseId || `Question ${index + 1}`).trim();
+        const responseAnswer = String(response?.answer || "");
+
+        const group = document.createElement("div");
+        group.className = "dashboard-application-edit-field";
+
+        const label = document.createElement("label");
+        label.textContent = responseLabel;
+        label.setAttribute("for", `dashboardAppEdit-${responseId}-${index}`);
+
+        const textarea = document.createElement("textarea");
+        textarea.id = `dashboardAppEdit-${responseId}-${index}`;
+        textarea.rows = Math.max(3, Math.min(8, Math.ceil((responseAnswer.length || 30) / 48)));
+        textarea.value = responseAnswer;
+        textarea.setAttribute("data-response-id", responseId);
+        textarea.setAttribute("data-response-label", responseLabel);
+
+        group.appendChild(label);
+        group.appendChild(textarea);
+        editGrid.appendChild(group);
+      });
+
+      detailPopupBodyEl.appendChild(editGrid);
+    } else {
+      const responsesList = document.createElement("ul");
+      responsesList.className = "dashboard-application-response-list";
+
+      responses.forEach((response, index) => {
+        const responseLabel = String(response?.label || response?.id || `Question ${index + 1}`).trim();
+        const responseAnswer = String(response?.answer || "").trim() || "No answer provided.";
+
+        const item = document.createElement("li");
+        const question = document.createElement("strong");
+        question.textContent = responseLabel;
+        const answer = document.createElement("p");
+        answer.textContent = responseAnswer;
+
+        item.appendChild(question);
+        item.appendChild(answer);
+        responsesList.appendChild(item);
+      });
+
+      detailPopupBodyEl.appendChild(responsesList);
+    }
+
+    const commentsTitle = document.createElement("h4");
+    commentsTitle.textContent = "Staff Comments";
+    detailPopupBodyEl.appendChild(commentsTitle);
+
+    const comments = Array.isArray(application.replies) ? application.replies : [];
+    if (!comments.length) {
+      const emptyComments = document.createElement("p");
+      emptyComments.textContent = "No staff comments yet.";
+      detailPopupBodyEl.appendChild(emptyComments);
+    } else {
+      const commentsList = document.createElement("ul");
+      commentsList.className = "dashboard-application-comment-list";
+      comments.forEach((reply) => {
+        const item = document.createElement("li");
+
+        const header = document.createElement("p");
+        header.className = "dashboard-application-comment-head";
+        const author = String(reply?.authorName || "Staff").trim() || "Staff";
+        const created = formatDashboardApplicationDate(reply?.createdAt);
+        header.textContent = `${author} - ${created}`;
+
+        const body = document.createElement("p");
+        body.textContent = String(reply?.message || "").trim() || "No comment text.";
+
+        item.appendChild(header);
+        item.appendChild(body);
+        commentsList.appendChild(item);
+      });
+      detailPopupBodyEl.appendChild(commentsList);
+    }
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.className = "btn btn-ghost";
+    closeButton.textContent = "Close";
+    closeButton.addEventListener("click", closeDetailPopup);
+    detailPopupActionsEl.appendChild(closeButton);
+
+    if (editable) {
+      const saveButton = document.createElement("button");
+      saveButton.type = "button";
+      saveButton.className = "btn btn-primary";
+      saveButton.textContent = "Save Changes";
+      saveButton.addEventListener("click", async () => {
+        const fields = Array.from(detailPopupBodyEl.querySelectorAll("textarea[data-response-id]"));
+        const nextResponses = fields.map((field) => ({
+          id: String(field.getAttribute("data-response-id") || "").trim(),
+          label: String(field.getAttribute("data-response-label") || "").trim(),
+          answer: String(field.value || "").trim(),
+        }));
+
+        const hasEmptyAnswer = nextResponses.some((entry) => !entry.answer);
+        if (hasEmptyAnswer) {
+          if (detailPopupMessageEl) {
+            detailPopupMessageEl.hidden = false;
+            detailPopupMessageEl.classList.remove("success");
+            detailPopupMessageEl.classList.add("error");
+            detailPopupMessageEl.textContent = "Please complete all answers before saving.";
+          }
+          return;
+        }
+
+        saveButton.disabled = true;
+        try {
+          const response = await fetch(`${apiBaseUrl}/my-applications/${application.id}`, {
+            method: "PATCH",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ responses: nextResponses }),
+          });
+
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            if (detailPopupMessageEl) {
+              detailPopupMessageEl.hidden = false;
+              detailPopupMessageEl.classList.remove("success");
+              detailPopupMessageEl.classList.add("error");
+              detailPopupMessageEl.textContent = payload.error || "Could not save your application right now.";
+            }
+            return;
+          }
+
+          if (detailPopupMessageEl) {
+            detailPopupMessageEl.hidden = false;
+            detailPopupMessageEl.classList.remove("error");
+            detailPopupMessageEl.classList.add("success");
+            detailPopupMessageEl.textContent = "Application answers updated.";
+          }
+
+          await initAccountDashboardPage();
+          closeDetailPopup();
+        } catch {
+          if (detailPopupMessageEl) {
+            detailPopupMessageEl.hidden = false;
+            detailPopupMessageEl.classList.remove("success");
+            detailPopupMessageEl.classList.add("error");
+            detailPopupMessageEl.textContent = "Could not save your application right now.";
+          }
+        } finally {
+          saveButton.disabled = false;
+        }
+      });
+      detailPopupActionsEl.appendChild(saveButton);
+    }
+
+    openDetailPopup();
+  };
 
   const state = readAccountState();
   const hasSteam = hasLinkedSteamAccount(state);
@@ -1965,8 +2285,13 @@ async function initAccountDashboardPage() {
       stateEl.textContent = "Application data is up to date.";
     }
 
-    renderDashboardApplicationList(pendingListEl, pendingApplications, "No pending applications.");
-    renderDashboardApplicationList(closedListEl, closedApplications, "No closed applications.");
+    renderDashboardApplicationList(pendingListEl, pendingApplications, "No pending applications.", {
+      onView: (application) => renderApplicationPopup(application, "view"),
+      onEdit: (application) => renderApplicationPopup(application, "edit"),
+    });
+    renderDashboardApplicationList(closedListEl, closedApplications, "No closed applications.", {
+      onView: (application) => renderApplicationPopup(application, "view"),
+    });
   } catch {
     if (stateEl) {
       stateEl.textContent = "";

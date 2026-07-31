@@ -2648,6 +2648,111 @@ body.popup-open {
   line-height: 1.45;
 }
 
+.dashboard-application-item {
+  list-style: disc;
+  margin-bottom: 0.6rem;
+}
+
+.dashboard-application-summary {
+  margin: 0;
+  color: #d8e2f2;
+}
+
+.dashboard-application-meta {
+  margin: 0.2rem 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.dashboard-application-actions {
+  display: flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.dashboard-application-actions .btn {
+  padding: 0.35rem 0.75rem;
+  min-height: 2rem;
+  font-size: 0.78rem;
+}
+
+.dashboard-application-popup-card {
+  width: min(780px, 94vw);
+  max-height: 86vh;
+  overflow: auto;
+}
+
+.dashboard-application-popup-body {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.dashboard-application-popup-summary {
+  margin: 0;
+  color: #ccd8ea;
+}
+
+.dashboard-application-popup-body h4 {
+  margin: 0.4rem 0 0;
+}
+
+.dashboard-application-response-list,
+.dashboard-application-comment-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.dashboard-application-response-list li,
+.dashboard-application-comment-list li {
+  line-height: 1.45;
+}
+
+.dashboard-application-response-list li p,
+.dashboard-application-comment-list li p {
+  margin: 0.2rem 0 0;
+  color: #c9d4e8;
+  white-space: pre-wrap;
+}
+
+.dashboard-application-comment-head {
+  color: #f0f5ff;
+  font-weight: 700;
+}
+
+.dashboard-application-edit-grid {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.dashboard-application-edit-field {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.dashboard-application-edit-field label {
+  color: #d5dff1;
+}
+
+.dashboard-application-edit-field textarea {
+  width: 100%;
+  resize: vertical;
+  border-radius: 0.65rem;
+  border: 1px solid rgba(122, 139, 168, 0.55);
+  background: rgba(10, 16, 26, 0.62);
+  color: #f4f8ff;
+  padding: 0.62rem 0.68rem;
+  font: inherit;
+}
+
+.dashboard-application-edit-field textarea:focus {
+  outline: none;
+  border-color: rgba(184, 207, 255, 0.82);
+  box-shadow: 0 0 0 1px rgba(184, 207, 255, 0.32);
+}
+
 .status-linked { color: var(--green); }
 .status-unlinked { color: #ffc7d3; }
 
