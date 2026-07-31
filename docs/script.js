@@ -60,7 +60,7 @@ const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const forceServerOffline = true;
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
 const adminDashboardUrl = "admin.html?v=20260730l";
-const adminDashboardScriptVersion = "v=20260730l";
+const adminDashboardScriptVersion = "v=20260731m1";
 const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:3000/api/discord/stats";
 const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
 const storeCartStorageKey = "bloodline-store-cart";
