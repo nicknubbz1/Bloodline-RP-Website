@@ -1989,6 +1989,12 @@ body.popup-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: transform 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.btn:disabled {
+  cursor: not-allowed;
 }
 
 .btn-primary {
@@ -2580,6 +2586,17 @@ body.popup-open {
 
 .account-dropdown-actions-column .btn {
   width: 100%;
+}
+
+.account-dropdown-actions-column .btn:not(:disabled):hover,
+.account-dropdown-actions-column .btn:not(:disabled):focus-visible {
+  border-color: rgba(255, 99, 99, 0.8);
+  background: rgba(255, 47, 47, 0.24);
+  box-shadow: 0 0 0 1px rgba(255, 72, 72, 0.26);
+}
+
+.account-dropdown-actions-column .btn:not(:disabled):active {
+  transform: translateY(1px);
 }
 
 .dashboard-grid {
