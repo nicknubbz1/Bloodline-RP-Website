@@ -1875,11 +1875,10 @@ async function initAccountDashboardPage() {
   const pendingListEl = document.getElementById("dashboardPendingList");
   const closedListEl = document.getElementById("dashboardClosedList");
   const discordLinkButtonEl = document.getElementById("dashboardDiscordLinkButton");
-  const discordLinkNoteEl = document.getElementById("dashboardDiscordLinkNote");
 
   const state = readAccountState();
   const hasSteam = hasLinkedSteamAccount(state);
-  const hasDiscord = Boolean(state.discordId || state.discordName);
+  const hasDiscord = Boolean(state.discordId || state.discordName || state.discordUsername);
   const subscription = readSubscriptionState();
 
   if (steamStatusEl) {
@@ -1902,14 +1901,6 @@ async function initAccountDashboardPage() {
       }
       openDiscordPopup();
     };
-  }
-
-  if (discordLinkNoteEl) {
-    discordLinkNoteEl.textContent = hasDiscord
-      ? "Discord linked. Allowlist and subscription roles can sync automatically."
-      : (hasSteam
-        ? "Link Discord here so allowlist and subscription roles can be applied automatically."
-        : "Sign in with Steam first, then link Discord to automate role syncing.");
   }
 
   if (subscriptionTierEl) {
