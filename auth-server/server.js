@@ -25,6 +25,23 @@ const discordClientSecret = process.env.DISCORD_CLIENT_SECRET;
 const discordGuildId = process.env.DISCORD_GUILD_ID || "";
 const discordBotToken = process.env.DISCORD_BOT_TOKEN || "";
 const discordInviteUrl = process.env.DISCORD_INVITE_URL || "";
+const discordAllowlistRoleId = process.env.DISCORD_ALLOWLIST_ROLE_ID || "";
+const discordSubscriptionRoleMap = (() => {
+  try {
+    const parsed = JSON.parse(process.env.DISCORD_SUBSCRIPTION_ROLE_MAP || "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .map(([key, value]) => [String(key || "").trim().toLowerCase(), String(value || "").trim()])
+        .filter(([key, value]) => key && value)
+    );
+  } catch {
+    return {};
+  }
+})();
 
 const steamEnabled = Boolean(steamApiKey);
 const discordEnabled = Boolean(discordClientId && discordClientSecret);
@@ -339,11 +356,65 @@ function getApplicationById(applications, id) {
   return applications.find((application) => application.id === id) || null;
 }
 
-function discordGet(pathname) {
+function normalizeTierKey(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isAllowlistApplication(application) {
+  const formKey = cleanText(application?.formKey || "", 80).toLowerCase();
+  const title = cleanText(application?.title || "", 120).toLowerCase();
+  return formKey === "allowlist-app" || title === "allowlist application";
+}
+
+function hasAcceptedAllowlistForSteamId(steamId) {
+  const normalizedSteamId = cleanText(steamId, 80);
+  if (!normalizedSteamId) {
+    return false;
+  }
+
+  const matchesAcceptedAllowlist = (application) => {
+    return String(application?.status || "").toLowerCase() === "accepted"
+      && isAllowlistApplication(application)
+      && String(application?.applicant?.steamId || "").trim() === normalizedSteamId;
+  };
+
+  const activeStore = readApplicationStore();
+  if (activeStore.applications.some(matchesAcceptedAllowlist)) {
+    return true;
+  }
+
+  const archivedStore = readArchivedApplicationStore();
+  return archivedStore.applications.some(matchesAcceptedAllowlist);
+}
+
+function getEntitledSubscriptionRoleIds(account) {
+  const steamId = cleanText(account?.steamId || "", 80);
+  const discordId = cleanText(account?.discordId || "", 80);
+  const subscriptions = readSubscriptionsStore();
+  const entitledRoleIds = new Set();
+
+  subscriptions.current.forEach((entry) => {
+    const entrySteamId = cleanText(entry?.steamId || "", 80);
+    const entryDiscordId = cleanText(entry?.discordId || "", 80);
+    const isMatch = (steamId && entrySteamId === steamId) || (discordId && entryDiscordId === discordId);
+    if (!isMatch) {
+      return;
+    }
+
+    const roleId = discordSubscriptionRoleMap[normalizeTierKey(entry?.tier)];
+    if (roleId) {
+      entitledRoleIds.add(roleId);
+    }
+  });
+
+  return entitledRoleIds;
+}
+
+function discordRequest(method, pathname, body) {
   return new Promise((resolve, reject) => {
     const request = https.request(
       {
-        method: "GET",
+        method,
         hostname: "discord.com",
         path: `/api/v10${pathname}`,
         headers: {
@@ -369,8 +440,23 @@ function discordGet(pathname) {
     );
 
     request.on("error", (error) => reject(error));
+    if (body !== undefined) {
+      request.write(JSON.stringify(body));
+    }
     request.end();
   });
+}
+
+function discordGet(pathname) {
+  return discordRequest("GET", pathname);
+}
+
+function discordPut(pathname) {
+  return discordRequest("PUT", pathname);
+}
+
+function discordDelete(pathname) {
+  return discordRequest("DELETE", pathname);
 }
 
 async function fetchDiscordMemberRoles(discordId) {
@@ -394,6 +480,63 @@ async function fetchDiscordMemberRoles(discordId) {
   }
 
   return payload.roles;
+}
+
+async function addDiscordRole(discordId, roleId) {
+  const response = await discordPut(`/guilds/${discordGuildId}/members/${discordId}/roles/${roleId}`);
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(`Discord role add failed (${response.statusCode}).`);
+  }
+}
+
+async function removeDiscordRole(discordId, roleId) {
+  const response = await discordDelete(`/guilds/${discordGuildId}/members/${discordId}/roles/${roleId}`);
+  if (response.statusCode === 404) {
+    return;
+  }
+  if (response.statusCode < 200 || response.statusCode >= 300) {
+    throw new Error(`Discord role remove failed (${response.statusCode}).`);
+  }
+}
+
+async function syncDiscordEntitlementRoles(account) {
+  const steamId = cleanText(account?.steamId || "", 80);
+  const discordId = cleanText(account?.discordId || "", 80);
+  if (!steamId || !discordId || !discordGuildId || !discordBotToken) {
+    return { skipped: true, added: [], removed: [] };
+  }
+
+  const currentRoles = await fetchDiscordMemberRoles(discordId);
+  const currentRoleSet = new Set(currentRoles);
+  const added = [];
+  const removed = [];
+
+  if (discordAllowlistRoleId && hasAcceptedAllowlistForSteamId(steamId) && !currentRoleSet.has(discordAllowlistRoleId)) {
+    await addDiscordRole(discordId, discordAllowlistRoleId);
+    currentRoleSet.add(discordAllowlistRoleId);
+    added.push(discordAllowlistRoleId);
+  }
+
+  const desiredSubscriptionRoleIds = getEntitledSubscriptionRoleIds(account);
+  const managedSubscriptionRoleIds = new Set(Object.values(discordSubscriptionRoleMap));
+
+  for (const roleId of managedSubscriptionRoleIds) {
+    if (currentRoleSet.has(roleId) && !desiredSubscriptionRoleIds.has(roleId)) {
+      await removeDiscordRole(discordId, roleId);
+      currentRoleSet.delete(roleId);
+      removed.push(roleId);
+    }
+  }
+
+  for (const roleId of desiredSubscriptionRoleIds) {
+    if (!currentRoleSet.has(roleId)) {
+      await addDiscordRole(discordId, roleId);
+      currentRoleSet.add(roleId);
+      added.push(roleId);
+    }
+  }
+
+  return { skipped: false, added, removed };
 }
 
 function buildFrontendUrl(page, params = {}) {
@@ -645,14 +788,33 @@ app.get("/auth/discord/callback", (req, res, next) => {
       discordRoles: user.discordRoles || [],
     };
 
-    res.redirect(buildFrontendUrl("auth-callback.html", {
-      provider: "discord",
-      status: "success",
-      discordId: user.discordId,
-      discordName: user.globalName,
-      discordUsername: user.username,
-      discordAvatar: user.avatar,
-    }));
+    syncDiscordEntitlementRoles(req.session.account)
+      .then(async () => {
+        try {
+          req.session.account.discordRoles = await fetchDiscordMemberRoles(user.discordId);
+        } catch {
+          req.session.account.discordRoles = user.discordRoles || [];
+        }
+
+        res.redirect(buildFrontendUrl("auth-callback.html", {
+          provider: "discord",
+          status: "success",
+          discordId: user.discordId,
+          discordName: user.globalName,
+          discordUsername: user.username,
+          discordAvatar: user.avatar,
+        }));
+      })
+      .catch(() => {
+        res.redirect(buildFrontendUrl("auth-callback.html", {
+          provider: "discord",
+          status: "success",
+          discordId: user.discordId,
+          discordName: user.globalName,
+          discordUsername: user.username,
+          discordAvatar: user.avatar,
+        }));
+      });
   })(req, res, next);
 });
 
@@ -1111,10 +1273,21 @@ app.post("/api/admin/applications/:id/decision", requireAdminSession, requireAdm
 
   writeApplicationStore(store);
 
-  res.json({
-    ok: true,
-    application,
-  });
+  const sendResponse = () => {
+    res.json({
+      ok: true,
+      application,
+    });
+  };
+
+  if (decision !== "accepted" || !isAllowlistApplication(application) || !application.applicant?.discordId) {
+    sendResponse();
+    return;
+  }
+
+  syncDiscordEntitlementRoles(application.applicant)
+    .then(sendResponse)
+    .catch(sendResponse);
 });
 
 app.post("/api/admin/applications/:id/archive", requireAdminSession, requireAdminPermission("applications"), (req, res) => {
@@ -1226,10 +1399,21 @@ app.post("/api/admin/subscriptions/gift", requireAdminSession, requireAdminPermi
   store.current.unshift(giftedSubscription);
   writeSubscriptionsStore(store);
 
-  res.status(201).json({
-    ok: true,
-    subscription: giftedSubscription,
-  });
+  const sendResponse = () => {
+    res.status(201).json({
+      ok: true,
+      subscription: giftedSubscription,
+    });
+  };
+
+  if (!giftedSubscription.discordId) {
+    sendResponse();
+    return;
+  }
+
+  syncDiscordEntitlementRoles(giftedSubscription)
+    .then(sendResponse)
+    .catch(sendResponse);
 });
 
 app.use((_req, res) => {

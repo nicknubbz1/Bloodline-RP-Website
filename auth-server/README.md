@@ -20,6 +20,8 @@ This server handles Steam OpenID, Discord OAuth, Discord live stats, application
    - `DISCORD_GUILD_ID`
    - `DISCORD_BOT_TOKEN`
    - `DISCORD_INVITE_URL`
+   - `DISCORD_ALLOWLIST_ROLE_ID`
+   - `DISCORD_SUBSCRIPTION_ROLE_MAP` (JSON object mapping subscription tier name to Discord role ID)
    - `SESSION_SECRET`
    - Optional: `MAIN_ADMIN_USERNAME` (default: `1234`)
    - Optional: `MAIN_ADMIN_PASSWORD` (default: `1234`)
@@ -37,6 +39,12 @@ This server handles Steam OpenID, Discord OAuth, Discord live stats, application
 - GitHub Pages can host the static website, but not this server
 - Deploy this auth server separately to a Node host
 - Update `auth-config.js` on the frontend to point to the deployed backend URL
+
+## Discord role automation
+- When a linked Discord user gets an accepted `allowlist-app`, the server can add the configured allowlist role automatically.
+- When a linked Discord user has an active subscription tier in the subscriptions store, the server can add the mapped subscription role automatically.
+- Automatic role sync runs after Discord linking, after allowlist acceptance, and after subscription gifting.
+- The bot must be in the Bloodline server and its role must sit above the allowlist/subscription roles it needs to manage.
 
 ## API endpoints
 - `GET /api/application-types`: return available application categories
