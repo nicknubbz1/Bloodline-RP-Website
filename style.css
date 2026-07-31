@@ -2244,7 +2244,7 @@ body.popup-open {
 .login-modal {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.72);
+  background: rgba(5, 8, 14, 0.72);
   display: none;
   align-items: center;
   justify-content: center;
@@ -2255,19 +2255,25 @@ body.popup-open {
 .login-modal.is-open { display: flex; }
 
 .login-modal-card {
-  width: min(460px, 94vw);
-  border: 1px solid var(--line-strong);
-  border-radius: 0.8rem;
-  background: linear-gradient(160deg, #1b2433, #151d29);
-  padding: 1rem;
+  width: min(480px, 94vw);
+  border: 1px solid rgba(102, 121, 154, 0.28);
+  border-radius: 1rem;
+  background:
+    linear-gradient(180deg, rgba(35, 46, 64, 0.95), rgba(20, 28, 40, 0.98)),
+    linear-gradient(160deg, #1b2433, #151d29);
+  padding: 1.25rem 1.25rem 1.1rem;
   position: relative;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .login-modal-card h2 {
-  margin: 0.5rem 0 0;
+  margin: 0.25rem 0 0;
   font-family: "Oxanium", sans-serif;
   text-transform: uppercase;
-  font-size: 2.1rem;
+  font-size: clamp(2rem, 5vw, 2.45rem);
+  line-height: 0.95;
 }
 
 .admin-dialog-card {
@@ -2316,27 +2322,52 @@ body.popup-open {
 
 .steam-login-mark {
   font-family: "Oxanium", sans-serif;
-  color: var(--green);
+  color: #ff3b3b;
   text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 800;
+  font-size: 0.82rem;
+  text-align: center;
 }
 
 .steam-login-copy,
-.steam-login-note { color: var(--muted); line-height: 1.55; }
+.steam-login-note {
+  color: #8c96aa;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.steam-login-copy {
+  text-align: center;
+  max-width: 30rem;
+  margin: 0.3rem auto 0;
+  font-size: 0.99rem;
+}
 
 .steam-login-button {
-  border: 1px solid var(--line-strong);
-  border-radius: 0.68rem;
-  background: rgba(255,255,255,0.04);
-  color: var(--text);
-  padding: 0.58rem 0.74rem;
+  width: 100%;
+  min-height: 3.05rem;
+  border: 1px solid rgba(86, 102, 126, 0.58);
+  border-radius: 0.78rem;
+  background: linear-gradient(180deg, rgba(34, 44, 58, 0.98), rgba(26, 33, 45, 0.98));
+  color: #f4f8ff;
+  padding: 0.65rem 1rem;
   font-family: "Oxanium", sans-serif;
   font-weight: 700;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.42rem;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  text-transform: uppercase;
 }
 
 .modal-close {
   position: absolute;
-  top: 0.6rem;
-  right: 0.6rem;
+  top: 0.45rem;
+  right: 0.55rem;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -2352,8 +2383,50 @@ body.popup-open {
 }
 
 .steam-login-button {
+  margin: 1.05rem 0 1rem;
+}
+
+.steam-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.steam-icon img,
+.steam-icon svg {
+  display: block;
   width: 100%;
-  margin: 0.7rem 0;
+  height: 100%;
+  object-fit: contain;
+  color: #eef5ff;
+}
+
+.steam-login-button-text {
+  display: inline-block;
+  transform: translateY(0.02em);
+}
+
+.steam-login-card {
+  width: min(472px, 92vw);
+  padding: 1rem 1.15rem 1.15rem;
+  clip-path: polygon(7% 0, 93% 0, 100% 7%, 100% 93%, 93% 100%, 7% 100%, 0 93%, 0 7%);
+}
+
+.steam-login-card .steam-login-copy {
+  margin-top: 0.4rem;
+}
+
+.steam-login-card .steam-login-note {
+  margin-top: 1rem;
+  font-size: 0.92rem;
+}
+
+.steam-login-card .login-modal-card h2 {
+  margin-top: 0.15rem;
 }
 
 .header-account-menu { position: relative; }

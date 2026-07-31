@@ -501,8 +501,10 @@ function ensureSteamLoginModal() {
       <h2 id="steamLoginTitle">Welcome Back</h2>
       <p class="steam-login-copy">Sign in with your Steam account to access your dashboard, manage applications, and connect Discord for your Bloodline identity.</p>
       <button class="steam-login-button" type="button">
-        <span class="steam-icon" aria-hidden="true">●</span>
-        <span>Login With Steam</span>
+        <span class="steam-icon" aria-hidden="true">
+          <img src="https://cdn.simpleicons.org/steam/ffffff" alt="" width="18" height="18" />
+        </span>
+        <span class="steam-login-button-text">Login With Steam</span>
       </button>
       <p class="steam-login-note">We only use Steam for authentication. We never access your games, inventory, or personal data.</p>
     </div>
