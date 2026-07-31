@@ -2428,6 +2428,11 @@ body.popup-open {
   font-size: 0.99rem;
 }
 
+.steam-login-warning {
+  color: #ff3b3b;
+  font-weight: 700;
+}
+
 .steam-login-button {
   width: 100%;
   min-height: 3.05rem;

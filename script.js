@@ -752,7 +752,7 @@ function ensureSteamLoginModal() {
       <button class="modal-close steam-modal-close" type="button" aria-label="Close login popup">X</button>
       <div class="steam-login-mark">Bloodline RP</div>
       <h2 id="steamLoginTitle" style="text-align: center;">Welcome Back</h2>
-      <p class="steam-login-copy">Sign in with your Steam account to access your dashboard, manage applications, and connect Discord for your Bloodline identity.</p>
+      <p class="steam-login-copy">Sign in with your Steam account to access your dashboard and manage applications. <span class="steam-login-warning">DO NOT forget to link your discord in the dashboard.</span></p>
       <button class="steam-login-button" type="button">
         <span class="steam-icon" aria-hidden="true">
           <img src="https://cdn.simpleicons.org/steam/ffffff" alt="" width="18" height="18" />
