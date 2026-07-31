@@ -1540,6 +1540,49 @@ app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("
     });
   }
 
+  const adminUsers = readAdminUsersStore().users || [];
+  const adminAvatarById = new Map();
+  const adminAvatarByUsername = new Map();
+  adminUsers.forEach((adminUser) => {
+    const avatar = normalizeAvatarValue(adminUser?.avatar || "");
+    if (!avatar) {
+      return;
+    }
+
+    const adminId = cleanText(adminUser?.id, 120);
+    if (adminId) {
+      adminAvatarById.set(adminId, avatar);
+    }
+
+    const username = cleanUsername(adminUser?.username || "").toLowerCase();
+    if (username) {
+      adminAvatarByUsername.set(username, avatar);
+    }
+  });
+
+  applications = applications.map((application) => {
+    const replies = Array.isArray(application?.replies) ? application.replies : [];
+    const nextReplies = replies.map((reply) => {
+      const existingAvatar = normalizeAvatarValue(reply?.authorAvatar || "");
+      const authorAdminId = cleanText(reply?.authorAdminId, 120);
+      const authorName = cleanUsername(reply?.authorName || "").toLowerCase();
+      const resolvedAvatar = existingAvatar
+        || (authorAdminId ? adminAvatarById.get(authorAdminId) : "")
+        || (authorName ? adminAvatarByUsername.get(authorName) : "")
+        || "";
+
+      return {
+        ...reply,
+        authorAvatar: resolvedAvatar,
+      };
+    });
+
+    return {
+      ...application,
+      replies: nextReplies,
+    };
+  });
+
   applications.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
 
   res.json({
@@ -1568,6 +1611,7 @@ app.post("/api/admin/applications/:id/replies", requireAdminSession, requireAdmi
     id: crypto.randomUUID(),
     authorAdminId: req.adminUser.id,
     authorName: req.adminUser.username,
+    authorAvatar: normalizeAvatarValue(req.adminUser.avatar || ""),
     message,
     createdAt: nowIso(),
   };

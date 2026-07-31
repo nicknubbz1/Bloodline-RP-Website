@@ -1012,10 +1012,14 @@
     return replies.map(function (reply) {
       const authorName = String(reply?.authorName || "Staff").trim() || "Staff";
       const authorInitial = authorName.slice(0, 1).toUpperCase();
+      const authorAvatar = String(reply?.authorAvatar || "").trim();
+      const avatarMarkup = authorAvatar
+        ? `<img src="${escapeHtml(authorAvatar)}" alt="" loading="lazy" />`
+        : escapeHtml(authorInitial);
       const message = String(reply?.message || "").trim() || "No comment.";
       return `
         <li class="dashboard-application-comment-item">
-          <span class="dashboard-application-comment-avatar">${escapeHtml(authorInitial)}</span>
+          <span class="dashboard-application-comment-avatar">${avatarMarkup}</span>
           <div class="dashboard-application-comment-content">
             <div class="dashboard-application-comment-head">
               <span class="dashboard-application-comment-author">${escapeHtml(authorName)}</span>
