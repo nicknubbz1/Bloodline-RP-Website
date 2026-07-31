@@ -560,22 +560,34 @@ function discordDelete(pathname) {
   return discordRequest("DELETE", pathname);
 }
 
-async function fetchDiscordMemberRoles(discordId) {
+async function fetchDiscordGuildMember(discordId) {
   if (!discordGuildId || !discordBotToken || !discordId) {
-    return [];
+    return null;
   }
 
   const response = await discordGet(`/guilds/${discordGuildId}/members/${discordId}`);
 
   if (response.statusCode === 404) {
-    return [];
+    return null;
   }
 
   if (response.statusCode < 200 || response.statusCode >= 300) {
     throw new Error(`Discord role check failed (${response.statusCode}).`);
   }
 
-  const payload = JSON.parse(response.body || "{}");
+  return JSON.parse(response.body || "{}");
+}
+
+async function fetchDiscordMemberRoles(discordId) {
+  if (!discordGuildId || !discordBotToken || !discordId) {
+    return [];
+  }
+
+  const payload = await fetchDiscordGuildMember(discordId);
+  if (!payload) {
+    return [];
+  }
+
   if (!Array.isArray(payload.roles)) {
     return [];
   }
@@ -770,6 +782,16 @@ if (discordEnabled) {
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        if (discordGuildId && discordBotToken) {
+          const guildMember = await fetchDiscordGuildMember(profile.id);
+          if (!guildMember) {
+            done(null, false, {
+              message: "Join the Bloodline Discord server before linking your Discord account.",
+            });
+            return;
+          }
+        }
+
         const roles = await fetchDiscordMemberRoles(profile.id);
         const user = {
           provider: "discord",
@@ -914,9 +936,17 @@ app.get("/auth/discord/callback", (req, res, next) => {
     return;
   }
 
-  passport.authenticate("discord", (error, user) => {
-    if (error || !user) {
+  passport.authenticate("discord", (error, user, info) => {
+    if (error) {
       redirectAuthError(res, "discord", "Discord authentication failed.");
+      return;
+    }
+
+    if (!user) {
+      const fallbackMessage = "Discord authentication failed.";
+      const joinMessage = "Join the Bloodline Discord server before linking your Discord account.";
+      const message = cleanText(info?.message || "", 240) || fallbackMessage;
+      redirectAuthError(res, "discord", message.includes("Join the Bloodline Discord server") ? joinMessage : message);
       return;
     }
 
