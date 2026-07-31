@@ -459,6 +459,14 @@ function ensureLatestAdminDashboardScript() {
 ensureLatestAdminDashboardScript();
 
 function openAuthPopup(url, popupName) {
+  const hostname = window.location.hostname;
+  const isLocalPage = hostname === "localhost" || hostname === "127.0.0.1";
+  const isLocalAuthUrl = typeof url === "string" && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//i.test(url);
+  if (!isLocalPage && isLocalAuthUrl) {
+    window.alert("Steam login is not configured for the live site yet. Set BLOODLINE_BACKEND_ORIGIN to your deployed auth server URL.");
+    return;
+  }
+
   const popupWidth = 520;
   const popupHeight = 760;
   const left = window.screenX + Math.max(0, (window.outerWidth - popupWidth) / 2);

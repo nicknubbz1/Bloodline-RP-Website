@@ -1,4 +1,6 @@
-const bloodlineBackendOrigin = window.BLOODLINE_BACKEND_ORIGIN || "http://localhost:3000";
+const isLocalBloodlineHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+const defaultBloodlineBackendOrigin = isLocalBloodlineHost ? "http://localhost:3000" : window.location.origin;
+const bloodlineBackendOrigin = window.BLOODLINE_BACKEND_ORIGIN || defaultBloodlineBackendOrigin;
 
 window.BLOODLINE_STEAM_AUTH_URL = window.BLOODLINE_STEAM_AUTH_URL || `${bloodlineBackendOrigin}/auth/steam`;
 window.BLOODLINE_DISCORD_AUTH_URL = window.BLOODLINE_DISCORD_AUTH_URL || `${bloodlineBackendOrigin}/auth/discord`;
@@ -15,5 +17,5 @@ window.BLOODLINE_PAYPAL_CHECKOUT_URL = window.BLOODLINE_PAYPAL_CHECKOUT_URL || "
 window.BLOODLINE_CASHAPP_CHECKOUT_URL = window.BLOODLINE_CASHAPP_CHECKOUT_URL || "";
 window.BLOODLINE_SERVER_STATUS_URL = window.BLOODLINE_SERVER_STATUS_URL || "";
 window.BLOODLINE_QUEUE_JOIN_URL = window.BLOODLINE_QUEUE_JOIN_URL || "";
-window.BLOODLINE_DISCORD_STATS_URL = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:3000/api/discord/stats";
+window.BLOODLINE_DISCORD_STATS_URL = window.BLOODLINE_DISCORD_STATS_URL || `${bloodlineBackendOrigin}/api/discord/stats`;
 window.BLOODLINE_DISCORD_INVITE_URL = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
