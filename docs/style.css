@@ -2416,6 +2416,11 @@ body.popup-open {
   clip-path: polygon(7% 0, 93% 0, 100% 7%, 100% 93%, 93% 100%, 7% 100%, 0 93%, 0 7%);
 }
 
+.steam-login-card .modal-close {
+  top: 0.72rem;
+  right: 1.2rem;
+}
+
 .steam-login-card .steam-login-copy {
   margin-top: 0.4rem;
 }
