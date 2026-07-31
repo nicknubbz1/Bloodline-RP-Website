@@ -67,7 +67,6 @@
     giftCandidates: [],
     settings: { maintenanceMode: false },
     source: "active",
-    expandedApplications: {},
     applicationLoadError: "",
     applicationLoadNotice: "",
     localMode: false,
@@ -75,6 +74,7 @@
   };
 
   let adminDialogModal = null;
+  let applicationPopupModal = null;
 
   function ensureAdminDialogModal() {
     if (adminDialogModal) {
@@ -302,6 +302,190 @@
       errorText: promptOptions.errorText || "",
       validatePrompt: typeof promptOptions.validatePrompt === "function" ? promptOptions.validatePrompt : null,
     });
+  }
+
+  function getApplicationByIdFromState(applicationId) {
+    const normalizedId = String(applicationId || "").trim();
+    if (!normalizedId) {
+      return null;
+    }
+    return state.applications.find(function (entry) {
+      return String(entry?.id || "") === normalizedId;
+    }) || null;
+  }
+
+  function ensureApplicationPopupModal() {
+    if (applicationPopupModal) {
+      return applicationPopupModal;
+    }
+
+    applicationPopupModal = document.createElement("div");
+    applicationPopupModal.className = "login-modal";
+    applicationPopupModal.setAttribute("aria-hidden", "true");
+    applicationPopupModal.innerHTML = `
+      <div class="login-modal-card dashboard-application-popup-card" role="dialog" aria-modal="true" aria-labelledby="adminApplicationPopupTitle">
+        <button class="modal-close" type="button" data-popup-close aria-label="Close application popup">X</button>
+        <h2 id="adminApplicationPopupTitle">View Application</h2>
+        <p class="admin-empty" data-popup-message hidden></p>
+        <div class="dashboard-application-popup-body" data-popup-body></div>
+        <div class="admin-inline-controls" data-popup-actions></div>
+      </div>
+    `;
+
+    document.body.appendChild(applicationPopupModal);
+
+    const closeButton = applicationPopupModal.querySelector("[data-popup-close]");
+    if (closeButton) {
+      closeButton.addEventListener("click", closeApplicationPopupModal);
+    }
+
+    applicationPopupModal.addEventListener("click", function (event) {
+      if (event.target === applicationPopupModal) {
+        closeApplicationPopupModal();
+      }
+    });
+
+    const actionsEl = applicationPopupModal.querySelector("[data-popup-actions]");
+    if (actionsEl) {
+      actionsEl.addEventListener("click", async function (event) {
+        const button = event.target.closest("button[data-action]");
+        if (!button) {
+          return;
+        }
+
+        const action = button.getAttribute("data-action") || "";
+        const appId = button.getAttribute("data-application-id") || "";
+        if (!appId) {
+          return;
+        }
+
+        try {
+          if (action === "accept" || action === "deny") {
+            await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/decision`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ decision: action === "accept" ? "accepted" : "denied", note: "" }),
+            });
+            await loadApplications();
+            closeApplicationPopupModal();
+            return;
+          }
+
+          if (action === "grant-allowlist") {
+            await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/grant-allowlist-role`, {
+              method: "POST",
+            });
+            await loadApplications();
+            openApplicationPopupModal(appId);
+            return;
+          }
+
+          if (action === "delete") {
+            if (!(await showConfirm("Delete this archived application permanently?", "Delete Application", "Delete"))) {
+              return;
+            }
+            await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}`, {
+              method: "DELETE",
+            });
+            await loadApplications();
+            closeApplicationPopupModal();
+            return;
+          }
+        } catch (error) {
+          await showAlert(error.message || "Could not update application.", "Error");
+        }
+      });
+    }
+
+    return applicationPopupModal;
+  }
+
+  function closeApplicationPopupModal() {
+    if (!applicationPopupModal) {
+      return;
+    }
+    applicationPopupModal.classList.remove("is-open");
+    applicationPopupModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
+  }
+
+  function openApplicationPopupModal(applicationId) {
+    const modal = ensureApplicationPopupModal();
+    const app = getApplicationByIdFromState(applicationId);
+    const titleEl = modal.querySelector("#adminApplicationPopupTitle");
+    const bodyEl = modal.querySelector("[data-popup-body]");
+    const actionsEl = modal.querySelector("[data-popup-actions]");
+    const messageEl = modal.querySelector("[data-popup-message]");
+
+    if (!titleEl || !bodyEl || !actionsEl || !messageEl) {
+      return;
+    }
+
+    if (!app) {
+      closeApplicationPopupModal();
+      return;
+    }
+
+    const appSource = app && app._storeSource === "archived" ? "archived" : "active";
+    const appStatus = normalizeApplicationStatus(app?.status);
+    const statusClass = getStatusClassName(appStatus);
+    const isClosed = appStatus === "accepted" || appStatus === "denied";
+    const reviewedOn = formatDate(app?.reviewedBy?.reviewedAt || app?.updatedAt);
+    const title = String(app?.title || app?.type || "Application");
+
+    titleEl.textContent = `View ${title}`;
+    messageEl.hidden = true;
+    messageEl.textContent = "";
+
+    bodyEl.innerHTML = `
+      <p class="dashboard-application-popup-summary">Submitted on ${escapeHtml(formatDate(app.createdAt))}. Status: <span class="dashboard-application-detail-value ${statusClass}">${escapeHtml(appStatus)}</span>.</p>
+      ${isClosed ? `<p class="dashboard-application-popup-summary">${escapeHtml(appStatus)} on ${escapeHtml(reviewedOn)}.</p>` : ""}
+      <h4>Application Answers</h4>
+      ${renderApplicationResponses(app)}
+      <section class="dashboard-application-comments-section">
+        <h4>Staff Comments</h4>
+        <ul class="dashboard-application-comment-list">${renderApplicationReplies(app)}</ul>
+        <div class="admin-inline-controls admin-comment-form-row">
+          <textarea class="admin-comment-input" data-popup-comment-input rows="3" placeholder="Leave a staff comment..."></textarea>
+          <button class="btn btn-ghost" data-action="comment" data-application-id="${escapeHtml(app.id)}" type="button">Post Comment</button>
+        </div>
+      </section>
+    `;
+
+    const commentButton = bodyEl.querySelector("button[data-action='comment']");
+    if (commentButton) {
+      commentButton.addEventListener("click", async function () {
+        const input = bodyEl.querySelector("[data-popup-comment-input]");
+        const message = input ? String(input.value || "").trim() : "";
+        if (!message) {
+          await showAlert("Comment message is required.", "Comment Required");
+          return;
+        }
+
+        try {
+          await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(app.id)}/replies`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ message }),
+          });
+          await loadApplications();
+          openApplicationPopupModal(app.id);
+        } catch (error) {
+          await showAlert(error.message || "Could not post comment.", "Error");
+        }
+      });
+    }
+
+    const allowlistAction = isAllowlistApplication(app)
+      ? `<button class="btn btn-ghost" data-action="grant-allowlist" data-application-id="${escapeHtml(app.id)}" type="button">Grant Allowlist Role</button>`
+      : "";
+    actionsEl.innerHTML = appSource === "active"
+      ? `<button class="btn btn-ghost" data-action="accept" data-application-id="${escapeHtml(app.id)}" type="button">Accept</button><button class="btn btn-danger" data-action="deny" data-application-id="${escapeHtml(app.id)}" type="button">Deny</button>${allowlistAction}`
+      : `<button class="btn btn-danger" data-action="delete" data-application-id="${escapeHtml(app.id)}" type="button">Delete</button>`;
+
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
   }
 
   function readStoredJson(storage, key, fallbackValue) {
@@ -972,23 +1156,13 @@
     }
 
     const cards = state.applications.map(function (app) {
-        const appSource = app && app._storeSource === "archived" ? "archived" : "active";
         const appStatus = normalizeApplicationStatus(app?.status);
         const statusClass = getStatusClassName(appStatus);
         const appTypeLabel = String(app?.title || app?.type || "Application");
         const steamName = String(app?.applicant?.steamName || "").trim() || "Unknown Steam User";
         const discordName = String(app?.applicant?.discordName || app?.applicant?.discordUsername || "").trim() || "Unknown Discord User";
-        const isExpanded = Boolean(state.expandedApplications[app.id]);
-        const isClosed = appStatus === "accepted" || appStatus === "denied";
-        const reviewedOn = formatDate(app?.reviewedBy?.reviewedAt || app?.updatedAt);
-        const allowlistAction = isAllowlistApplication(app)
-          ? '<button class="btn btn-ghost" data-action="grant-allowlist" type="button">Grant Allowlist Role</button>'
-          : "";
-        const moderationActions = appSource === "active"
-          ? `<div class="admin-inline-controls admin-application-moderation-controls"><button class="btn btn-ghost" data-action="accept" type="button">Accept</button><button class="btn btn-danger" data-action="deny" type="button">Deny</button>${allowlistAction}</div>`
-          : '<div class="admin-inline-controls admin-application-moderation-controls"><button class="btn btn-danger" data-action="delete" type="button">Delete</button></div>';
         return `
-        <article class="admin-application-card" data-application-id="${app.id}" data-application-source="${appSource}">
+        <article class="admin-application-card" data-application-id="${app.id}">
           <header class="admin-application-head">
             <h3>${escapeHtml(appTypeLabel)}</h3>
             <span class="admin-application-status-text dashboard-application-detail-value ${statusClass}">${escapeHtml(appStatus)}</span>
@@ -997,23 +1171,8 @@
           <p><strong>Discord name:</strong> ${escapeHtml(discordName)}</p>
           <p><strong>Submitted:</strong> ${escapeHtml(formatDate(app.createdAt))}</p>
           <div class="admin-inline-controls admin-application-primary-controls">
-            <button class="btn btn-ghost" data-action="toggle-view" type="button">${isExpanded ? "Hide" : "View"}</button>
+            <button class="btn btn-ghost" data-action="view" type="button">View</button>
           </div>
-          <section class="admin-application-view" ${isExpanded ? "" : "hidden"}>
-            <p class="dashboard-application-popup-summary">Submitted on ${escapeHtml(formatDate(app.createdAt))}. Status: ${escapeHtml(appStatus)}.</p>
-            ${isClosed ? `<p class="dashboard-application-popup-summary">${escapeHtml(appStatus)} on ${escapeHtml(reviewedOn)}.</p>` : ""}
-            <h4>Application Answers</h4>
-            ${renderApplicationResponses(app)}
-            <section class="dashboard-application-comments-section">
-              <h4>Staff Comments</h4>
-              <ul class="dashboard-application-comment-list">${renderApplicationReplies(app)}</ul>
-              <div class="admin-inline-controls admin-comment-form-row">
-                <textarea class="admin-comment-input" data-comment-input rows="2" placeholder="Leave a staff comment..."></textarea>
-                <button class="btn btn-ghost" data-action="comment" type="button">Post Comment</button>
-              </div>
-            </section>
-            ${moderationActions}
-          </section>
         </article>
       `;
       }).join("");
@@ -1933,53 +2092,9 @@
       const appId = card.getAttribute("data-application-id");
       const action = button.getAttribute("data-action");
 
-      if (action === "toggle-view") {
-        state.expandedApplications[appId] = !state.expandedApplications[appId];
-        renderApplications();
+      if (action === "view") {
+        openApplicationPopupModal(appId);
         return;
-      }
-
-      if (!hasPermission("applications")) {
-        await showAlert("You do not have Applications moderation permission.", "Access Denied");
-        return;
-      }
-
-      try {
-        if (action === "accept" || action === "deny") {
-          await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/decision`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ decision: action === "accept" ? "accepted" : "denied", note: "" }),
-          });
-        } else if (action === "comment") {
-          const input = card.querySelector("[data-comment-input]");
-          const message = input ? String(input.value || "").trim() : "";
-          if (!message) {
-            await showAlert("Comment message is required.", "Comment Required");
-            return;
-          }
-          await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/replies`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message }),
-          });
-        } else if (action === "grant-allowlist") {
-          await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/grant-allowlist-role`, {
-            method: "POST",
-          });
-          await showAlert("Allowlist role granted successfully.", "Success");
-        } else if (action === "delete") {
-          if (!(await showConfirm("Delete this archived application permanently?", "Delete Application", "Delete"))) {
-            return;
-          }
-          await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}`, {
-            method: "DELETE",
-          });
-        }
-
-        await loadApplications();
-      } catch (error) {
-        await showAlert(error.message || "Could not update application.", "Error");
       }
     });
   }
