@@ -504,7 +504,12 @@
   }
 
   function writeStoredJson(storage, key, value) {
-    storage.setItem(key, JSON.stringify(value));
+    try {
+      storage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   function buildAdminAvatarCacheKeys(adminRef, usernameFallback) {
@@ -1803,8 +1808,8 @@
           ...(state.admin || {}),
           avatar: croppedAvatar,
         };
-        persistAdminAvatar(state.admin, croppedAvatar);
         renderAdminMeta();
+        persistAdminAvatar(state.admin, croppedAvatar);
 
         if (state.localMode) {
           const updated = updateLocalAdminUser(state.admin.id, function (entry) {
@@ -1817,8 +1822,8 @@
             ...state.admin,
             avatar: croppedAvatar,
           };
-          persistAdminAvatar(state.admin, croppedAvatar);
           renderAdminMeta();
+          persistAdminAvatar(state.admin, croppedAvatar);
           await showAlert(updated ? "Profile picture updated." : "Profile picture could not be saved locally.", "Success");
           return;
         }
