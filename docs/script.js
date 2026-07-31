@@ -1071,6 +1071,79 @@ function getAccountLogoutButtons() {
   return document.querySelectorAll('[data-auth-action="logout"]');
 }
 
+function getInitialsFromName(name) {
+  const value = String(name || "").trim();
+  if (!value) {
+    return "ST";
+  }
+
+  const parts = value.split(/\s+/).filter(Boolean);
+  const initials = parts.slice(0, 2).map((part) => part.charAt(0).toUpperCase()).join("");
+  return initials || value.slice(0, 2).toUpperCase();
+}
+
+function renderHeaderAccountTrigger(state) {
+  const hasSteam = Boolean(state.steamId || state.steamName);
+
+  loginTriggers.forEach((trigger) => {
+    if (!trigger.dataset.defaultMarkup) {
+      trigger.dataset.defaultMarkup = trigger.innerHTML;
+    }
+
+    if (!hasSteam) {
+      trigger.classList.remove("account-chip-trigger");
+      trigger.removeAttribute("data-logged-in");
+      trigger.setAttribute("aria-label", "Login with Steam");
+      trigger.innerHTML = trigger.dataset.defaultMarkup || trigger.innerHTML;
+      return;
+    }
+
+    const displayName = String(state.steamName || "Steam User").trim() || "Steam User";
+    const displayId = String(state.steamId || "Connected").trim() || "Connected";
+    const avatarUrl = String(state.steamAvatar || "").trim();
+
+    trigger.classList.add("account-chip-trigger");
+    trigger.setAttribute("data-logged-in", "true");
+    trigger.setAttribute("aria-label", "Open account menu");
+
+    const avatarEl = document.createElement("span");
+    avatarEl.className = "account-chip-avatar";
+
+    if (avatarUrl) {
+      const imageEl = document.createElement("img");
+      imageEl.src = avatarUrl;
+      imageEl.alt = "";
+      imageEl.loading = "lazy";
+      avatarEl.appendChild(imageEl);
+    } else {
+      const fallbackEl = document.createElement("span");
+      fallbackEl.className = "account-chip-avatar-fallback";
+      fallbackEl.textContent = getInitialsFromName(displayName);
+      avatarEl.appendChild(fallbackEl);
+    }
+
+    const metaEl = document.createElement("span");
+    metaEl.className = "account-chip-meta";
+
+    const nameEl = document.createElement("span");
+    nameEl.className = "account-chip-name";
+    nameEl.textContent = displayName;
+
+    const idEl = document.createElement("span");
+    idEl.className = "account-chip-id";
+    idEl.textContent = displayId;
+
+    metaEl.appendChild(nameEl);
+    metaEl.appendChild(idEl);
+
+    const caretEl = document.createElement("span");
+    caretEl.className = "account-chip-caret";
+    caretEl.setAttribute("aria-hidden", "true");
+
+    trigger.replaceChildren(avatarEl, metaEl, caretEl);
+  });
+}
+
 async function logoutAccount() {
   try {
     await fetch(authLogoutUrl, {
@@ -1091,8 +1164,10 @@ function renderAccountState() {
   const state = readAccountState();
   const steamName = state.steamName || "Awaiting Steam Login";
   const discordName = state.discordName || "Not Connected";
-  const hasSteam = Boolean(state.steamName);
+  const hasSteam = Boolean(state.steamId || state.steamName);
   const hasDiscord = Boolean(state.discordName);
+
+  renderHeaderAccountTrigger(state);
 
   if (discordButton) {
     discordButton.disabled = !hasSteam;
