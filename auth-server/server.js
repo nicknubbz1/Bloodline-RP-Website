@@ -75,6 +75,7 @@ const archivedApplicationStorePath = path.join(__dirname, "data", "applications-
 const adminUsersStorePath = path.join(__dirname, "data", "admin-users.json");
 const adminSettingsStorePath = path.join(__dirname, "data", "admin-settings.json");
 const subscriptionsStorePath = path.join(__dirname, "data", "subscriptions.json");
+const accountLinksStorePath = path.join(__dirname, "data", "account-links.json");
 const defaultMainAdminUsername = process.env.MAIN_ADMIN_USERNAME || "1234";
 const defaultMainAdminPassword = process.env.MAIN_ADMIN_PASSWORD || "1234";
 const adminSessionDays = Number(process.env.ADMIN_SESSION_DAYS || 30);
@@ -447,6 +448,106 @@ function writeSubscriptionsStore(nextStore) {
     current: Array.isArray(nextStore.current) ? nextStore.current : [],
     ended: Array.isArray(nextStore.ended) ? nextStore.ended : [],
   });
+}
+
+function readAccountLinksStore() {
+  const store = readJsonFile(accountLinksStorePath, {
+    links: [],
+  });
+  return {
+    links: Array.isArray(store.links) ? store.links : [],
+  };
+}
+
+function writeAccountLinksStore(nextStore) {
+  writeJsonFile(accountLinksStorePath, {
+    links: Array.isArray(nextStore.links) ? nextStore.links : [],
+  });
+}
+
+function normalizeAccountLink(entry) {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const steamId = cleanText(entry.steamId || "", 80);
+  const discordId = cleanText(entry.discordId || "", 80);
+  if (!steamId || !discordId) {
+    return null;
+  }
+
+  return {
+    steamId,
+    discordId,
+    discordName: cleanText(entry.discordName || "", 120),
+    discordUsername: cleanText(entry.discordUsername || "", 120),
+    discordAvatar: cleanText(entry.discordAvatar || "", 500),
+    updatedAt: entry.updatedAt || nowIso(),
+  };
+}
+
+function findAccountLinkBySteamId(steamId) {
+  const normalizedSteamId = cleanText(steamId || "", 80);
+  if (!normalizedSteamId) {
+    return null;
+  }
+
+  const store = readAccountLinksStore();
+  for (const entry of store.links) {
+    const normalizedEntry = normalizeAccountLink(entry);
+    if (normalizedEntry && normalizedEntry.steamId === normalizedSteamId) {
+      return normalizedEntry;
+    }
+  }
+
+  return null;
+}
+
+function upsertAccountLinkFromAccount(account) {
+  const normalized = normalizeAccountLink(account);
+  if (!normalized) {
+    return null;
+  }
+
+  const store = readAccountLinksStore();
+  const nextLinks = store.links
+    .map((entry) => normalizeAccountLink(entry))
+    .filter(Boolean)
+    .filter((entry) => entry.steamId !== normalized.steamId && entry.discordId !== normalized.discordId);
+
+  nextLinks.unshift({
+    ...normalized,
+    updatedAt: nowIso(),
+  });
+
+  writeAccountLinksStore({ links: nextLinks });
+  return normalized;
+}
+
+function hydrateSessionAccountFromLink(req) {
+  const sessionAccount = req?.session?.account;
+  if (!sessionAccount?.steamId) {
+    return false;
+  }
+
+  if (sessionAccount.discordId) {
+    return false;
+  }
+
+  const linked = findAccountLinkBySteamId(sessionAccount.steamId);
+  if (!linked) {
+    return false;
+  }
+
+  req.session.account = {
+    ...sessionAccount,
+    discordId: linked.discordId,
+    discordName: linked.discordName,
+    discordUsername: linked.discordUsername,
+    discordAvatar: linked.discordAvatar,
+  };
+  applyAccountSessionLifetime(req);
+  return true;
 }
 
 function ensureAdminBootstrapUser() {
@@ -851,10 +952,13 @@ function requireSteamSession(req, res, next) {
     redirectAuthError(res, "discord", "Steam login is required before Discord can be linked.");
     return;
   }
+
+  hydrateSessionAccountFromLink(req);
   next();
 }
 
 function requireLinkedAccount(req, res, next) {
+  hydrateSessionAccountFromLink(req);
   const account = req.session.account;
   if (!account?.steamId || !account?.discordId) {
     res.status(401).json({ error: "Steam and Discord must both be linked to continue." });
@@ -1027,6 +1131,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.get("/auth/session", (req, res) => {
+  hydrateSessionAccountFromLink(req);
   const account = req.session.account || null;
   if (account) {
     applyAccountSessionLifetime(req);
@@ -1086,6 +1191,7 @@ app.get("/auth/steam/return", (req, res, next) => {
         steamAvatar: user.avatar,
       };
       applyAccountSessionLifetime(req);
+      upsertAccountLinkFromAccount(req.session.account);
       saveSession(req)
         .then(() => {
           res.redirect(buildFrontendUrl("auth-callback.html", {
@@ -1124,6 +1230,7 @@ app.get("/auth/steam/return", (req, res, next) => {
         steamAvatar: user.avatar,
       };
       applyAccountSessionLifetime(req);
+      upsertAccountLinkFromAccount(req.session.account);
       saveSession(req)
         .then(() => {
           res.redirect(buildFrontendUrl("auth-callback.html", {
@@ -1178,6 +1285,7 @@ app.get("/auth/discord/callback", requireSteamSession, (req, res, next) => {
       discordRoles: user.discordRoles || [],
     };
     applyAccountSessionLifetime(req);
+    upsertAccountLinkFromAccount(req.session.account);
 
     const finalizeDiscordSuccess = () => {
       saveSession(req)
@@ -2079,6 +2187,9 @@ ensureJsonFile(archivedApplicationStorePath, { applications: [] });
 ensureJsonFile(subscriptionsStorePath, {
   current: [],
   ended: [],
+});
+ensureJsonFile(accountLinksStorePath, {
+  links: [],
 });
 ensureJsonFile(adminSettingsStorePath, {
   maintenanceMode: false,
