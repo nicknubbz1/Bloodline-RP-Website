@@ -19,6 +19,14 @@ const frontendBaseUrls = (process.env.FRONTEND_BASE_URLS || "")
   .map((entry) => entry.trim())
   .filter(Boolean);
 const sessionSecret = process.env.SESSION_SECRET || "change-me-in-production";
+const runtimeIsSecure = backendBaseUrl.startsWith("https://") || process.env.NODE_ENV === "production";
+const requestedSessionSameSite = (process.env.SESSION_COOKIE_SAME_SITE || (runtimeIsSecure ? "none" : "lax")).toLowerCase();
+const sessionCookieSameSite = ["lax", "strict", "none"].includes(requestedSessionSameSite)
+  ? requestedSessionSameSite
+  : (runtimeIsSecure ? "none" : "lax");
+const sessionCookieSecure = process.env.SESSION_COOKIE_SECURE
+  ? String(process.env.SESSION_COOKIE_SECURE).toLowerCase() === "true"
+  : runtimeIsSecure;
 const steamApiKey = process.env.STEAM_API_KEY;
 const discordClientId = process.env.DISCORD_CLIENT_ID;
 const discordClientSecret = process.env.DISCORD_CLIENT_SECRET;
@@ -742,8 +750,8 @@ app.use(session({
   saveUninitialized: false,
   cookie: {
     httpOnly: true,
-    sameSite: "lax",
-    secure: false,
+    sameSite: sessionCookieSameSite,
+    secure: sessionCookieSecure,
     maxAge: 1000 * 60 * 60 * 24 * 7,
   },
 }));
