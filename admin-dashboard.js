@@ -27,6 +27,7 @@
   const localAdminSessionKey = "bloodline-local-admin-session";
   const localAdminSessionTempKey = "bloodline-local-admin-session-temp";
   const adminAuthStorageKey = "bloodline-admin-auth";
+  const adminAvatarCacheKey = "bloodline-admin-avatar-cache";
   const adminApiTokenStorageKey = "bloodline-admin-api-token";
   const localAdminSettingsKey = "bloodline-local-admin-settings";
   const localSubscriptionsKey = "bloodline-local-subscriptions";
@@ -517,6 +518,40 @@
 
   function writeStoredJson(storage, key, value) {
     storage.setItem(key, JSON.stringify(value));
+  }
+
+  function getCachedAdminAvatar(adminId) {
+    const key = String(adminId || "").trim();
+    if (!key) {
+      return "";
+    }
+    const avatarCache = readStoredJson(localStorage, adminAvatarCacheKey, {});
+    const value = avatarCache && typeof avatarCache === "object" ? avatarCache[key] : "";
+    return typeof value === "string" ? value : "";
+  }
+
+  function persistAdminAvatar(adminId, avatarValue) {
+    const key = String(adminId || "").trim();
+    const nextAvatar = String(avatarValue || "").trim();
+    if (!key || !nextAvatar) {
+      return;
+    }
+
+    const avatarCache = readStoredJson(localStorage, adminAvatarCacheKey, {});
+    const nextCache = avatarCache && typeof avatarCache === "object" ? { ...avatarCache } : {};
+    nextCache[key] = nextAvatar;
+    writeStoredJson(localStorage, adminAvatarCacheKey, nextCache);
+
+    const authState = readStoredJson(localStorage, adminAuthStorageKey, null);
+    if (authState && typeof authState === "object" && authState.admin && authState.admin.id === key) {
+      writeStoredJson(localStorage, adminAuthStorageKey, {
+        ...authState,
+        admin: {
+          ...authState.admin,
+          avatar: nextAvatar,
+        },
+      });
+    }
   }
 
   function readAdminApiToken() {
@@ -1103,7 +1138,7 @@
     }
 
     const adminName = state.admin?.username || "";
-    const avatarValue = state.admin?.avatar || "";
+    const avatarValue = state.admin?.avatar || getCachedAdminAvatar(state.admin?.id);
     const initials = getAdminInitials(adminName || "No staff session");
     const hasAvatar = Boolean(avatarValue && String(avatarValue).trim());
 
@@ -1349,7 +1384,17 @@
 
     try {
       const payload = await requestJson(adminSessionUrl, { timeoutMs: 6000 });
-      state.admin = payload.admin || null;
+      const nextAdmin = payload.admin ? { ...payload.admin } : null;
+      if (nextAdmin?.id) {
+        const fallbackAvatar = getCachedAdminAvatar(nextAdmin.id);
+        if (!nextAdmin.avatar && fallbackAvatar) {
+          nextAdmin.avatar = fallbackAvatar;
+        }
+        if (nextAdmin.avatar) {
+          persistAdminAvatar(nextAdmin.id, nextAdmin.avatar);
+        }
+      }
+      state.admin = nextAdmin;
       state.localMode = false;
       renderAdminMeta();
       return;
@@ -1652,6 +1697,7 @@
             ...state.admin,
             avatar: croppedAvatar,
           };
+          persistAdminAvatar(state.admin.id, croppedAvatar);
           renderAdminMeta();
           await showAlert(updated ? "Profile picture updated." : "Profile picture could not be saved locally.", "Success");
           return;
@@ -1663,7 +1709,14 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ avatar: croppedAvatar }),
           });
-          state.admin = payload.admin || state.admin;
+          const nextAdmin = payload.admin
+            ? { ...payload.admin }
+            : { ...(state.admin || {}), avatar: croppedAvatar };
+          if (!nextAdmin.avatar) {
+            nextAdmin.avatar = croppedAvatar;
+          }
+          state.admin = nextAdmin;
+          persistAdminAvatar(nextAdmin.id, nextAdmin.avatar);
           renderAdminMeta();
           await showAlert("Profile picture updated.", "Success");
         } catch (error) {
