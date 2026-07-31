@@ -1578,7 +1578,25 @@ app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("
 
   const activeStore = readApplicationStore();
   const archivedStore = readArchivedApplicationStore();
-  let applications = source === "archived" ? [...archivedStore.applications] : [...activeStore.applications];
+  const isClosedStatus = (value) => {
+    const normalized = String(value || "").toLowerCase();
+    return normalized === "accepted" || normalized === "denied";
+  };
+
+  let applications = source === "archived"
+    ? (() => {
+      const mergedById = new Map();
+      [...archivedStore.applications, ...activeStore.applications.filter((entry) => isClosedStatus(entry?.status))]
+        .forEach((entry) => {
+          const id = cleanText(entry?.id || "", 120);
+          if (!id || mergedById.has(id)) {
+            return;
+          }
+          mergedById.set(id, entry);
+        });
+      return Array.from(mergedById.values());
+    })()
+    : [...activeStore.applications];
 
   if (type && type !== "all") {
     applications = applications.filter((application) => application.type === type);

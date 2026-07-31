@@ -1217,6 +1217,20 @@
         headers,
         signal: controller.signal,
       });
+
+      if ((response.status === 401 || response.status === 403) && headers.Authorization) {
+        const retryHeaders = { ...headers };
+        delete retryHeaders.Authorization;
+        response = await fetch(url, {
+          credentials: "include",
+          ...fetchOptions,
+          headers: retryHeaders,
+          signal: controller.signal,
+        });
+        if (response.ok) {
+          clearAdminApiToken();
+        }
+      }
     } catch (error) {
       if (error && error.name === "AbortError") {
         throw new Error("Request timed out.");
@@ -1522,11 +1536,14 @@
       renderAdminMeta();
       return;
     } catch (error) {
-      const message = String(error?.message || "").toLowerCase();
-      const isAuthFailure = message.includes("admin login required")
-        || message.includes("admin account no longer exists");
+      if (optimisticAdmin) {
+        state.admin = optimisticAdmin;
+        state.localMode = Boolean(sessionAdmin);
+        renderAdminMeta();
+        return;
+      }
 
-      if (isAuthFailure || (!sessionAdmin && !cachedAdmin && !shouldAllowLocalAdminFallback())) {
+      if (!shouldAllowLocalAdminFallback()) {
         state.admin = null;
         state.localMode = false;
         clearLocalAdminSession();
@@ -1535,10 +1552,10 @@
         throw new Error("Admin session not found.");
       }
 
-      state.admin = optimisticAdmin || state.admin;
+      state.admin = state.admin || null;
       state.localMode = Boolean(sessionAdmin);
       renderAdminMeta();
-      return;
+      throw new Error("Admin session not found.");
     }
   }
 
