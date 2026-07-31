@@ -938,7 +938,7 @@ app.get("/auth/discord", requireSteamSession, (req, res, next) => {
   passport.authenticate("discord")(req, res, next);
 });
 
-app.get("/auth/discord/callback", (req, res, next) => {
+app.get("/auth/discord/callback", requireSteamSession, (req, res, next) => {
   if (!discordEnabled) {
     redirectAuthError(res, "discord", "Discord auth is not configured on the backend yet.");
     return;

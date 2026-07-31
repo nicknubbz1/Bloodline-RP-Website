@@ -57,10 +57,34 @@
     }
   }
 
+  function getAuthSessionUrl() {
+    return window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
+  }
+
   function isLoggedInLocally() {
     try {
       const state = JSON.parse(localStorage.getItem("bloodline-account") || "{}");
       return Boolean(String(state.steamId || "").trim());
+    } catch {
+      return false;
+    }
+  }
+
+  async function hasLinkedAccountOnBackend() {
+    try {
+      const response = await fetch(getAuthSessionUrl(), {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        return false;
+      }
+
+      const payload = await response.json();
+      const account = payload && payload.account ? payload.account : {};
+      const hasSteam = Boolean(String(account.steamId || "").trim());
+      const hasDiscord = Boolean(String(account.discordId || "").trim());
+      return hasSteam && hasDiscord;
     } catch {
       return false;
     }
@@ -188,6 +212,12 @@
 
     if (!isLoggedInLocally()) {
       showLoginRequiredPopup();
+      return;
+    }
+
+    const backendLinked = await hasLinkedAccountOnBackend();
+    if (!backendLinked) {
+      setMessage("Please log in with Steam and re-link Discord from the dashboard, then try again.", "error");
       return;
     }
 
