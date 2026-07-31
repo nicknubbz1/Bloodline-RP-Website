@@ -307,6 +307,34 @@
     });
   }
 
+  function readAvatarFileAsDataUrl(file) {
+    return new Promise(function (resolve) {
+      if (!file) {
+        resolve("");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function () {
+        const result = String(reader.result || "").trim();
+        resolve(result.startsWith("data:image/") ? result : "");
+      };
+      reader.onerror = function () {
+        resolve("");
+      };
+
+      try {
+        reader.readAsDataURL(file);
+      } catch {
+        resolve("");
+      }
+    });
+  }
+
+  async function openAvatarCropEditor(file) {
+    return readAvatarFileAsDataUrl(file);
+  }
+
   function getApplicationByIdFromState(applicationId) {
     const normalizedId = String(applicationId || "").trim();
     if (!normalizedId) {
