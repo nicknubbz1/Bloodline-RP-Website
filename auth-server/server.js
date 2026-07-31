@@ -1228,8 +1228,26 @@ app.post("/api/applications", requireLinkedAccount, (req, res) => {
 });
 
 app.get("/api/my-applications", requireLinkedAccount, (req, res) => {
-  const store = readApplicationStore();
-  const myApplications = store.applications.filter((application) => application.applicant?.steamId === req.session.account.steamId);
+  const activeStore = readApplicationStore();
+  const archivedStore = readArchivedApplicationStore();
+  const targetSteamId = String(req.session.account?.steamId || "").trim();
+
+  const matchesUser = (application) => String(application?.applicant?.steamId || "").trim() === targetSteamId;
+
+  const mergedById = new Map();
+  [...activeStore.applications, ...archivedStore.applications]
+    .filter(matchesUser)
+    .forEach((application) => {
+      const id = String(application?.id || "").trim();
+      if (!id) {
+        return;
+      }
+      mergedById.set(id, application);
+    });
+
+  const myApplications = Array.from(mergedById.values()).sort((left, right) => {
+    return Date.parse(right?.createdAt || 0) - Date.parse(left?.createdAt || 0);
+  });
 
   res.json({
     applications: myApplications,
