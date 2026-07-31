@@ -569,6 +569,7 @@
       id: user.id,
       username: user.username,
       isMainAdmin: Boolean(user.isMainAdmin),
+      avatar: user.avatar || "",
       permissions: normalizePermissions(user.permissions),
     };
   }
@@ -623,6 +624,7 @@
       id: cachedAdmin.id,
       username: cachedAdmin.username,
       isMainAdmin: Boolean(cachedAdmin.isMainAdmin),
+      avatar: cachedAdmin.avatar || "",
       permissions: normalizePermissions(cachedAdmin.permissions),
     };
   }
