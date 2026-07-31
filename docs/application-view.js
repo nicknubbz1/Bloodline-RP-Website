@@ -10,6 +10,7 @@
   const loginPopupCloseEl = document.getElementById("loginRequiredPopupClose");
   const loginPopupLoginEl = document.getElementById("loginRequiredPopupLogin");
   const localApplicationAvailabilityKey = "bloodline-application-form-availability";
+  const applicationDraftStoragePrefix = "bloodline-application-draft";
 
   const params = new URLSearchParams(window.location.search);
   const formKey = params.get("form") || "";
@@ -34,6 +35,89 @@
       return true;
     }
     return Boolean(map[selectedForm.key]);
+  }
+
+  function getDraftStorageKey() {
+    if (!selectedForm?.key) {
+      return "";
+    }
+    return `${applicationDraftStoragePrefix}:${selectedForm.key}`;
+  }
+
+  function readDraft() {
+    const key = getDraftStorageKey();
+    if (!key) {
+      return {};
+    }
+
+    try {
+      const parsed = JSON.parse(localStorage.getItem(key) || "{}") || {};
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function writeDraft(nextDraft) {
+    const key = getDraftStorageKey();
+    if (!key) {
+      return;
+    }
+
+    const safeDraft = nextDraft && typeof nextDraft === "object" ? nextDraft : {};
+    localStorage.setItem(key, JSON.stringify(safeDraft));
+  }
+
+  function clearDraft() {
+    const key = getDraftStorageKey();
+    if (!key) {
+      return;
+    }
+    localStorage.removeItem(key);
+  }
+
+  function getFormFields() {
+    if (!fieldsWrap) {
+      return [];
+    }
+    return Array.from(fieldsWrap.querySelectorAll("input, textarea, select"));
+  }
+
+  function persistDraftFromFields() {
+    const fields = getFormFields();
+    if (!fields.length) {
+      return;
+    }
+
+    const nextDraft = {};
+    fields.forEach(function (field) {
+      const fieldName = String(field.name || "").trim();
+      if (!fieldName) {
+        return;
+      }
+      nextDraft[fieldName] = String(field.value || "");
+    });
+    writeDraft(nextDraft);
+  }
+
+  function restoreDraftToFields() {
+    const draft = readDraft();
+    const fields = getFormFields();
+    if (!fields.length) {
+      return;
+    }
+
+    fields.forEach(function (field) {
+      const fieldName = String(field.name || "").trim();
+      if (!fieldName) {
+        return;
+      }
+
+      const savedValue = draft[fieldName];
+      if (typeof savedValue === "string") {
+        field.value = savedValue;
+      }
+    });
   }
 
   function setMessage(text, kind) {
@@ -196,6 +280,8 @@
     selectedForm.questions.forEach(function (question, index) {
       fieldsWrap.appendChild(renderField(question, index));
     });
+
+    restoreDraftToFields();
   }
 
   async function submit(event) {
@@ -227,8 +313,7 @@
     for (const field of fields) {
       const value = (field.value || "").trim();
       if (field.required && !value) {
-        field.focus();
-        setMessage("Please complete all required fields.", "error");
+        setMessage("You did not fill out all required questions.", "error");
         return;
       }
 
@@ -282,6 +367,7 @@
       if (formEl) {
         formEl.reset();
       }
+      clearDraft();
       setMessage("Application submitted. Staff will review it soon. You can view your application status in the dashboard.", "success");
     } catch {
       setMessage("Could not reach the auth server. Try again shortly.", "error");
@@ -303,5 +389,7 @@
   }
   if (formEl) {
     formEl.addEventListener("submit", submit);
+    formEl.addEventListener("input", persistDraftFromFields);
+    formEl.addEventListener("change", persistDraftFromFields);
   }
 })();
