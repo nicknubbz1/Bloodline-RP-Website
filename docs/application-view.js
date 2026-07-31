@@ -377,8 +377,19 @@
 
       if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-          setMessage("Your session expired. Please log in with Steam again, then resubmit.", "error");
-          showLoginRequiredPopup();
+          const data = await response.json().catch(function () {
+            return {};
+          });
+          const backendMessage = String(data?.error || "").trim();
+          if (backendMessage) {
+            setMessage(backendMessage, "error");
+          } else {
+            setMessage("Your session expired. Please log in with Steam again, then resubmit.", "error");
+          }
+
+          if (response.status === 401 && /session|login|log in|steam/i.test(backendMessage || "")) {
+            showLoginRequiredPopup();
+          }
           return;
         }
         const data = await response.json().catch(function () {

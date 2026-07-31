@@ -228,6 +228,23 @@ function applyAccountSessionLifetime(req) {
   req.session.cookie.maxAge = 1000 * 60 * 60 * 24 * Math.max(1, accountSessionDays);
 }
 
+function saveSession(req) {
+  return new Promise((resolve, reject) => {
+    if (!req || !req.session || typeof req.session.save !== "function") {
+      resolve();
+      return;
+    }
+
+    req.session.save((error) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+}
+
 function httpsRequest(options, body) {
   return new Promise((resolve, reject) => {
     const request = https.request(options, (response) => {
@@ -1011,6 +1028,9 @@ app.get("/health", (_req, res) => {
 
 app.get("/auth/session", (req, res) => {
   const account = req.session.account || null;
+  if (account) {
+    applyAccountSessionLifetime(req);
+  }
   res.json({
     account,
     steamEnabled,
@@ -1066,14 +1086,19 @@ app.get("/auth/steam/return", (req, res, next) => {
         steamAvatar: user.avatar,
       };
       applyAccountSessionLifetime(req);
-
-      res.redirect(buildFrontendUrl("auth-callback.html", {
-        provider: "steam",
-        status: "success",
-        steamId: user.steamId,
-        steamName: user.displayName,
-        steamAvatar: user.avatar,
-      }));
+      saveSession(req)
+        .then(() => {
+          res.redirect(buildFrontendUrl("auth-callback.html", {
+            provider: "steam",
+            status: "success",
+            steamId: user.steamId,
+            steamName: user.displayName,
+            steamAvatar: user.avatar,
+          }));
+        })
+        .catch(() => {
+          redirectAuthError(res, "steam", "Steam session could not be created.");
+        });
     })().catch(() => {
       redirectAuthError(res, "steam", "Steam authentication failed.");
     });
@@ -1099,14 +1124,19 @@ app.get("/auth/steam/return", (req, res, next) => {
         steamAvatar: user.avatar,
       };
       applyAccountSessionLifetime(req);
-
-      res.redirect(buildFrontendUrl("auth-callback.html", {
-        provider: "steam",
-        status: "success",
-        steamId: user.steamId,
-        steamName: user.displayName,
-        steamAvatar: user.avatar,
-      }));
+      saveSession(req)
+        .then(() => {
+          res.redirect(buildFrontendUrl("auth-callback.html", {
+            provider: "steam",
+            status: "success",
+            steamId: user.steamId,
+            steamName: user.displayName,
+            steamAvatar: user.avatar,
+          }));
+        })
+        .catch(() => {
+          redirectAuthError(res, "steam", "Steam session could not be created.");
+        });
     });
   })(req, res, next);
 });
@@ -1149,6 +1179,23 @@ app.get("/auth/discord/callback", requireSteamSession, (req, res, next) => {
     };
     applyAccountSessionLifetime(req);
 
+    const finalizeDiscordSuccess = () => {
+      saveSession(req)
+        .then(() => {
+          res.redirect(buildFrontendUrl("auth-callback.html", {
+            provider: "discord",
+            status: "success",
+            discordId: user.discordId,
+            discordName: user.globalName,
+            discordUsername: user.username,
+            discordAvatar: user.avatar,
+          }));
+        })
+        .catch(() => {
+          redirectAuthError(res, "discord", "Discord session could not be created.");
+        });
+    };
+
     syncDiscordEntitlementRoles(req.session.account)
       .then(async () => {
         try {
@@ -1157,24 +1204,10 @@ app.get("/auth/discord/callback", requireSteamSession, (req, res, next) => {
           req.session.account.discordRoles = user.discordRoles || [];
         }
 
-        res.redirect(buildFrontendUrl("auth-callback.html", {
-          provider: "discord",
-          status: "success",
-          discordId: user.discordId,
-          discordName: user.globalName,
-          discordUsername: user.username,
-          discordAvatar: user.avatar,
-        }));
+        finalizeDiscordSuccess();
       })
       .catch(() => {
-        res.redirect(buildFrontendUrl("auth-callback.html", {
-          provider: "discord",
-          status: "success",
-          discordId: user.discordId,
-          discordName: user.globalName,
-          discordUsername: user.username,
-          discordAvatar: user.avatar,
-        }));
+        finalizeDiscordSuccess();
       });
   })(req, res, next);
 });
