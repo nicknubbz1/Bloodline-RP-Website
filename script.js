@@ -2064,8 +2064,58 @@ async function initAccountDashboardPage() {
   const subscriptionRenewalEl = document.getElementById("dashboardSubscriptionRenewal");
   const subscriptionNextPaymentEl = document.getElementById("dashboardSubscriptionNextPayment");
   const stateEl = document.getElementById("dashboardApplicationState");
-  const pendingListEl = document.getElementById("dashboardPendingList");
-  const closedListEl = document.getElementById("dashboardClosedList");
+  const ensureDashboardApplicationLists = () => {
+    let pendingList = document.getElementById("dashboardPendingList");
+    let closedList = document.getElementById("dashboardClosedList");
+
+    if (pendingList && closedList) {
+      return { pendingList, closedList };
+    }
+
+    const dashboardGrid = document.querySelector(".dashboard-grid");
+    const combinedList = document.getElementById("dashboardApplicationsList");
+
+    if (combinedList) {
+      const pendingCard = combinedList.closest(".account-card");
+      if (pendingCard) {
+        const pendingTitle = pendingCard.querySelector("h3");
+        if (pendingTitle) {
+          pendingTitle.textContent = "Pending Applications";
+        }
+      }
+
+      combinedList.id = "dashboardPendingList";
+      pendingList = document.getElementById("dashboardPendingList");
+
+      if (!closedList && dashboardGrid) {
+        const closedCard = document.createElement("article");
+        closedCard.className = "account-card";
+
+        const closedTitle = document.createElement("h3");
+        closedTitle.textContent = "Closed Applications";
+
+        const closedUl = document.createElement("ul");
+        closedUl.className = "dashboard-list";
+        closedUl.id = "dashboardClosedList";
+
+        closedCard.appendChild(closedTitle);
+        closedCard.appendChild(closedUl);
+
+        if (pendingCard && pendingCard.parentElement === dashboardGrid) {
+          pendingCard.insertAdjacentElement("afterend", closedCard);
+        } else {
+          dashboardGrid.insertBefore(closedCard, dashboardGrid.firstChild);
+        }
+      }
+    }
+
+    pendingList = document.getElementById("dashboardPendingList");
+    closedList = document.getElementById("dashboardClosedList");
+
+    return { pendingList, closedList };
+  };
+
+  const { pendingList: pendingListEl, closedList: closedListEl } = ensureDashboardApplicationLists();
   const discordLinkButtonEl = document.getElementById("dashboardDiscordLinkButton");
   const detailPopupEl = document.getElementById("dashboardApplicationDetailPopup");
   const detailPopupCloseEl = document.getElementById("dashboardApplicationPopupClose");
