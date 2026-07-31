@@ -499,6 +499,61 @@ function showAuthUnavailableMessage() {
   window.alert("Authentication is not configured for this live site yet. Set BLOODLINE_BACKEND_ORIGIN to your deployed auth server URL.");
 }
 
+function buildFrontendAuthCallbackUrl() {
+  return new URL("auth-callback.html", window.location.href);
+}
+
+function buildSteamOpenIdFallbackUrl() {
+  const callbackUrl = buildFrontendAuthCallbackUrl();
+  callbackUrl.searchParams.set("provider", "steam");
+
+  const params = new URLSearchParams({
+    "openid.ns": "http://specs.openid.net/auth/2.0",
+    "openid.mode": "checkid_setup",
+    "openid.claimed_id": "http://specs.openid.net/auth/2.0/identifier_select",
+    "openid.identity": "http://specs.openid.net/auth/2.0/identifier_select",
+    "openid.return_to": callbackUrl.toString(),
+    "openid.realm": window.location.origin,
+  });
+
+  return `https://steamcommunity.com/openid/login?${params.toString()}`;
+}
+
+function parseSteamOpenIdCallback(params) {
+  const mode = params.get("openid.mode") || "";
+  const claimedId = params.get("openid.claimed_id") || "";
+  const steamIdMatch = claimedId.match(/\/id\/(\d+)$/);
+
+  if (mode === "id_res" && steamIdMatch) {
+    return {
+      provider: "steam",
+      status: "success",
+      steamId: steamIdMatch[1],
+      steamName: params.get("steamName") || "Steam User",
+      steamAvatar: params.get("steamAvatar") || "",
+      message: "Steam connected successfully. This popup will close automatically.",
+    };
+  }
+
+  if (mode === "cancel") {
+    return {
+      provider: "steam",
+      status: "error",
+      message: "Steam sign-in was cancelled.",
+    };
+  }
+
+  if (mode) {
+    return {
+      provider: "steam",
+      status: "error",
+      message: "Steam authentication could not be completed.",
+    };
+  }
+
+  return null;
+}
+
 function openAuthPopup(url, popupName) {
   if (isInvalidLiveAuthUrl(url)) {
     showAuthUnavailableMessage();
@@ -525,7 +580,9 @@ function openAuthPopup(url, popupName) {
 }
 
 function openSteamPopup() {
-  openAuthPopup(steamPopupUrl, "bloodline-steam-login");
+  const fallbackUrl = buildSteamOpenIdFallbackUrl();
+  const targetUrl = isInvalidLiveAuthUrl(steamPopupUrl) ? fallbackUrl : steamPopupUrl;
+  openAuthPopup(targetUrl, "bloodline-steam-login");
 }
 
 function openDiscordPopup() {
@@ -1617,16 +1674,17 @@ function handleAuthCallbackPage() {
   }
 
   const params = new URLSearchParams(window.location.search);
-  const provider = params.get("provider");
-  const status = params.get("status");
-  const message = params.get("message");
+  const openIdResult = parseSteamOpenIdCallback(params);
+  const provider = params.get("provider") || openIdResult?.provider || "";
+  const status = params.get("status") || openIdResult?.status || "";
+  const message = params.get("message") || openIdResult?.message || "";
 
   if (status === "success") {
     if (provider === "steam") {
       mergeAccountState({
-        steamId: params.get("steamId") || "",
-        steamName: params.get("steamName") || "Steam User",
-        steamAvatar: params.get("steamAvatar") || "",
+        steamId: params.get("steamId") || openIdResult?.steamId || "",
+        steamName: params.get("steamName") || openIdResult?.steamName || "Steam User",
+        steamAvatar: params.get("steamAvatar") || openIdResult?.steamAvatar || "",
       });
     }
 
