@@ -94,6 +94,7 @@ const connectReadyWindowMs = 60000;
 let connectQueuePollTimer = null;
 let connectQueueReadyTimer = null;
 let accountDropdownState = null;
+let steamProfileHydrationPromise = null;
 const socialStats = {
   discord: "16,628 members · 3,054 online",
   youtube: "128K subscribers · 24 new videos",
@@ -554,6 +555,153 @@ function parseSteamOpenIdCallback(params) {
   }
 
   return null;
+}
+
+function isPlaceholderSteamName(name) {
+  const normalized = String(name || "").trim().toLowerCase();
+  return !normalized || normalized === "steam user";
+}
+
+function normalizeSteamDisplayName(rawName) {
+  const value = String(rawName || "").trim();
+  if (!value) {
+    return "";
+  }
+
+  return value
+    .replace(/^Steam Community\s*::\s*/i, "")
+    .trim();
+}
+
+async function fetchSteamProfileFromXml(steamId) {
+  const normalizedSteamId = String(steamId || "").trim();
+  if (!/^\d{17}$/.test(normalizedSteamId)) {
+    return null;
+  }
+
+  const steamProfileUrl = `https://steamcommunity.com/profiles/${normalizedSteamId}/?xml=1`;
+  const lookupUrl = `https://corsproxy.io/?${encodeURIComponent(steamProfileUrl)}`;
+
+  try {
+    const response = await fetch(lookupUrl, { cache: "no-store" });
+    if (!response.ok) {
+      return null;
+    }
+
+    const xmlText = await response.text();
+    if (!xmlText) {
+      return null;
+    }
+
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(xmlText, "application/xml");
+
+    const readTag = (tagName) => {
+      const node = xmlDoc.querySelector(tagName);
+      return node ? String(node.textContent || "").trim() : "";
+    };
+
+    const steamName = readTag("steamID");
+    const steamAvatar = readTag("avatarFull") || readTag("avatarMedium") || readTag("avatarIcon");
+
+    return {
+      steamName,
+      steamAvatar,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchSteamProfileFromHtml(steamId) {
+  const normalizedSteamId = String(steamId || "").trim();
+  if (!/^\d{17}$/.test(normalizedSteamId)) {
+    return null;
+  }
+
+  const steamProfileUrl = `https://steamcommunity.com/profiles/${normalizedSteamId}`;
+  const lookupUrl = `https://corsproxy.io/?${encodeURIComponent(steamProfileUrl)}`;
+
+  try {
+    const response = await fetch(lookupUrl, { cache: "no-store" });
+    if (!response.ok) {
+      return null;
+    }
+
+    const htmlText = await response.text();
+    if (!htmlText) {
+      return null;
+    }
+
+    const titleMatch = htmlText.match(/<title>([^<]+)<\/title>/i);
+    const ogTitleMatch = htmlText.match(/property=["']og:title["']\s+content=["']([^"']+)["']/i);
+    const nameFromTitle = normalizeSteamDisplayName(ogTitleMatch?.[1] || titleMatch?.[1] || "");
+
+    const avatarMatch = htmlText.match(/https:\/\/avatars\.(?:cloudflare\.)?steamstatic\.com\/[a-f0-9]+_(?:full|medium|icon)\.jpg/i);
+    const steamAvatar = avatarMatch ? avatarMatch[0] : "";
+
+    return {
+      steamName: nameFromTitle,
+      steamAvatar,
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function hydrateSteamProfileFromPublicLookup() {
+  if (steamProfileHydrationPromise) {
+    return steamProfileHydrationPromise;
+  }
+
+  steamProfileHydrationPromise = (async () => {
+    const state = readAccountState();
+    const steamId = String(state.steamId || "").trim();
+    if (!steamId) {
+      return;
+    }
+
+    const needsName = isPlaceholderSteamName(state.steamName);
+    const needsAvatar = !String(state.steamAvatar || "").trim();
+    if (!needsName && !needsAvatar) {
+      return;
+    }
+
+    const profileFromXml = await fetchSteamProfileFromXml(steamId);
+    let nextSteamName = String(profileFromXml?.steamName || "").trim();
+    let nextSteamAvatar = String(profileFromXml?.steamAvatar || "").trim();
+
+    const needsHtmlLookup = isPlaceholderSteamName(nextSteamName) || !nextSteamAvatar;
+    if (needsHtmlLookup) {
+      const profileFromHtml = await fetchSteamProfileFromHtml(steamId);
+      if (profileFromHtml) {
+        const htmlName = String(profileFromHtml.steamName || "").trim();
+        const htmlAvatar = String(profileFromHtml.steamAvatar || "").trim();
+        if (htmlName && isPlaceholderSteamName(nextSteamName)) {
+          nextSteamName = htmlName;
+        }
+        if (htmlAvatar && !nextSteamAvatar) {
+          nextSteamAvatar = htmlAvatar;
+        }
+      }
+    }
+
+    if (!nextSteamName && !nextSteamAvatar) {
+      return;
+    }
+
+    const nextState = mergeAccountState({
+      steamName: nextSteamName || state.steamName,
+      steamAvatar: nextSteamAvatar || state.steamAvatar,
+    });
+
+    renderHeaderAccountTrigger(nextState);
+    updateAccountDropdownDetails();
+  })().finally(() => {
+    steamProfileHydrationPromise = null;
+  });
+
+  return steamProfileHydrationPromise;
 }
 
 function openAuthPopup(url, popupName) {
@@ -1197,6 +1345,8 @@ function renderAccountState() {
     discordDisplayEl.textContent = discordName;
   }
 
+  void hydrateSteamProfileFromPublicLookup();
+
   updateStoreCartAuthState();
 }
 
@@ -1625,6 +1775,17 @@ async function updateAccountDropdownDetails() {
   const hasSteam = Boolean(state.steamId || state.steamName);
   const hasDiscord = Boolean(state.discordId || state.discordName);
 
+  if (accountDropdownState.dropdownEl) {
+    if (hasSteam) {
+      accountDropdownState.dropdownEl.removeAttribute("hidden");
+      accountDropdownState.dropdownEl.removeAttribute("inert");
+    } else {
+      closeAccountDropdown();
+      accountDropdownState.dropdownEl.setAttribute("hidden", "hidden");
+      accountDropdownState.dropdownEl.setAttribute("inert", "");
+    }
+  }
+
   if (accountDropdownState.steamStatusEl) {
     accountDropdownState.steamStatusEl.textContent = hasSteam ? "Linked" : "Unlinked";
     accountDropdownState.steamStatusEl.className = hasSteam ? "status-linked" : "status-unlinked";
@@ -1788,6 +1949,11 @@ function closeAccountDropdown() {
 }
 
 function toggleAccountDropdown() {
+  if (!hasLoggedInAccount()) {
+    openSteamLoginModal();
+    return;
+  }
+
   if (!accountDropdownState?.dropdownEl) {
     return;
   }
@@ -1872,10 +2038,15 @@ function handleAuthCallbackPage() {
 
   if (status === "success") {
     if (provider === "steam") {
+      const existingState = readAccountState();
+      const resolvedSteamName = params.get("steamName") || openIdResult?.steamName || "";
+      const resolvedSteamAvatar = params.get("steamAvatar") || openIdResult?.steamAvatar || "";
       mergeAccountState({
         steamId: params.get("steamId") || openIdResult?.steamId || "",
-        steamName: params.get("steamName") || openIdResult?.steamName || "Steam User",
-        steamAvatar: params.get("steamAvatar") || openIdResult?.steamAvatar || "",
+        steamName: isPlaceholderSteamName(resolvedSteamName)
+          ? (existingState.steamName || "Steam User")
+          : resolvedSteamName,
+        steamAvatar: resolvedSteamAvatar || existingState.steamAvatar || "",
       });
     }
 
@@ -2431,6 +2602,11 @@ function initRulesPageNavigation() {
 loginTriggers.forEach((trigger) => {
   trigger.addEventListener("click", (event) => {
     event.preventDefault();
+
+    if (!hasLoggedInAccount()) {
+      openSteamLoginModal();
+      return;
+    }
 
     if (accountDropdownState?.dropdownEl) {
       toggleAccountDropdown();
