@@ -520,30 +520,63 @@
     storage.setItem(key, JSON.stringify(value));
   }
 
-  function getCachedAdminAvatar(adminId) {
-    const key = String(adminId || "").trim();
-    if (!key) {
-      return "";
+  function buildAdminAvatarCacheKeys(adminRef, usernameFallback) {
+    const keys = [];
+    const isObject = adminRef && typeof adminRef === "object";
+    const idValue = isObject ? adminRef.id : adminRef;
+    const usernameValue = isObject ? adminRef.username : usernameFallback;
+
+    const idKey = String(idValue || "").trim();
+    if (idKey) {
+      keys.push(idKey);
     }
-    const avatarCache = readStoredJson(localStorage, adminAvatarCacheKey, {});
-    const value = avatarCache && typeof avatarCache === "object" ? avatarCache[key] : "";
-    return typeof value === "string" ? value : "";
+
+    const usernameKey = String(usernameValue || "").trim().toLowerCase();
+    if (usernameKey) {
+      keys.push(`user:${usernameKey}`);
+    }
+
+    return keys;
   }
 
-  function persistAdminAvatar(adminId, avatarValue) {
-    const key = String(adminId || "").trim();
+  function getCachedAdminAvatar(adminRef, usernameFallback) {
+    const keys = buildAdminAvatarCacheKeys(adminRef, usernameFallback);
+    if (!keys.length) {
+      return "";
+    }
+
+    const avatarCache = readStoredJson(localStorage, adminAvatarCacheKey, {});
+    if (!avatarCache || typeof avatarCache !== "object") {
+      return "";
+    }
+
+    for (let index = 0; index < keys.length; index += 1) {
+      const value = avatarCache[keys[index]];
+      if (typeof value === "string" && value.trim()) {
+        return value;
+      }
+    }
+
+    return "";
+  }
+
+  function persistAdminAvatar(adminRef, avatarValue, usernameFallback) {
+    const keys = buildAdminAvatarCacheKeys(adminRef, usernameFallback);
     const nextAvatar = String(avatarValue || "").trim();
-    if (!key || !nextAvatar) {
+    if (!keys.length || !nextAvatar) {
       return;
     }
 
     const avatarCache = readStoredJson(localStorage, adminAvatarCacheKey, {});
     const nextCache = avatarCache && typeof avatarCache === "object" ? { ...avatarCache } : {};
-    nextCache[key] = nextAvatar;
+    keys.forEach(function (key) {
+      nextCache[key] = nextAvatar;
+    });
     writeStoredJson(localStorage, adminAvatarCacheKey, nextCache);
 
     const authState = readStoredJson(localStorage, adminAuthStorageKey, null);
-    if (authState && typeof authState === "object" && authState.admin && authState.admin.id === key) {
+    const authAdminId = String(authState?.admin?.id || "").trim();
+    if (authState && typeof authState === "object" && authState.admin && keys.includes(authAdminId)) {
       writeStoredJson(localStorage, adminAuthStorageKey, {
         ...authState,
         admin: {
@@ -1138,7 +1171,7 @@
     }
 
     const adminName = state.admin?.username || "";
-    const avatarValue = state.admin?.avatar || getCachedAdminAvatar(state.admin?.id);
+    const avatarValue = state.admin?.avatar || getCachedAdminAvatar(state.admin);
     const initials = getAdminInitials(adminName || "No staff session");
     const hasAvatar = Boolean(avatarValue && String(avatarValue).trim());
 
@@ -1386,12 +1419,12 @@
       const payload = await requestJson(adminSessionUrl, { timeoutMs: 6000 });
       const nextAdmin = payload.admin ? { ...payload.admin } : null;
       if (nextAdmin?.id) {
-        const fallbackAvatar = getCachedAdminAvatar(nextAdmin.id);
+        const fallbackAvatar = getCachedAdminAvatar(nextAdmin);
         if (!nextAdmin.avatar && fallbackAvatar) {
           nextAdmin.avatar = fallbackAvatar;
         }
         if (nextAdmin.avatar) {
-          persistAdminAvatar(nextAdmin.id, nextAdmin.avatar);
+          persistAdminAvatar(nextAdmin, nextAdmin.avatar);
         }
       }
       state.admin = nextAdmin;
@@ -1686,6 +1719,13 @@
           return;
         }
 
+        state.admin = {
+          ...(state.admin || {}),
+          avatar: croppedAvatar,
+        };
+        persistAdminAvatar(state.admin, croppedAvatar);
+        renderAdminMeta();
+
         if (state.localMode) {
           const updated = updateLocalAdminUser(state.admin.id, function (entry) {
             return {
@@ -1697,7 +1737,7 @@
             ...state.admin,
             avatar: croppedAvatar,
           };
-          persistAdminAvatar(state.admin.id, croppedAvatar);
+          persistAdminAvatar(state.admin, croppedAvatar);
           renderAdminMeta();
           await showAlert(updated ? "Profile picture updated." : "Profile picture could not be saved locally.", "Success");
           return;
@@ -1716,11 +1756,11 @@
             nextAdmin.avatar = croppedAvatar;
           }
           state.admin = nextAdmin;
-          persistAdminAvatar(nextAdmin.id, nextAdmin.avatar);
+          persistAdminAvatar(nextAdmin, nextAdmin.avatar);
           renderAdminMeta();
           await showAlert("Profile picture updated.", "Success");
         } catch (error) {
-          await showAlert(error.message || "Could not update profile picture.", "Error");
+          await showAlert("Profile picture saved locally. Server update failed.", "Partial Success");
         }
       };
 
