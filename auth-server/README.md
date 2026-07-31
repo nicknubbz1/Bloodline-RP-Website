@@ -40,6 +40,35 @@ This server handles Steam OpenID, Discord OAuth, Discord live stats, application
 - Deploy this auth server separately to a Node host
 - Update `auth-config.js` on the frontend to point to the deployed backend URL
 
+## Easiest deploy: Render
+1. Push this repo to GitHub.
+2. Create a Render account.
+3. In Render, create a new Blueprint and point it at this repo.
+4. Render will read `render.yaml` from the repo root and create the `bloodline-auth-server` service automatically.
+5. In the Render environment settings, fill in the secret values:
+   - `BACKEND_BASE_URL`
+   - `STEAM_API_KEY`
+   - `DISCORD_CLIENT_ID`
+   - `DISCORD_CLIENT_SECRET`
+   - `DISCORD_BOT_TOKEN`
+   - `DISCORD_INVITE_URL`
+6. Keep `DISCORD_GUILD_ID=1416529381916147744` unless your Bloodline server ID changes.
+7. After deploy, copy the public Render URL. That URL is your backend base URL.
+
+## After backend deploy
+The live website still needs to know where the auth server lives.
+
+Use your deployed backend URL as `BLOODLINE_BACKEND_ORIGIN` on the frontend, or hardcode it in `auth-config.js` and `docs/auth-config.js`.
+
+Example:
+- Backend URL: `https://bloodline-auth-server.onrender.com`
+- Discord auth URL becomes: `https://bloodline-auth-server.onrender.com/auth/discord`
+- Steam auth URL becomes: `https://bloodline-auth-server.onrender.com/auth/steam`
+
+If you do not want to manage role sync yet, leave:
+- `DISCORD_ALLOWLIST_ROLE_ID` empty
+- `DISCORD_SUBSCRIPTION_ROLE_MAP={}`
+
 ## Discord role automation
 - When a linked Discord user gets an accepted `allowlist-app`, the server can add the configured allowlist role automatically.
 - When a linked Discord user has an active subscription tier in the subscriptions store, the server can add the mapped subscription role automatically.

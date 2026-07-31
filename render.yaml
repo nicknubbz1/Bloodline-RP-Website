@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: bloodline-auth-server
+    runtime: node
+    rootDir: auth-server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: BACKEND_BASE_URL
+        sync: false
+      - key: FRONTEND_BASE_URL
+        value: https://nicknubbz1.github.io/Bloodline-RP-Website
+      - key: FRONTEND_BASE_URLS
+        value: https://nicknubbz1.github.io,https://nicknubbz1.github.io/Bloodline-RP-Website
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: STEAM_API_KEY
+        sync: false
+      - key: DISCORD_CLIENT_ID
+        sync: false
+      - key: DISCORD_CLIENT_SECRET
+        sync: false
+      - key: DISCORD_GUILD_ID
+        value: 1416529381916147744
+      - key: DISCORD_BOT_TOKEN
+        sync: false
+      - key: DISCORD_INVITE_URL
+        sync: false
+      - key: DISCORD_ALLOWLIST_ROLE_ID
+        sync: false
+      - key: DISCORD_SUBSCRIPTION_ROLE_MAP
+        value: '{}'
