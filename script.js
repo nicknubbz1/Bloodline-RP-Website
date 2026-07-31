@@ -46,7 +46,6 @@ const discordDisplayEl = document.getElementById("discordDisplay");
 const loginTriggers = document.querySelectorAll(".login-trigger");
 const steamAuthButtons = document.querySelectorAll('[data-auth-provider="steam"]');
 const discordAuthButtons = document.querySelectorAll('[data-auth-provider="discord"]');
-const accountLogoutButtons = document.querySelectorAll('[data-auth-action="logout"]');
 const authCallbackMessageEl = document.getElementById("authCallbackMessage");
 const steamPopupUrl = window.BLOODLINE_STEAM_AUTH_URL || "http://localhost:3000/auth/steam";
 const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3000/auth/discord";
@@ -1068,6 +1067,10 @@ function mergeAccountState(nextPartialState) {
   return nextState;
 }
 
+function getAccountLogoutButtons() {
+  return document.querySelectorAll('[data-auth-action="logout"]');
+}
+
 async function logoutAccount() {
   try {
     await fetch(authLogoutUrl, {
@@ -1099,7 +1102,7 @@ function renderAccountState() {
     button.disabled = !hasSteam;
   });
 
-  accountLogoutButtons.forEach((button) => {
+  getAccountLogoutButtons().forEach((button) => {
     button.disabled = !hasSteam;
   });
 
@@ -2384,11 +2387,17 @@ discordAuthButtons.forEach((button) => {
   });
 });
 
-accountLogoutButtons.forEach((button) => {
-  button.addEventListener("click", async (event) => {
-    event.preventDefault();
-    await logoutAccount();
-  });
+document.addEventListener("click", async (event) => {
+  const actionTarget = event.target instanceof Element
+    ? event.target.closest('[data-auth-action="logout"]')
+    : null;
+
+  if (!actionTarget) {
+    return;
+  }
+
+  event.preventDefault();
+  await logoutAccount();
 });
 
 window.addEventListener("storage", (event) => {
