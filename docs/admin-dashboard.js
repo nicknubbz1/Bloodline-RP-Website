@@ -1587,6 +1587,7 @@
     state.applicationLoadError = "";
     state.applicationLoadNotice = "";
     const requestId = ++applicationsLoadRequestId;
+    const previousApplications = Array.isArray(state.applications) ? [...state.applications] : [];
 
     if (!hasPermission("applications") && !hasPermission("applicationAvailability")) {
       if (requestId !== applicationsLoadRequestId) {
@@ -1652,7 +1653,7 @@
       }
 
       const normalizedSource = state.source === "archived" ? "archived" : "active";
-      state.applications = Array.isArray(payload?.applications)
+      const nextApplications = Array.isArray(payload?.applications)
         ? payload.applications.map(function (entry) {
           return {
             ...entry,
@@ -1660,12 +1661,24 @@
           };
         })
         : [];
+
+      if (!nextApplications.length && previousApplications.length) {
+        state.applications = previousApplications;
+        state.applicationLoadNotice = "Live response returned no applications. Showing last loaded applications to prevent data loss.";
+      } else {
+        state.applications = nextApplications;
+      }
     } catch (error) {
       if (requestId !== applicationsLoadRequestId) {
         return;
       }
-      state.applications = [];
-      state.applicationLoadError = `Could not load applications: ${error && error.message ? error.message : "Request failed."}`;
+      if (previousApplications.length) {
+        state.applications = previousApplications;
+        state.applicationLoadNotice = "Could not refresh applications. Showing last loaded applications.";
+      } else {
+        state.applications = [];
+        state.applicationLoadError = `Could not load applications: ${error && error.message ? error.message : "Request failed."}`;
+      }
     }
 
     if (requestId !== applicationsLoadRequestId) {

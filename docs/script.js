@@ -60,8 +60,8 @@ const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-st
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const forceServerOffline = true;
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
-const adminDashboardUrl = "admin.html?v=20260731n11";
-const adminDashboardScriptVersion = "v=20260731n11";
+const adminDashboardUrl = "admin.html?v=20260731n12";
+const adminDashboardScriptVersion = "v=20260731n12";
 const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:3000/api/discord/stats";
 const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
 const storeCartStorageKey = "bloodline-store-cart";
@@ -2428,6 +2428,15 @@ async function initAccountDashboardPage() {
 
     const payload = await response.json();
     const applications = Array.isArray(payload.applications) ? payload.applications : [];
+    const cachedApplications = readCachedApplications();
+    if (applications.length === 0 && cachedApplications.length > 0) {
+      renderApplicationsWithCounts(
+        cachedApplications,
+        "Live data returned empty. Showing your last saved applications to prevent data loss."
+      );
+      return;
+    }
+
     writeCachedApplications(applications);
     renderApplicationsWithCounts(applications, "Application data is up to date.");
   } catch {
@@ -2514,7 +2523,7 @@ async function syncAccountFromBackend() {
 
     if (!response.ok) {
       if (response.status === 401 || response.status === 403) {
-        localStorage.removeItem(accountStorageKey);
+        // Keep local account snapshot to avoid destructive logout UX on transient cookie/session issues.
         renderAccountState();
         updateAccountDropdownDetails();
         initAccountDashboardPage();
@@ -2524,7 +2533,7 @@ async function syncAccountFromBackend() {
 
     const payload = await response.json();
     if (!payload.account) {
-      localStorage.removeItem(accountStorageKey);
+      // Do not clear linked account state automatically when backend session data is temporarily unavailable.
       renderAccountState();
       updateAccountDropdownDetails();
       initAccountDashboardPage();
@@ -2928,8 +2937,7 @@ async function refreshAdminSession() {
     });
 
     if (!response.ok) {
-      const isAuthFailure = response.status === 401 || response.status === 403;
-      if (!isAuthFailure && setCachedAdminState()) {
+      if (setCachedAdminState()) {
         return;
       }
 
@@ -2939,9 +2947,6 @@ async function refreshAdminSession() {
           admin: null,
         };
         clearLocalAdminSession();
-        if (isAuthFailure) {
-          clearAdminApiToken();
-        }
         writeAdminAuthState({
           ...readAdminAuthState(),
           loggedIn: false,
