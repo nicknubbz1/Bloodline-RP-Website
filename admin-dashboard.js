@@ -419,10 +419,16 @@
             const grantPayload = await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/grant-allowlist-role`, {
               method: "POST",
             });
+            const grantedDiscordName = String(
+              grantPayload?.application?.applicant?.discordName
+              || grantPayload?.application?.applicant?.discordUsername
+              || grantPayload?.discordId
+              || "linked Discord account"
+            ).trim();
             await showAlert(
               grantPayload?.alreadyGranted
-                ? "Allowlist role was already granted to this linked Discord account."
-                : "Allowlist role granted to the linked Discord account.",
+                ? `Allowlist role was already granted to ${grantedDiscordName}.`
+                : `Allowlist role granted to ${grantedDiscordName}.`,
               "Success"
             );
             await loadApplications();
