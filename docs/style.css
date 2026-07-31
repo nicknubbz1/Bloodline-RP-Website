@@ -145,23 +145,26 @@ a { color: inherit; text-decoration: none; }
 
 .login-trigger.account-chip-trigger {
   width: auto;
-  min-width: 11.8rem;
-  max-width: min(15.2rem, 52vw);
+  min-width: 12.8rem;
+  max-width: min(16.6rem, 58vw);
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.42rem;
-  padding: 0.16rem 0.5rem 0.16rem 0.22rem;
-  border-radius: 999px;
+  gap: 0.5rem;
+  padding: 0.22rem 0.56rem 0.22rem 0.28rem;
+  border-radius: 0.62rem;
+  border-color: rgba(170, 189, 217, 0.32);
+  background: linear-gradient(180deg, rgba(27, 36, 52, 0.98), rgba(18, 25, 38, 0.98));
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
   text-decoration: none;
 }
 
 .account-chip-avatar {
-  width: 1.6rem;
-  height: 1.6rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border-radius: 50%;
   overflow: hidden;
-  border: 1px solid rgba(255, 160, 173, 0.56);
+  border: 1px solid rgba(255, 176, 176, 0.55);
   flex-shrink: 0;
   display: grid;
   place-items: center;
@@ -190,7 +193,7 @@ a { color: inherit; text-decoration: none; }
 
 .account-chip-name {
   font-family: "Oxanium", sans-serif;
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   line-height: 1;
   color: #eef4ff;
   white-space: nowrap;
@@ -200,7 +203,7 @@ a { color: inherit; text-decoration: none; }
 
 .account-chip-id {
   font-family: "Rajdhani", sans-serif;
-  font-size: 0.68rem;
+  font-size: 0.66rem;
   line-height: 1;
   color: #95a8c6;
   white-space: nowrap;
@@ -210,11 +213,11 @@ a { color: inherit; text-decoration: none; }
 
 .account-chip-caret {
   margin-left: auto;
-  width: 0.44rem;
-  height: 0.44rem;
-  border-right: 1.5px solid #b8c8e2;
-  border-bottom: 1.5px solid #b8c8e2;
-  transform: rotate(45deg) translateY(-1px);
+  width: 0;
+  height: 0;
+  border-left: 0.24rem solid transparent;
+  border-right: 0.24rem solid transparent;
+  border-top: 0.28rem solid #b8c8e2;
   flex-shrink: 0;
 }
 
