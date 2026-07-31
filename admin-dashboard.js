@@ -687,12 +687,12 @@
   function getStatusClassName(status) {
     const normalized = normalizeApplicationStatus(status);
     if (normalized === "accepted") {
-      return "admin-badge-status-accepted";
+      return "application-status-accepted";
     }
     if (normalized === "denied") {
-      return "admin-badge-status-denied";
+      return "application-status-denied";
     }
-    return "admin-badge-status-pending";
+    return "application-status-pending";
   }
 
   function isAllowlistApplication(app) {
@@ -704,7 +704,7 @@
   function renderApplicationReplies(app) {
     const replies = Array.isArray(app?.replies) ? app.replies : [];
     if (!replies.length) {
-      return '<p class="admin-empty">No staff comments yet.</p>';
+      return '<li class="dashboard-application-comments-empty">No staff comments yet.</li>';
     }
 
     return replies.map(function (reply) {
@@ -712,15 +712,31 @@
       const authorInitial = authorName.slice(0, 1).toUpperCase();
       const message = String(reply?.message || "").trim() || "No comment.";
       return `
-        <article class="admin-comment-item">
-          <span class="admin-comment-avatar">${escapeHtml(authorInitial)}</span>
-          <div class="admin-comment-body">
-            <p class="admin-comment-meta">${escapeHtml(authorName)} • ${escapeHtml(formatDate(reply?.createdAt))}</p>
+        <li class="dashboard-application-comment-item">
+          <span class="dashboard-application-comment-avatar">${escapeHtml(authorInitial)}</span>
+          <div class="dashboard-application-comment-content">
+            <div class="dashboard-application-comment-head">
+              <span class="dashboard-application-comment-author">${escapeHtml(authorName)}</span>
+              <span class="dashboard-application-comment-time">${escapeHtml(formatDate(reply?.createdAt))}</span>
+            </div>
             <p>${escapeHtml(message)}</p>
           </div>
-        </article>
+        </li>
       `;
     }).join("");
+  }
+
+  function renderApplicationResponses(app) {
+    const responses = Array.isArray(app?.responses) ? app.responses : [];
+    if (!responses.length) {
+      return '<p class="admin-empty">No saved answers found.</p>';
+    }
+
+    return `<ul class="dashboard-application-response-list">${responses.map(function (response, index) {
+      const responseLabel = String(response?.label || response?.id || `Question ${index + 1}`).trim();
+      const responseAnswer = String(response?.answer || "").trim() || "No answer provided.";
+      return `<li><strong>${escapeHtml(responseLabel)}</strong><p>${escapeHtml(responseAnswer)}</p></li>`;
+    }).join("")}</ul>`;
   }
 
   function buildGiftCandidates() {
@@ -963,17 +979,19 @@
         const steamName = String(app?.applicant?.steamName || "").trim() || "Unknown Steam User";
         const discordName = String(app?.applicant?.discordName || app?.applicant?.discordUsername || "").trim() || "Unknown Discord User";
         const isExpanded = Boolean(state.expandedApplications[app.id]);
+        const isClosed = appStatus === "accepted" || appStatus === "denied";
+        const reviewedOn = formatDate(app?.reviewedBy?.reviewedAt || app?.updatedAt);
         const allowlistAction = isAllowlistApplication(app)
           ? '<button class="btn btn-ghost" data-action="grant-allowlist" type="button">Grant Allowlist Role</button>'
           : "";
         const moderationActions = appSource === "active"
-          ? `<button class="btn btn-ghost" data-action="accept" type="button">Accept</button><button class="btn btn-danger" data-action="deny" type="button">Deny</button>${allowlistAction}`
-          : '<button class="btn btn-danger" data-action="delete" type="button">Delete</button>';
+          ? `<div class="admin-inline-controls admin-application-moderation-controls"><button class="btn btn-ghost" data-action="accept" type="button">Accept</button><button class="btn btn-danger" data-action="deny" type="button">Deny</button>${allowlistAction}</div>`
+          : '<div class="admin-inline-controls admin-application-moderation-controls"><button class="btn btn-danger" data-action="delete" type="button">Delete</button></div>';
         return `
         <article class="admin-application-card" data-application-id="${app.id}" data-application-source="${appSource}">
           <header class="admin-application-head">
             <h3>${escapeHtml(appTypeLabel)}</h3>
-            <span class="admin-badge ${statusClass}">${escapeHtml(appStatus)}</span>
+            <span class="admin-application-status-text dashboard-application-detail-value ${statusClass}">${escapeHtml(appStatus)}</span>
           </header>
           <p><strong>Steam name:</strong> ${escapeHtml(steamName)}</p>
           <p><strong>Discord name:</strong> ${escapeHtml(discordName)}</p>
@@ -982,19 +1000,20 @@
             <button class="btn btn-ghost" data-action="toggle-view" type="button">${isExpanded ? "Hide" : "View"}</button>
           </div>
           <section class="admin-application-view" ${isExpanded ? "" : "hidden"}>
-            <p>${escapeHtml(app.body || "No details")}</p>
-            <div class="admin-comments-wrap">
+            <p class="dashboard-application-popup-summary">Submitted on ${escapeHtml(formatDate(app.createdAt))}. Status: ${escapeHtml(appStatus)}.</p>
+            ${isClosed ? `<p class="dashboard-application-popup-summary">${escapeHtml(appStatus)} on ${escapeHtml(reviewedOn)}.</p>` : ""}
+            <h4>Application Answers</h4>
+            ${renderApplicationResponses(app)}
+            <section class="dashboard-application-comments-section">
               <h4>Staff Comments</h4>
-              <div class="admin-comments-list">${renderApplicationReplies(app)}</div>
+              <ul class="dashboard-application-comment-list">${renderApplicationReplies(app)}</ul>
               <div class="admin-inline-controls admin-comment-form-row">
                 <textarea class="admin-comment-input" data-comment-input rows="2" placeholder="Leave a staff comment..."></textarea>
                 <button class="btn btn-ghost" data-action="comment" type="button">Post Comment</button>
               </div>
-            </div>
-          </section>
-          <div class="admin-inline-controls admin-application-moderation-controls">
+            </section>
             ${moderationActions}
-          </div>
+          </section>
         </article>
       `;
       }).join("");

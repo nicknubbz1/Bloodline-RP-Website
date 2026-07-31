@@ -893,6 +893,15 @@ body.maintenance-gated {
   margin-bottom: 0.2rem;
 }
 
+.admin-application-status-text {
+  display: inline-block;
+  width: fit-content;
+  font-family: "Oxanium", sans-serif;
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
 .admin-application-primary-controls,
 .admin-application-moderation-controls {
   margin-top: 0.3rem;
