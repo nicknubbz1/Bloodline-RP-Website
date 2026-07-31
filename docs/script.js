@@ -46,9 +46,11 @@ const discordDisplayEl = document.getElementById("discordDisplay");
 const loginTriggers = document.querySelectorAll(".login-trigger");
 const steamAuthButtons = document.querySelectorAll('[data-auth-provider="steam"]');
 const discordAuthButtons = document.querySelectorAll('[data-auth-provider="discord"]');
+const accountLogoutButtons = document.querySelectorAll('[data-auth-action="logout"]');
 const authCallbackMessageEl = document.getElementById("authCallbackMessage");
 const steamPopupUrl = window.BLOODLINE_STEAM_AUTH_URL || "http://localhost:3000/auth/steam";
 const discordPopupUrl = window.BLOODLINE_DISCORD_AUTH_URL || "http://localhost:3000/auth/discord";
+const authLogoutUrl = window.BLOODLINE_AUTH_LOGOUT_URL || "http://localhost:3000/auth/logout";
 const authSessionUrl = window.BLOODLINE_AUTH_SESSION_URL || "http://localhost:3000/auth/session";
 const apiBaseUrl = window.BLOODLINE_API_BASE_URL || "http://localhost:3000/api";
 const adminLoginUrl = window.BLOODLINE_ADMIN_LOGIN_URL || `${apiBaseUrl}/admin/login`;
@@ -1065,6 +1067,22 @@ function mergeAccountState(nextPartialState) {
   return nextState;
 }
 
+async function logoutAccount() {
+  try {
+    await fetch(authLogoutUrl, {
+      credentials: "include",
+      mode: "cors",
+    });
+  } catch {
+    // Ignore backend logout failures when running static-only.
+  }
+
+  localStorage.removeItem(accountStorageKey);
+  renderAccountState();
+  updateAccountDropdownDetails();
+  closeAccountDropdown();
+}
+
 function renderAccountState() {
   const state = readAccountState();
   const steamName = state.steamName || "Awaiting Steam Login";
@@ -1077,6 +1095,10 @@ function renderAccountState() {
   }
 
   discordAuthButtons.forEach((button) => {
+    button.disabled = !hasSteam;
+  });
+
+  accountLogoutButtons.forEach((button) => {
     button.disabled = !hasSteam;
   });
 
@@ -2270,6 +2292,13 @@ discordAuthButtons.forEach((button) => {
   button.addEventListener("click", (event) => {
     event.preventDefault();
     openDiscordPopup();
+  });
+});
+
+accountLogoutButtons.forEach((button) => {
+  button.addEventListener("click", async (event) => {
+    event.preventDefault();
+    await logoutAccount();
   });
 });
 
