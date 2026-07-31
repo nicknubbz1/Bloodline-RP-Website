@@ -1042,12 +1042,31 @@
       return '<li class="dashboard-application-comments-empty">No staff comments yet.</li>';
     }
 
+    const currentAdminId = String(state.admin?.id || "").trim();
+    const currentAdminName = String(state.admin?.username || "").trim().toLowerCase();
+    const currentAdminAvatar = String(
+      state.admin?.avatar
+      || getCachedAdminAvatar(state.admin, state.admin?.username)
+      || ""
+    ).trim();
+
     return replies.map(function (reply) {
-      const authorName = String(reply?.authorName || "Staff").trim() || "Staff";
+      const authorName = String(
+        reply?.authorName
+        || reply?.author
+        || reply?.username
+        || reply?.staffName
+        || "Staff"
+      ).trim() || "Staff";
       const authorInitial = authorName.slice(0, 1).toUpperCase();
-      const authorAvatar = String(reply?.authorAvatar || "").trim();
-      const avatarMarkup = authorAvatar
-        ? `<img src="${escapeHtml(authorAvatar)}" alt="" loading="lazy" />`
+      const authorAdminId = String(reply?.authorAdminId || reply?.adminId || reply?.staffId || "").trim();
+      const authorAvatar = String(reply?.authorAvatar || reply?.authorAvatarUrl || reply?.avatar || "").trim();
+      const isCurrentAdminComment =
+        (currentAdminId && authorAdminId && currentAdminId === authorAdminId)
+        || (currentAdminName && authorName.toLowerCase() === currentAdminName);
+      const resolvedAvatar = authorAvatar || (isCurrentAdminComment ? currentAdminAvatar : "");
+      const avatarMarkup = resolvedAvatar
+        ? `<img src="${escapeHtml(resolvedAvatar)}" alt="" loading="lazy" />`
         : escapeHtml(authorInitial);
       const message = String(reply?.message || "").trim() || "No comment.";
       return `

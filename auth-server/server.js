@@ -1588,9 +1588,21 @@ app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("
   applications = applications.map((application) => {
     const replies = Array.isArray(application?.replies) ? application.replies : [];
     const nextReplies = replies.map((reply) => {
-      const existingAvatar = normalizeAvatarValue(reply?.authorAvatar || "");
-      const authorAdminId = cleanText(reply?.authorAdminId, 120);
-      const authorName = cleanUsername(reply?.authorName || "").toLowerCase();
+      const existingAvatar = normalizeAvatarValue(
+        reply?.authorAvatar
+        || reply?.authorAvatarUrl
+        || reply?.avatar
+        || ""
+      );
+      const authorAdminId = cleanText(reply?.authorAdminId || reply?.adminId || reply?.staffId, 120);
+      const authorNameRaw = cleanUsername(
+        reply?.authorName
+        || reply?.author
+        || reply?.username
+        || reply?.staffName
+        || ""
+      );
+      const authorName = authorNameRaw.toLowerCase();
       const resolvedAvatar = existingAvatar
         || (authorAdminId ? adminAvatarById.get(authorAdminId) : "")
         || (authorName ? adminAvatarByUsername.get(authorName) : "")
@@ -1598,6 +1610,8 @@ app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("
 
       return {
         ...reply,
+        authorAdminId,
+        authorName: authorNameRaw || "Staff",
         authorAvatar: resolvedAvatar,
       };
     });
