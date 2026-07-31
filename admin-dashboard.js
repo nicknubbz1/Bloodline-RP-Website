@@ -668,6 +668,35 @@
     };
   }
 
+  function sanitizeAdminAuthSnapshot(admin) {
+    if (!admin || typeof admin !== "object") {
+      return null;
+    }
+
+    if (!admin.id || !admin.username) {
+      return null;
+    }
+
+    return {
+      id: admin.id,
+      username: admin.username,
+      isMainAdmin: Boolean(admin.isMainAdmin),
+      avatar: admin.avatar || "",
+      permissions: normalizePermissions(admin.permissions),
+    };
+  }
+
+  function persistAdminAuthSnapshot(admin) {
+    const existing = readStoredJson(localStorage, adminAuthStorageKey, {});
+    const base = existing && typeof existing === "object" ? existing : {};
+    writeStoredJson(localStorage, adminAuthStorageKey, {
+      ...base,
+      loggedIn: Boolean(admin),
+      admin: sanitizeAdminAuthSnapshot(admin),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+
   function readLocalAdminSession() {
     const persistent = readStoredJson(localStorage, localAdminSessionKey, null);
     if (persistent?.id) {
@@ -1459,16 +1488,27 @@
       }
       state.admin = nextAdmin;
       state.localMode = false;
+      persistAdminAuthSnapshot(nextAdmin);
       renderAdminMeta();
       return;
-    } catch {
-      if (!sessionAdmin || !shouldAllowLocalAdminFallback()) {
+    } catch (error) {
+      const message = String(error?.message || "").toLowerCase();
+      const isAuthFailure = message.includes("admin login required")
+        || message.includes("admin account no longer exists");
+
+      if (isAuthFailure || (!sessionAdmin && !cachedAdmin && !shouldAllowLocalAdminFallback())) {
         state.admin = null;
         state.localMode = false;
         clearLocalAdminSession();
         clearAdminApiToken();
+        persistAdminAuthSnapshot(null);
         throw new Error("Admin session not found.");
       }
+
+      state.admin = optimisticAdmin || state.admin;
+      state.localMode = Boolean(sessionAdmin);
+      renderAdminMeta();
+      return;
     }
   }
 
@@ -1959,6 +1999,15 @@
           body: JSON.stringify({ username }),
         });
         state.admin = payload.admin || state.admin;
+        persistAdminAuthSnapshot(state.admin);
+        if (state.admin?.id) {
+          updateLocalAdminUser(state.admin.id, function (entry) {
+            return {
+              ...entry,
+              username: String(state.admin?.username || entry.username || "").trim(),
+            };
+          });
+        }
         renderAdminMeta();
         await showAlert("Username changed.", "Success");
       } catch (error) {

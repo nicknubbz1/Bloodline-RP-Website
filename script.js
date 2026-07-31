@@ -59,8 +59,8 @@ const siteStatusUrl = window.BLOODLINE_SITE_STATUS_URL || `${apiBaseUrl}/site-st
 const serverStatusUrl = window.BLOODLINE_SERVER_STATUS_URL || "";
 const forceServerOffline = true;
 const queueJoinUrl = window.BLOODLINE_QUEUE_JOIN_URL || "";
-const adminDashboardUrl = "admin.html?v=20260731n6";
-const adminDashboardScriptVersion = "v=20260731n6";
+const adminDashboardUrl = "admin.html?v=20260731n7";
+const adminDashboardScriptVersion = "v=20260731n7";
 const discordStatsUrl = window.BLOODLINE_DISCORD_STATS_URL || "http://localhost:3000/api/discord/stats";
 const discordInviteUrl = window.BLOODLINE_DISCORD_INVITE_URL || "https://discord.gg/A3ZywNnpPU";
 const storeCartStorageKey = "bloodline-store-cart";
@@ -2854,6 +2854,19 @@ function attachAdminJoinButtonHandlers() {
 }
 
 async function refreshAdminSession() {
+  const setCachedAdminState = () => {
+    const snapshot = readAdminAuthState();
+    if (snapshot?.loggedIn && snapshot?.admin?.id) {
+      adminSessionState = {
+        loggedIn: true,
+        admin: snapshot.admin,
+      };
+      updateAdminJoinButtons();
+      return true;
+    }
+    return false;
+  };
+
   try {
     const response = await fetch(adminSessionUrl, {
       credentials: "include",
@@ -2861,13 +2874,20 @@ async function refreshAdminSession() {
     });
 
     if (!response.ok) {
+      const isAuthFailure = response.status === 401 || response.status === 403;
+      if (!isAuthFailure && setCachedAdminState()) {
+        return;
+      }
+
       if (!shouldAllowLocalAdminFallback()) {
         adminSessionState = {
           loggedIn: false,
           admin: null,
         };
         clearLocalAdminSession();
-        clearAdminApiToken();
+        if (isAuthFailure) {
+          clearAdminApiToken();
+        }
         writeAdminAuthState({
           ...readAdminAuthState(),
           loggedIn: false,
@@ -2924,13 +2944,16 @@ async function refreshAdminSession() {
     });
     updateAdminJoinButtons();
   } catch {
+    if (setCachedAdminState()) {
+      return;
+    }
+
     if (!shouldAllowLocalAdminFallback()) {
       adminSessionState = {
         loggedIn: false,
         admin: null,
       };
       clearLocalAdminSession();
-      clearAdminApiToken();
       writeAdminAuthState({
         ...readAdminAuthState(),
         loggedIn: false,
