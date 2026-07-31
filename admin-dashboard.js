@@ -404,6 +404,18 @@
         }
 
         try {
+          if (action === "accept" || action === "deny" || action === "grant-allowlist") {
+            const actionLabel = action === "accept"
+              ? "accept this application"
+              : action === "deny"
+                ? "deny this application"
+                : "grant allowlist role to this applicant";
+            const confirmed = await showConfirm(`Are you sure you want to ${actionLabel}?`, "Confirm Action", "Yes, Continue");
+            if (!confirmed) {
+              return;
+            }
+          }
+
           if (action === "accept" || action === "deny") {
             await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/decision`, {
               method: "POST",
