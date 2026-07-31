@@ -1893,19 +1893,42 @@ function renderDashboardApplicationList(container, applications, emptyText, opti
     const reviewedOn = formatDashboardApplicationDate(entry?.reviewedBy?.reviewedAt || entry?.updatedAt);
     const commentCount = getDashboardApplicationCommentCount(entry);
     const closed = isDashboardApplicationClosed(entry);
+    const statusLabel = status.charAt(0).toUpperCase() + status.slice(1);
 
     const item = document.createElement("li");
     item.className = "dashboard-application-item";
 
-    const summary = document.createElement("p");
-    summary.className = "dashboard-application-summary";
-    summary.textContent = closed
-      ? `${title} submitted on ${submittedOn}, ${status} on ${reviewedOn}.`
-      : `${title} submitted on ${submittedOn} status ${status}.`;
+    const titleEl = document.createElement("h4");
+    titleEl.className = "dashboard-application-title";
+    titleEl.textContent = title;
 
-    const meta = document.createElement("p");
-    meta.className = "dashboard-application-meta";
-    meta.textContent = `Staff comments: ${commentCount}`;
+    const details = document.createElement("div");
+    details.className = "dashboard-application-details";
+
+    const addDetailRow = (label, value) => {
+      const row = document.createElement("p");
+      row.className = "dashboard-application-detail-row";
+
+      const labelEl = document.createElement("span");
+      labelEl.className = "dashboard-application-detail-label";
+      labelEl.textContent = `${label}:`;
+
+      const valueEl = document.createElement("span");
+      valueEl.className = "dashboard-application-detail-value";
+      valueEl.textContent = value;
+
+      row.appendChild(labelEl);
+      row.appendChild(valueEl);
+      details.appendChild(row);
+    };
+
+    addDetailRow("Submitted", submittedOn);
+    addDetailRow("Status", statusLabel);
+    addDetailRow("Staff comments", String(commentCount));
+
+    if (closed) {
+      addDetailRow("Reviewed", `${statusLabel} on ${reviewedOn}`);
+    }
 
     const actions = document.createElement("div");
     actions.className = "dashboard-application-actions";
@@ -1934,8 +1957,8 @@ function renderDashboardApplicationList(container, applications, emptyText, opti
       actions.appendChild(editButton);
     }
 
-    item.appendChild(summary);
-    item.appendChild(meta);
+    item.appendChild(titleEl);
+    item.appendChild(details);
     item.appendChild(actions);
     container.appendChild(item);
   });

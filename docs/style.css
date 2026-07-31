@@ -2638,36 +2638,65 @@ body.popup-open {
 
 .dashboard-list {
   margin: 0.5rem 0 0;
-  padding-left: 1.1rem;
+  padding-left: 0;
   color: #c3cee1;
   display: grid;
-  gap: 0.28rem;
+  gap: 0.65rem;
 }
 
 .dashboard-list li {
   line-height: 1.45;
+  list-style: none;
 }
 
 .dashboard-application-item {
-  list-style: disc;
-  margin-bottom: 0.6rem;
-}
-
-.dashboard-application-summary {
   margin: 0;
-  color: #d8e2f2;
+  padding: 0.72rem 0.78rem;
+  border: 1px solid rgba(120, 137, 166, 0.34);
+  border-radius: 0.72rem;
+  background: rgba(13, 20, 33, 0.68);
+  display: grid;
+  gap: 0.45rem;
 }
 
-.dashboard-application-meta {
-  margin: 0.2rem 0 0.5rem;
-  color: var(--muted);
-  font-size: 0.92rem;
+.dashboard-application-title {
+  margin: 0;
+  color: #f2f6ff;
+  font-family: "Oxanium", sans-serif;
+  font-size: 1rem;
+  letter-spacing: 0.01em;
+}
+
+.dashboard-application-details {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.dashboard-application-detail-row {
+  margin: 0;
+  display: flex;
+  gap: 0.4rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.dashboard-application-detail-label {
+  color: #9ba8bf;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.dashboard-application-detail-value {
+  color: #d7e0ef;
 }
 
 .dashboard-application-actions {
   display: flex;
   gap: 0.45rem;
   flex-wrap: wrap;
+  margin-top: 0.25rem;
 }
 
 .dashboard-application-actions .btn {
