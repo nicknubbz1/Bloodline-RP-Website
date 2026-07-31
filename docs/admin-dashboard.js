@@ -11,7 +11,7 @@
     && currentScriptSrc.includes("admin-dashboard.js")
     && !currentScriptSrc.includes(requiredDashboardVersion)
   ) {
-    return;
+    window.BLOODLINE_ADMIN_DASHBOARD_REQUIRED_VERSION = "";
   }
 
   if (window.BLOODLINE_ADMIN_DASHBOARD_LOADED) {
