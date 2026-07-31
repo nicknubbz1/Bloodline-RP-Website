@@ -869,6 +869,117 @@ body.maintenance-gated {
   text-transform: uppercase;
 }
 
+.admin-badge.admin-badge-status-pending {
+  border-color: rgba(252, 204, 92, 0.55);
+  background: rgba(252, 204, 92, 0.14);
+  color: #ffe08a;
+}
+
+.admin-badge.admin-badge-status-accepted {
+  border-color: rgba(124, 237, 166, 0.55);
+  background: rgba(124, 237, 166, 0.14);
+  color: #b8ffd4;
+}
+
+.admin-badge.admin-badge-status-denied {
+  border-color: rgba(255, 118, 133, 0.55);
+  background: rgba(255, 118, 133, 0.14);
+  color: #ffd0d7;
+}
+
+.admin-application-head {
+  display: grid;
+  gap: 0.32rem;
+  margin-bottom: 0.2rem;
+}
+
+.admin-application-primary-controls,
+.admin-application-moderation-controls {
+  margin-top: 0.3rem;
+}
+
+.admin-application-view {
+  margin-top: 0.55rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.55rem;
+}
+
+.admin-comments-wrap {
+  margin-top: 0.45rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.admin-comments-wrap h4 {
+  margin: 0;
+  font-family: "Oxanium", sans-serif;
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.admin-comments-list {
+  display: grid;
+  gap: 0.38rem;
+}
+
+.admin-comment-item {
+  display: grid;
+  grid-template-columns: 2rem 1fr;
+  gap: 0.45rem;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 0.55rem;
+  padding: 0.42rem;
+  background: rgba(255, 255, 255, 0.015);
+}
+
+.admin-comment-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Oxanium", sans-serif;
+  font-size: 0.78rem;
+  color: #f1f6ff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.admin-comment-body {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.admin-comment-meta {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #9cb0d3;
+}
+
+.admin-comment-body p {
+  margin: 0;
+}
+
+.admin-comment-form-row {
+  margin-top: 0.2rem;
+  align-items: stretch;
+}
+
+.admin-comment-input {
+  width: 100%;
+  min-height: 4.6rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--line);
+  background: rgba(14, 18, 28, 0.9);
+  color: #f5f8ff;
+  padding: 0.45rem 0.5rem;
+  font-family: "Inter", sans-serif;
+  resize: vertical;
+}
+
 .btn.btn-danger {
   border-color: #a3102d;
   color: #ffd4de;

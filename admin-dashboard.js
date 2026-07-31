@@ -67,6 +67,7 @@
     giftCandidates: [],
     settings: { maintenanceMode: false },
     source: "active",
+    expandedApplications: {},
     applicationLoadError: "",
     applicationLoadNotice: "",
     localMode: false,
@@ -666,6 +667,62 @@
     return steamName || steamId || "Unknown Steam User";
   }
 
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function normalizeApplicationStatus(value) {
+    const normalized = String(value || "pending").toLowerCase();
+    if (["accepted", "denied", "pending"].includes(normalized)) {
+      return normalized;
+    }
+    return "pending";
+  }
+
+  function getStatusClassName(status) {
+    const normalized = normalizeApplicationStatus(status);
+    if (normalized === "accepted") {
+      return "admin-badge-status-accepted";
+    }
+    if (normalized === "denied") {
+      return "admin-badge-status-denied";
+    }
+    return "admin-badge-status-pending";
+  }
+
+  function isAllowlistApplication(app) {
+    const formKey = String(app?.formKey || "").trim().toLowerCase();
+    const title = String(app?.title || "").trim().toLowerCase();
+    return formKey === "allowlist-app" || title === "allowlist application";
+  }
+
+  function renderApplicationReplies(app) {
+    const replies = Array.isArray(app?.replies) ? app.replies : [];
+    if (!replies.length) {
+      return '<p class="admin-empty">No staff comments yet.</p>';
+    }
+
+    return replies.map(function (reply) {
+      const authorName = String(reply?.authorName || "Staff").trim() || "Staff";
+      const authorInitial = authorName.slice(0, 1).toUpperCase();
+      const message = String(reply?.message || "").trim() || "No comment.";
+      return `
+        <article class="admin-comment-item">
+          <span class="admin-comment-avatar">${escapeHtml(authorInitial)}</span>
+          <div class="admin-comment-body">
+            <p class="admin-comment-meta">${escapeHtml(authorName)} • ${escapeHtml(formatDate(reply?.createdAt))}</p>
+            <p>${escapeHtml(message)}</p>
+          </div>
+        </article>
+      `;
+    }).join("");
+  }
+
   function buildGiftCandidates() {
     const map = new Map();
 
@@ -900,22 +957,43 @@
 
     const cards = state.applications.map(function (app) {
         const appSource = app && app._storeSource === "archived" ? "archived" : "active";
-        const actions = appSource === "active"
-          ? '<button class="btn btn-ghost" data-action="accept" type="button">Accept</button><button class="btn btn-ghost" data-action="deny" type="button">Deny</button><button class="btn btn-ghost" data-action="reply" type="button">Reply</button><button class="btn btn-ghost" data-action="archive" type="button">Archive</button>'
+        const appStatus = normalizeApplicationStatus(app?.status);
+        const statusClass = getStatusClassName(appStatus);
+        const appTypeLabel = String(app?.title || app?.type || "Application");
+        const steamName = String(app?.applicant?.steamName || "").trim() || "Unknown Steam User";
+        const discordName = String(app?.applicant?.discordName || app?.applicant?.discordUsername || "").trim() || "Unknown Discord User";
+        const isExpanded = Boolean(state.expandedApplications[app.id]);
+        const allowlistAction = isAllowlistApplication(app)
+          ? '<button class="btn btn-ghost" data-action="grant-allowlist" type="button">Grant Allowlist Role</button>'
+          : "";
+        const moderationActions = appSource === "active"
+          ? `<button class="btn btn-ghost" data-action="accept" type="button">Accept</button><button class="btn btn-danger" data-action="deny" type="button">Deny</button>${allowlistAction}`
           : '<button class="btn btn-danger" data-action="delete" type="button">Delete</button>';
         return `
         <article class="admin-application-card" data-application-id="${app.id}" data-application-source="${appSource}">
-          <header>
-            <h3>${app.title || "Application"}</h3>
-            <span class="admin-badge">${app.status || "pending"}</span>
+          <header class="admin-application-head">
+            <h3>${escapeHtml(appTypeLabel)}</h3>
+            <span class="admin-badge ${statusClass}">${escapeHtml(appStatus)}</span>
           </header>
-          <p><strong>Type:</strong> ${app.type || "unknown"}</p>
-          <p><strong>Applicant:</strong> ${formatSteamIdentity(app.applicant)}</p>
-          <p><strong>Created:</strong> ${formatDate(app.createdAt)}</p>
-          <p><strong>Source:</strong> ${appSource}</p>
-          <p>${app.body || "No details"}</p>
-          <div class="admin-inline-controls">
-            ${actions}
+          <p><strong>Steam name:</strong> ${escapeHtml(steamName)}</p>
+          <p><strong>Discord name:</strong> ${escapeHtml(discordName)}</p>
+          <p><strong>Submitted:</strong> ${escapeHtml(formatDate(app.createdAt))}</p>
+          <div class="admin-inline-controls admin-application-primary-controls">
+            <button class="btn btn-ghost" data-action="toggle-view" type="button">${isExpanded ? "Hide" : "View"}</button>
+          </div>
+          <section class="admin-application-view" ${isExpanded ? "" : "hidden"}>
+            <p>${escapeHtml(app.body || "No details")}</p>
+            <div class="admin-comments-wrap">
+              <h4>Staff Comments</h4>
+              <div class="admin-comments-list">${renderApplicationReplies(app)}</div>
+              <div class="admin-inline-controls admin-comment-form-row">
+                <textarea class="admin-comment-input" data-comment-input rows="2" placeholder="Leave a staff comment..."></textarea>
+                <button class="btn btn-ghost" data-action="comment" type="button">Post Comment</button>
+              </div>
+            </div>
+          </section>
+          <div class="admin-inline-controls admin-application-moderation-controls">
+            ${moderationActions}
           </div>
         </article>
       `;
@@ -1836,6 +1914,12 @@
       const appId = card.getAttribute("data-application-id");
       const action = button.getAttribute("data-action");
 
+      if (action === "toggle-view") {
+        state.expandedApplications[appId] = !state.expandedApplications[appId];
+        renderApplications();
+        return;
+      }
+
       if (!hasPermission("applications")) {
         await showAlert("You do not have Applications moderation permission.", "Access Denied");
         return;
@@ -1848,13 +1932,11 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ decision: action === "accept" ? "accepted" : "denied", note: "" }),
           });
-        } else if (action === "reply") {
-          const message = await showPrompt("Enter your reply message.", {
-            title: "Reply To Application",
-            inputLabel: "Reply Message",
-            confirmText: "Send",
-          });
+        } else if (action === "comment") {
+          const input = card.querySelector("[data-comment-input]");
+          const message = input ? String(input.value || "").trim() : "";
           if (!message) {
+            await showAlert("Comment message is required.", "Comment Required");
             return;
           }
           await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/replies`, {
@@ -1862,10 +1944,11 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ message }),
           });
-        } else if (action === "archive") {
-          await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/archive`, {
+        } else if (action === "grant-allowlist") {
+          await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(appId)}/grant-allowlist-role`, {
             method: "POST",
           });
+          await showAlert("Allowlist role granted successfully.", "Success");
         } else if (action === "delete") {
           if (!(await showConfirm("Delete this archived application permanently?", "Delete Application", "Delete"))) {
             return;

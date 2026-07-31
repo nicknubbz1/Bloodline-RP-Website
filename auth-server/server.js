@@ -480,6 +480,32 @@ function getApplicationById(applications, id) {
   return applications.find((application) => application.id === id) || null;
 }
 
+function findApplicationRecordById(id) {
+  const activeStore = readApplicationStore();
+  const activeApplication = getApplicationById(activeStore.applications, id);
+  if (activeApplication) {
+    return {
+      source: "active",
+      application: activeApplication,
+      activeStore,
+      archivedStore: null,
+    };
+  }
+
+  const archivedStore = readArchivedApplicationStore();
+  const archivedApplication = getApplicationById(archivedStore.applications, id);
+  if (archivedApplication) {
+    return {
+      source: "archived",
+      application: archivedApplication,
+      activeStore: null,
+      archivedStore,
+    };
+  }
+
+  return null;
+}
+
 function buildSteamOpenIdUrl() {
   const returnUrl = `${backendBaseUrl}/auth/steam/return`;
   const params = new URLSearchParams({
@@ -1540,8 +1566,8 @@ app.post("/api/admin/applications/:id/replies", requireAdminSession, requireAdmi
     return;
   }
 
-  const store = readApplicationStore();
-  const application = getApplicationById(store.applications, req.params.id);
+  const record = findApplicationRecordById(req.params.id);
+  const application = record?.application || null;
 
   if (!application) {
     res.status(404).json({ error: "Application not found." });
@@ -1560,7 +1586,11 @@ app.post("/api/admin/applications/:id/replies", requireAdminSession, requireAdmi
   application.replies.push(reply);
   application.updatedAt = nowIso();
 
-  writeApplicationStore(store);
+  if (record.source === "archived") {
+    writeArchivedApplicationStore(record.archivedStore);
+  } else {
+    writeApplicationStore(record.activeStore);
+  }
 
   res.status(201).json({
     ok: true,
@@ -1578,8 +1608,8 @@ app.post("/api/admin/applications/:id/decision", requireAdminSession, requireAdm
     return;
   }
 
-  const store = readApplicationStore();
-  const application = getApplicationById(store.applications, req.params.id);
+  const activeStore = readApplicationStore();
+  const application = getApplicationById(activeStore.applications, req.params.id);
 
   if (!application) {
     res.status(404).json({ error: "Application not found." });
@@ -1595,7 +1625,41 @@ app.post("/api/admin/applications/:id/decision", requireAdminSession, requireAdm
   };
   application.updatedAt = nowIso();
 
-  writeApplicationStore(store);
+  if (decision === "accepted" || decision === "denied") {
+    const archivedStore = readArchivedApplicationStore();
+    activeStore.applications = activeStore.applications.filter((entry) => entry.id !== application.id);
+
+    const archivedApplication = {
+      ...application,
+      archivedAt: nowIso(),
+      archivedBy: req.adminUser.username,
+      updatedAt: nowIso(),
+    };
+    archivedStore.applications = archivedStore.applications.filter((entry) => entry.id !== archivedApplication.id);
+    archivedStore.applications.unshift(archivedApplication);
+
+    writeApplicationStore(activeStore);
+    writeArchivedApplicationStore(archivedStore);
+
+    const sendResponse = () => {
+      res.json({
+        ok: true,
+        application: archivedApplication,
+      });
+    };
+
+    if (decision !== "accepted" || !isAllowlistApplication(archivedApplication) || !archivedApplication.applicant?.discordId) {
+      sendResponse();
+      return;
+    }
+
+    syncDiscordEntitlementRoles(archivedApplication.applicant)
+      .then(sendResponse)
+      .catch(sendResponse);
+    return;
+  }
+
+  writeApplicationStore(activeStore);
 
   const sendResponse = () => {
     res.json({
@@ -1612,6 +1676,53 @@ app.post("/api/admin/applications/:id/decision", requireAdminSession, requireAdm
   syncDiscordEntitlementRoles(application.applicant)
     .then(sendResponse)
     .catch(sendResponse);
+});
+
+app.post("/api/admin/applications/:id/grant-allowlist-role", requireAdminSession, requireAdminPermission("applications"), async (req, res) => {
+  if (!discordAllowlistRoleId) {
+    res.status(400).json({ error: "Allowlist role is not configured on the backend." });
+    return;
+  }
+
+  const record = findApplicationRecordById(req.params.id);
+  const application = record?.application || null;
+
+  if (!application) {
+    res.status(404).json({ error: "Application not found." });
+    return;
+  }
+
+  if (!isAllowlistApplication(application)) {
+    res.status(400).json({ error: "This action is only available for Allowlist applications." });
+    return;
+  }
+
+  const discordId = cleanText(application?.applicant?.discordId || "", 80);
+  if (!discordId) {
+    res.status(400).json({ error: "Applicant does not have a Discord account linked." });
+    return;
+  }
+
+  try {
+    await addDiscordRole(discordId, discordAllowlistRoleId);
+
+    application.allowlistRoleGrantedAt = nowIso();
+    application.allowlistRoleGrantedBy = req.adminUser.username;
+    application.updatedAt = nowIso();
+
+    if (record.source === "archived") {
+      writeArchivedApplicationStore(record.archivedStore);
+    } else {
+      writeApplicationStore(record.activeStore);
+    }
+
+    res.json({
+      ok: true,
+      application,
+    });
+  } catch {
+    res.status(502).json({ error: "Could not grant allowlist role right now." });
+  }
 });
 
 app.post("/api/admin/applications/:id/archive", requireAdminSession, requireAdminPermission("applications"), (req, res) => {
