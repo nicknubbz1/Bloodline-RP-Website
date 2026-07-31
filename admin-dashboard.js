@@ -32,6 +32,7 @@
   const localAdminSettingsKey = "bloodline-local-admin-settings";
   const localSubscriptionsKey = "bloodline-local-subscriptions";
   const localApplicationAvailabilityKey = "bloodline-application-form-availability";
+  const dashboardRuntimeDebugVersion = "20260731n3dbg";
   const applicationForms = Array.isArray(window.BLOODLINE_APPLICATION_FORMS) ? window.BLOODLINE_APPLICATION_FORMS : [];
 
   const tabs = Array.from(document.querySelectorAll("[data-admin-tab]"));
@@ -78,6 +79,7 @@
   let applicationsLoadRequestId = 0;
   let adminDialogModal = null;
   let applicationPopupModal = null;
+  let lastAvatarDebugEvent = "boot";
 
   function insertAfterNode(node, referenceNode) {
     if (!node || !referenceNode || !referenceNode.parentNode) {
@@ -572,25 +574,56 @@
     return keys;
   }
 
-  function getCachedAdminAvatar(adminRef, usernameFallback) {
+  function getCachedAdminAvatarDetails(adminRef, usernameFallback) {
     const keys = buildAdminAvatarCacheKeys(adminRef, usernameFallback);
     if (!keys.length) {
-      return "";
+      return { value: "", source: "none" };
     }
 
     const avatarCache = readStoredJson(localStorage, adminAvatarCacheKey, {});
     if (!avatarCache || typeof avatarCache !== "object") {
-      return "";
+      return { value: "", source: "none" };
     }
 
     for (let index = 0; index < keys.length; index += 1) {
       const value = avatarCache[keys[index]];
       if (typeof value === "string" && value.trim()) {
-        return value;
+        return {
+          value,
+          source: keys[index].startsWith("user:") ? "cache-user" : "cache-id",
+        };
       }
     }
 
-    return "";
+    return { value: "", source: "none" };
+  }
+
+  function getCachedAdminAvatar(adminRef, usernameFallback) {
+    const details = getCachedAdminAvatarDetails(adminRef, usernameFallback);
+    return details.value;
+  }
+
+  function getAvatarDisplayInfo(adminName) {
+    const stateAvatar = String(state.admin?.avatar || "").trim();
+    if (stateAvatar) {
+      return {
+        value: stateAvatar,
+        source: "state",
+      };
+    }
+
+    const cached = getCachedAdminAvatarDetails(state.admin, adminName);
+    return {
+      value: cached.value,
+      source: cached.source,
+    };
+  }
+
+  function buildAvatarDebugText(adminName, source, avatarValue) {
+    const safeName = String(adminName || "").trim().toLowerCase() || "none";
+    const safeSource = String(source || "none").trim() || "none";
+    const avatarLength = String(String(avatarValue || "").trim().length);
+    return `dbg:${dashboardRuntimeDebugVersion} user:${safeName} src:${safeSource} len:${avatarLength} evt:${lastAvatarDebugEvent}`;
   }
 
   function persistAdminAvatar(adminRef, avatarValue, usernameFallback) {
@@ -1204,9 +1237,11 @@
     }
 
     const adminName = state.admin?.username || "";
-    const avatarValue = state.admin?.avatar || getCachedAdminAvatar(state.admin);
+    const avatarInfo = getAvatarDisplayInfo(adminName);
+    const avatarValue = avatarInfo.value;
     const initials = getAdminInitials(adminName || "No staff session");
     const hasAvatar = Boolean(avatarValue && String(avatarValue).trim());
+    const avatarDebugText = buildAvatarDebugText(adminName, avatarInfo.source, avatarValue);
 
     sessionMetaEl.innerHTML = `
       <span class="admin-session-meta__avatar${hasAvatar ? "" : " admin-session-meta__avatar-fallback"}">
@@ -1215,6 +1250,7 @@
           : escapeHtml(initials)}
       </span>
       <span class="admin-session-meta__text">${escapeHtml(state.admin ? `Logged in as ${adminName}` : "No staff session.")}</span>
+      <span class="admin-empty" style="display:block;font-size:12px;opacity:0.82;">${escapeHtml(avatarDebugText)}</span>
     `;
 
     if (changeUsernameBtn) {
@@ -1744,13 +1780,22 @@
         input.remove();
 
         if (!file) {
+          lastAvatarDebugEvent = "file-not-selected";
+          renderAdminMeta();
           return;
         }
 
+        lastAvatarDebugEvent = `file-selected:${String(file.type || "unknown").trim() || "unknown"}`;
+        renderAdminMeta();
+
         const croppedAvatar = await openAvatarCropEditor(file);
         if (!croppedAvatar || !croppedAvatar.startsWith("data:image/")) {
+          lastAvatarDebugEvent = "avatar-read-failed";
+          renderAdminMeta();
           return;
         }
+
+        lastAvatarDebugEvent = "avatar-read-success";
 
         state.admin = {
           ...(state.admin || {}),
@@ -1770,6 +1815,7 @@
             ...state.admin,
             avatar: croppedAvatar,
           };
+          lastAvatarDebugEvent = updated ? "local-save-success" : "local-save-failed";
           renderAdminMeta();
           persistAdminAvatar(state.admin, croppedAvatar);
           await showAlert(updated ? "Profile picture updated." : "Profile picture could not be saved locally.", "Success");
@@ -1789,10 +1835,13 @@
             nextAdmin.avatar = croppedAvatar;
           }
           state.admin = nextAdmin;
+          lastAvatarDebugEvent = "server-save-success";
           persistAdminAvatar(nextAdmin, nextAdmin.avatar);
           renderAdminMeta();
           await showAlert("Profile picture updated.", "Success");
         } catch (error) {
+          lastAvatarDebugEvent = "server-save-failed-local-kept";
+          renderAdminMeta();
           await showAlert("Profile picture saved locally. Server update failed.", "Partial Success");
         }
       };
