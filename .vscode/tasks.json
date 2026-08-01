@@ -1,0 +1,45 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "commit-push-banner-stability",
+			"type": "shell",
+			"command": "git add style.css docs/style.css index.html account.html applications.html application-view.html rules.html store.html docs/index.html docs/account.html docs/applications.html docs/application-view.html docs/rules.html docs/store.html && git commit -m \"Lock banner position across tabs and unify css cache key\" && git push origin main"
+		},
+		{
+			"label": "git_push_banner_fix2",
+			"type": "shell",
+			"command": "git status --short"
+		},
+		{
+			"label": "deploy-steam-fallback",
+			"type": "shell",
+			"command": "git add -u; git commit -m \"Add Steam OpenID fallback login path for static site\"; git push origin main",
+			"isBackground": false
+		},
+		{
+			"label": "deploy-account-logout-button",
+			"type": "shell",
+			"command": "git add account.html docs/account.html script.js docs/script.js && git commit -m \"Add dashboard logout button and sign-out handler\" && git push origin main",
+			"isBackground": false
+		},
+		{
+			"label": "deploy-steam-profile-html-fallback",
+			"type": "shell",
+			"command": "git add script.js docs/script.js account-dashboard.html account.html admin.html application-view.html applications.html auth-callback.html index.html rules.html store.html team.html docs/account-dashboard.html docs/account.html docs/admin.html docs/application-view.html docs/applications.html docs/auth-callback.html docs/index.html docs/rules.html docs/store.html docs/team.html; git commit -m \"Use Steam profile HTML fallback for name and avatar\"; git push origin main",
+			"isBackground": false
+		},
+		{
+			"label": "deploy-remove-account-screen",
+			"type": "shell",
+			"command": "git add account.html docs/account.html; git commit -m \"Remove legacy account access page\"; git push origin main",
+			"isBackground": false
+		},
+		{
+			"label": "deploy-render-backend-origin",
+			"type": "shell",
+			"command": "git add auth-config.js docs/auth-config.js; git commit -m \"Point static frontend auth config to Render backend\"; git push origin main",
+			"isBackground": false
+		}
+	]
+}
