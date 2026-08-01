@@ -1612,17 +1612,6 @@
 
     state.applicationAvailability = normalizeApplicationAvailability(readLocalApplicationAvailability());
 
-    if (state.localMode) {
-      if (requestId !== applicationsLoadRequestId) {
-        return;
-      }
-      state.applications = [];
-      state.applicationLoadNotice = "";
-      renderApplications();
-      renderApplicationAvailability();
-      return;
-    }
-
     if (!hasPermission("applications")) {
       if (requestId !== applicationsLoadRequestId) {
         return;
