@@ -80,6 +80,9 @@ const defaultMainAdminUsername = process.env.MAIN_ADMIN_USERNAME || "1234";
 const defaultMainAdminPassword = process.env.MAIN_ADMIN_PASSWORD || "1234";
 const adminSessionDays = Number(process.env.ADMIN_SESSION_DAYS || 30);
 const accountSessionDays = Number(process.env.ACCOUNT_SESSION_DAYS || 30);
+const rememberSessionDays = Number(process.env.REMEMBER_SESSION_DAYS || 365);
+const rememberCookieName = process.env.REMEMBER_COOKIE_NAME || "bloodline_remember";
+const rememberTokenSecret = process.env.REMEMBER_TOKEN_SECRET || sessionSecret;
 const adminApiTokenSecret = process.env.ADMIN_API_TOKEN_SECRET || sessionSecret;
 const adminApiTokenDays = Number(process.env.ADMIN_API_TOKEN_DAYS || adminSessionDays || 30);
 const sessionDataPath = path.join(__dirname, "data", "sessions");
@@ -244,6 +247,154 @@ function saveSession(req) {
       resolve();
     });
   });
+}
+
+function parseCookieHeader(cookieHeader) {
+  const cookieMap = {};
+  if (!cookieHeader || typeof cookieHeader !== "string") {
+    return cookieMap;
+  }
+
+  cookieHeader.split(";").forEach((entry) => {
+    const segment = String(entry || "").trim();
+    if (!segment) {
+      return;
+    }
+
+    const separatorIndex = segment.indexOf("=");
+    if (separatorIndex <= 0) {
+      return;
+    }
+
+    const name = segment.slice(0, separatorIndex).trim();
+    const value = segment.slice(separatorIndex + 1).trim();
+    if (!name) {
+      return;
+    }
+
+    cookieMap[name] = value;
+  });
+
+  return cookieMap;
+}
+
+function signRememberToken(steamId) {
+  const normalizedSteamId = cleanText(steamId, 80);
+  if (!normalizedSteamId) {
+    return "";
+  }
+
+  const tokenLifetimeMs = 1000 * 60 * 60 * 24 * Math.max(1, rememberSessionDays);
+  const payloadRaw = JSON.stringify({
+    steamId: normalizedSteamId,
+    exp: Date.now() + tokenLifetimeMs,
+  });
+  const payloadEncoded = toBase64Url(payloadRaw);
+  const signature = crypto
+    .createHmac("sha256", rememberTokenSecret)
+    .update(payloadEncoded)
+    .digest("hex");
+
+  return `${payloadEncoded}.${signature}`;
+}
+
+function verifyRememberToken(token) {
+  if (!token || typeof token !== "string") {
+    return null;
+  }
+
+  const [payloadEncoded, providedSignature] = token.split(".");
+  if (!payloadEncoded || !providedSignature) {
+    return null;
+  }
+
+  const expectedSignature = crypto
+    .createHmac("sha256", rememberTokenSecret)
+    .update(payloadEncoded)
+    .digest("hex");
+
+  if (providedSignature.length !== expectedSignature.length) {
+    return null;
+  }
+
+  const signatureMatches = crypto.timingSafeEqual(
+    Buffer.from(providedSignature, "utf8"),
+    Buffer.from(expectedSignature, "utf8")
+  );
+  if (!signatureMatches) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(fromBase64Url(payloadEncoded));
+    const steamId = cleanText(payload?.steamId || "", 80);
+    const exp = Number(payload?.exp || 0);
+    if (!steamId || !Number.isFinite(exp) || exp <= Date.now()) {
+      return null;
+    }
+
+    return { steamId };
+  } catch {
+    return null;
+  }
+}
+
+function setRememberSteamCookie(res, steamId) {
+  const token = signRememberToken(steamId);
+  if (!res || !token) {
+    return;
+  }
+
+  const maxAge = 1000 * 60 * 60 * 24 * Math.max(1, rememberSessionDays);
+  res.cookie(rememberCookieName, token, {
+    httpOnly: true,
+    sameSite: sessionCookieSameSite,
+    secure: sessionCookieSecure,
+    maxAge,
+    path: "/",
+  });
+}
+
+function clearRememberSteamCookie(res) {
+  if (!res) {
+    return;
+  }
+
+  res.clearCookie(rememberCookieName, {
+    httpOnly: true,
+    sameSite: sessionCookieSameSite,
+    secure: sessionCookieSecure,
+    path: "/",
+  });
+}
+
+function hydrateSessionAccountFromRememberCookie(req) {
+  if (!req || !req.session) {
+    return false;
+  }
+
+  const account = req.session.account || {};
+  if (account.steamId) {
+    return false;
+  }
+
+  const cookies = parseCookieHeader(req.headers?.cookie || "");
+  const rememberToken = String(cookies[rememberCookieName] || "").trim();
+  if (!rememberToken) {
+    return false;
+  }
+
+  const verified = verifyRememberToken(rememberToken);
+  if (!verified?.steamId) {
+    return false;
+  }
+
+  req.session.account = {
+    ...account,
+    steamId: verified.steamId,
+  };
+  applyAccountSessionLifetime(req);
+  return true;
 }
 
 function httpsRequest(options, body) {
@@ -974,6 +1125,7 @@ function redirectAuthError(res, provider, message) {
 }
 
 function requireSteamSession(req, res, next) {
+  hydrateSessionAccountFromRememberCookie(req);
   hydrateSessionAccountFromAuthUser(req);
   if (!req.session.account?.steamId) {
     redirectAuthError(res, "discord", "Steam login is required before Discord can be linked.");
@@ -985,6 +1137,7 @@ function requireSteamSession(req, res, next) {
 }
 
 function requireLinkedAccount(req, res, next) {
+  hydrateSessionAccountFromRememberCookie(req);
   hydrateSessionAccountFromAuthUser(req);
   hydrateSessionAccountFromLink(req);
   const account = req.session.account;
@@ -1159,6 +1312,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.get("/auth/session", (req, res) => {
+  hydrateSessionAccountFromRememberCookie(req);
   hydrateSessionAccountFromAuthUser(req);
   hydrateSessionAccountFromLink(req);
   const account = req.session.account || null;
@@ -1173,6 +1327,7 @@ app.get("/auth/session", (req, res) => {
 });
 
 app.get("/auth/logout", (req, res) => {
+  clearRememberSteamCookie(res);
   req.logout(() => {
     req.session.destroy(() => {
       res.json({ ok: true });
@@ -1221,6 +1376,7 @@ app.get("/auth/steam/return", (req, res, next) => {
       };
       applyAccountSessionLifetime(req);
       upsertAccountLinkFromAccount(req.session.account);
+      setRememberSteamCookie(res, user.steamId);
       saveSession(req)
         .then(() => {
           res.redirect(buildFrontendUrl("auth-callback.html", {
@@ -1260,6 +1416,7 @@ app.get("/auth/steam/return", (req, res, next) => {
       };
       applyAccountSessionLifetime(req);
       upsertAccountLinkFromAccount(req.session.account);
+      setRememberSteamCookie(res, user.steamId);
       saveSession(req)
         .then(() => {
           res.redirect(buildFrontendUrl("auth-callback.html", {
