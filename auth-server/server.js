@@ -550,6 +550,32 @@ function hydrateSessionAccountFromLink(req) {
   return true;
 }
 
+function hydrateSessionAccountFromAuthUser(req) {
+  if (!req || !req.session) {
+    return false;
+  }
+
+  const existingAccount = req.session.account || {};
+  if (existingAccount.steamId) {
+    return false;
+  }
+
+  const authUser = req.user || req.session?.passport?.user || null;
+  const steamId = cleanText(authUser?.steamId || "", 80);
+  if (!steamId) {
+    return false;
+  }
+
+  req.session.account = {
+    ...existingAccount,
+    steamId,
+    steamName: cleanText(authUser?.displayName || authUser?.steamName || existingAccount.steamName || "", 120),
+    steamAvatar: cleanText(authUser?.avatar || authUser?.steamAvatar || existingAccount.steamAvatar || "", 500),
+  };
+  applyAccountSessionLifetime(req);
+  return true;
+}
+
 function ensureAdminBootstrapUser() {
   const store = readAdminUsersStore();
   const users = store.users || [];
@@ -948,6 +974,7 @@ function redirectAuthError(res, provider, message) {
 }
 
 function requireSteamSession(req, res, next) {
+  hydrateSessionAccountFromAuthUser(req);
   if (!req.session.account?.steamId) {
     redirectAuthError(res, "discord", "Steam login is required before Discord can be linked.");
     return;
@@ -958,6 +985,7 @@ function requireSteamSession(req, res, next) {
 }
 
 function requireLinkedAccount(req, res, next) {
+  hydrateSessionAccountFromAuthUser(req);
   hydrateSessionAccountFromLink(req);
   const account = req.session.account;
   if (!account?.steamId || !account?.discordId) {
@@ -1131,6 +1159,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.get("/auth/session", (req, res) => {
+  hydrateSessionAccountFromAuthUser(req);
   hydrateSessionAccountFromLink(req);
   const account = req.session.account || null;
   if (account) {

@@ -321,7 +321,19 @@
       return;
     }
 
-    if (!isLoggedInLocally()) {
+    const backendLinkState = await getBackendLinkState();
+    if (backendLinkState.reachable) {
+      if (!backendLinkState.hasSteam) {
+        setMessage("Please log in with Steam, then try again.", "error");
+        showLoginRequiredPopup();
+        return;
+      }
+
+      if (!backendLinkState.hasDiscord) {
+        setMessage("Please link Discord from your dashboard before submitting.", "error");
+        return;
+      }
+    } else if (!isLoggedInLocally()) {
       showLoginRequiredPopup();
       return;
     }
