@@ -1,4 +1,10 @@
-const bloodlineBackendOrigin = "http://localhost:3000";
+const bloodlineHostName = window.location.hostname;
+const isLocalBloodlineHost = ["localhost", "127.0.0.1"].includes(bloodlineHostName);
+const isStaticBloodlineHost = /\.github\.io$/i.test(bloodlineHostName);
+const defaultBloodlineBackendOrigin = isLocalBloodlineHost
+	? "http://localhost:3000"
+	: (isStaticBloodlineHost ? "https://bloodline-auth-server.onrender.com" : window.location.origin);
+const bloodlineBackendOrigin = window.BLOODLINE_BACKEND_ORIGIN || defaultBloodlineBackendOrigin;
 
 window.BLOODLINE_STEAM_AUTH_URL = window.BLOODLINE_STEAM_AUTH_URL || `${bloodlineBackendOrigin}/auth/steam`;
 window.BLOODLINE_DISCORD_AUTH_URL = window.BLOODLINE_DISCORD_AUTH_URL || `${bloodlineBackendOrigin}/auth/discord`;
