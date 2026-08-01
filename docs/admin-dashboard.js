@@ -1529,24 +1529,18 @@
       renderAdminMeta();
       return;
     } catch (error) {
-      if (optimisticAdmin) {
-        state.admin = optimisticAdmin;
-        state.localMode = Boolean(sessionAdmin);
+      if (sessionAdmin && shouldAllowLocalAdminFallback()) {
+        state.admin = sessionAdmin;
+        state.localMode = true;
         renderAdminMeta();
         return;
       }
 
-      if (!shouldAllowLocalAdminFallback()) {
-        state.admin = null;
-        state.localMode = false;
-        clearLocalAdminSession();
-        clearAdminApiToken();
-        persistAdminAuthSnapshot(null);
-        throw new Error("Admin session not found.");
-      }
-
-      state.admin = state.admin || null;
-      state.localMode = Boolean(sessionAdmin);
+      state.admin = null;
+      state.localMode = false;
+      clearLocalAdminSession();
+      clearAdminApiToken();
+      persistAdminAuthSnapshot(null);
       renderAdminMeta();
       throw new Error("Admin session not found.");
     }
@@ -1791,13 +1785,13 @@
 
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async function () {
-      if (state.localMode) {
-        clearLocalAdminSession();
-      } else {
+      if (!state.localMode) {
         await requestJson(adminLogoutUrl, { method: "POST" }).catch(function () {
           return null;
         });
       }
+      clearLocalAdminSession();
+      persistAdminAuthSnapshot(null);
       clearAdminApiToken();
       window.location.href = "index.html";
     });
