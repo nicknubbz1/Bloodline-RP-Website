@@ -1142,6 +1142,12 @@ function requireLinkedAccount(req, res, next) {
   hydrateSessionAccountFromLink(req);
   const account = req.session.account;
   if (!account?.steamId || !account?.discordId) {
+    console.warn("[applications] blocked submit: missing linked account", {
+      hasSteam: Boolean(account?.steamId),
+      hasDiscord: Boolean(account?.discordId),
+      steamId: account?.steamId || "",
+      discordId: account?.discordId || "",
+    });
     res.status(401).json({ error: "Steam and Discord must both be linked to continue." });
     return;
   }
@@ -1550,6 +1556,13 @@ app.get("/api/discord/stats", async (_req, res) => {
 });
 
 app.post("/api/applications", requireLinkedAccount, (req, res) => {
+  console.log("[applications] submit request", {
+    formKey: cleanText(req.body.formKey, 80),
+    type: cleanText(req.body.type, 40).toLowerCase(),
+    steamId: req.session.account?.steamId || "",
+    discordId: req.session.account?.discordId || "",
+  });
+
   const type = cleanText(req.body.type, 40).toLowerCase();
   const requestedTitle = cleanText(req.body.title, 80);
   const body = cleanText(req.body.body || req.body.message, 3000);
@@ -1597,6 +1610,11 @@ app.post("/api/applications", requireLinkedAccount, (req, res) => {
   const store = readApplicationStore();
   store.applications.unshift(nextApplication);
   writeApplicationStore(store);
+
+  console.log("[applications] submit stored", {
+    applicationId: nextApplication.id,
+    totalActive: Array.isArray(store.applications) ? store.applications.length : 0,
+  });
 
   res.status(201).json({
     ok: true,
@@ -2043,6 +2061,13 @@ app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("
   });
 
   applications.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
+
+  console.log("[applications] admin list", {
+    admin: req.adminUser?.username || "unknown",
+    source: source === "archived" ? "archived" : "active",
+    search,
+    count: applications.length,
+  });
 
   res.json({
     applications,
