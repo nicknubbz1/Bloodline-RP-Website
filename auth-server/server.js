@@ -95,6 +95,7 @@ const applicationTypes = [
 ];
 const validApplicationTypeKeys = new Set(applicationTypes.map((entry) => entry.key));
 const dataRootPath = resolveDataRootPath();
+const legacyDataRootPath = path.join(__dirname, "data");
 const applicationStorePath = path.join(dataRootPath, "applications.json");
 const archivedApplicationStorePath = path.join(dataRootPath, "applications-archived.json");
 const adminUsersStorePath = path.join(dataRootPath, "admin-users.json");
@@ -561,6 +562,63 @@ function writeJsonFile(filePath, nextValue) {
     }
     throw error;
   }
+}
+
+function readJsonFileIfExists(filePath) {
+  try {
+    if (!fs.existsSync(filePath)) {
+      return null;
+    }
+    const raw = fs.readFileSync(filePath, "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function migrateLegacyStoreFile(fileName, fallbackData) {
+  const targetPath = path.join(dataRootPath, fileName);
+  const legacyPath = path.join(legacyDataRootPath, fileName);
+
+  if (!fs.existsSync(legacyPath)) {
+    return;
+  }
+
+  const legacyData = readJsonFileIfExists(legacyPath);
+  if (legacyData === null) {
+    return;
+  }
+
+  const targetData = readJsonFileIfExists(targetPath);
+  const fallbackJson = JSON.stringify(fallbackData);
+  const legacyJson = JSON.stringify(legacyData);
+  const targetJson = targetData === null ? fallbackJson : JSON.stringify(targetData);
+  const targetMissingOrDefault = targetData === null || targetJson === fallbackJson;
+
+  if (!targetMissingOrDefault || legacyJson === fallbackJson) {
+    return;
+  }
+
+  ensureJsonFile(targetPath, fallbackData);
+  fs.writeFileSync(targetPath, JSON.stringify(legacyData, null, 2), "utf8");
+  console.log(`[storage] migrated ${fileName} from legacy path`);
+}
+
+function migrateLegacyDataIfNeeded() {
+  if (path.resolve(dataRootPath) === path.resolve(legacyDataRootPath)) {
+    return;
+  }
+
+  migrateLegacyStoreFile("applications.json", { applications: [] });
+  migrateLegacyStoreFile("applications-archived.json", { applications: [] });
+  migrateLegacyStoreFile("subscriptions.json", { current: [], ended: [] });
+  migrateLegacyStoreFile("account-links.json", { links: [] });
+  migrateLegacyStoreFile("admin-settings.json", {
+    maintenanceMode: false,
+    updatedAt: nowIso(),
+    updatedBy: "system",
+  });
+  migrateLegacyStoreFile("admin-users.json", { users: [] });
 }
 
 function readArchivedApplicationStore() {
@@ -2553,6 +2611,7 @@ app.use((_req, res) => {
 });
 
 ensureApplicationStore();
+migrateLegacyDataIfNeeded();
 ensureJsonFile(archivedApplicationStorePath, { applications: [] });
 ensureJsonFile(subscriptionsStorePath, {
   current: [],
