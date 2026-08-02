@@ -2377,7 +2377,13 @@ app.post("/api/admin/applications/:id/replies", requireAdminSession, requireAdmi
       targetAdmin.avatar = requestedAvatar;
       targetAdmin.updatedAt = nowIso();
       writeAdminUsersStore(adminStore);
-      persistReplyAvatarsFromAdminProfiles();
+      setImmediate(() => {
+        try {
+          persistReplyAvatarsFromAdminProfiles();
+        } catch {
+          // Keep comment post path non-blocking.
+        }
+      });
     }
   }
 

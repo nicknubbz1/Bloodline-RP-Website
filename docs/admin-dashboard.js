@@ -521,6 +521,7 @@
               message,
               authorAvatar: currentAdminAvatar,
             }),
+            timeoutMs: 20000,
           });
           await loadApplications();
           openApplicationPopupModal(app.id);
