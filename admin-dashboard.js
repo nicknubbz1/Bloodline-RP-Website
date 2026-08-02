@@ -523,6 +523,7 @@
           const currentAdminAvatar = String(
             state.admin?.avatar
             || getCachedAdminAvatar(state.admin, state.admin?.username)
+            || readLinkedSteamAvatar()
             || ""
           ).trim();
 
@@ -636,6 +637,15 @@
           avatar: nextAvatar,
         },
       });
+    }
+  }
+
+  function readLinkedSteamAvatar() {
+    try {
+      const account = JSON.parse(localStorage.getItem("bloodline-account") || "{}") || {};
+      return String(account?.steamAvatar || "").trim();
+    } catch {
+      return "";
     }
   }
 
@@ -1538,7 +1548,11 @@
       const payload = await requestJson(adminSessionUrl, { timeoutMs: 6000 });
       const nextAdmin = payload.admin ? { ...payload.admin } : null;
       if (nextAdmin?.id) {
-        const fallbackAvatar = getCachedAdminAvatar(nextAdmin);
+        const fallbackAvatar = String(
+          getCachedAdminAvatar(nextAdmin)
+          || readLinkedSteamAvatar()
+          || ""
+        ).trim();
         if (!nextAdmin.avatar && fallbackAvatar) {
           nextAdmin.avatar = fallbackAvatar;
           try {
