@@ -1235,13 +1235,15 @@ function mergeAccountState(nextPartialState) {
     const shouldPreserveDiscord = !incomingDiscordId && !incomingDiscordName && !incomingDiscordUsername && !incomingDiscordAvatar;
 
     if (shouldPreserveDiscord) {
-      return {
+      const preservedState = {
         ...nextState,
         discordId: currentState.discordId || "",
         discordName: currentState.discordName || "",
         discordUsername: currentState.discordUsername || "",
         discordAvatar: currentState.discordAvatar || "",
       };
+      writeAccountState(preservedState);
+      return preservedState;
     }
   }
 
@@ -2666,12 +2668,20 @@ function handleAuthCallbackPage() {
     }
 
     if (provider === "discord") {
-      mergeAccountState({
-        discordId: params.get("discordId") || "",
-        discordName: params.get("discordName") || params.get("discordUsername") || "Discord User",
-        discordUsername: params.get("discordUsername") || "",
-        discordAvatar: params.get("discordAvatar") || "",
-      });
+      const discordId = params.get("discordId") || "";
+      const discordName = params.get("discordName") || "";
+      const discordUsername = params.get("discordUsername") || "";
+      const discordAvatar = params.get("discordAvatar") || "";
+      const hasIncomingDiscordIdentity = Boolean(discordId || discordName || discordUsername || discordAvatar);
+
+      if (hasIncomingDiscordIdentity) {
+        mergeAccountState({
+          discordId,
+          discordName: discordName || discordUsername || "",
+          discordUsername,
+          discordAvatar,
+        });
+      }
     }
   }
 
