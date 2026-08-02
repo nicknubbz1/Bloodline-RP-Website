@@ -1541,6 +1541,16 @@
         const fallbackAvatar = getCachedAdminAvatar(nextAdmin);
         if (!nextAdmin.avatar && fallbackAvatar) {
           nextAdmin.avatar = fallbackAvatar;
+          try {
+            await requestJson(`${apiBaseUrl}/admin/avatar`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ avatar: fallbackAvatar }),
+              timeoutMs: 8000,
+            });
+          } catch {
+            // Keep local cached avatar if backend sync is temporarily unavailable.
+          }
         }
         if (nextAdmin.avatar) {
           persistAdminAvatar(nextAdmin, nextAdmin.avatar);
