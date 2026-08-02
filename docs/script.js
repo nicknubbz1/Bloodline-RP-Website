@@ -1297,12 +1297,7 @@ function getStaffCommentInitials(name) {
   return letterInitials || "ST";
 }
 
-function buildStaffFallbackAvatarUrl(name) {
-  const seed = String(name || "Staff").trim() || "Staff";
-  return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(seed)}`;
-}
-
-function resolveStaffReplyAvatarUrl(reply, authorName) {
+function resolveStaffReplyAvatarUrl(reply) {
   const avatarUrl = String(
     reply?.authorAvatar
     || reply?.authorAvatarUrl
@@ -1313,7 +1308,7 @@ function resolveStaffReplyAvatarUrl(reply, authorName) {
     || ""
   ).trim();
 
-  return avatarUrl || buildStaffFallbackAvatarUrl(authorName);
+  return avatarUrl;
 }
 
 function renderHeaderAccountTrigger(state) {
@@ -2348,7 +2343,7 @@ async function initAccountDashboardPage() {
 
         const author = String(reply?.authorName || "Staff").trim() || "Staff";
         const created = formatDashboardApplicationDate(reply?.createdAt);
-        const avatarUrl = resolveStaffReplyAvatarUrl(reply, author);
+        const avatarUrl = resolveStaffReplyAvatarUrl(reply);
 
         const avatar = document.createElement("span");
         avatar.className = "dashboard-application-comment-avatar";

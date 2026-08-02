@@ -250,11 +250,6 @@ function cleanUsername(value) {
   return cleanText(value, 40).toLowerCase();
 }
 
-function buildStaffFallbackAvatarUrl(name) {
-  const seed = cleanText(name || "staff", 120) || "staff";
-  return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(seed)}`;
-}
-
 function applyAccountSessionLifetime(req) {
   if (!req || !req.session || !req.session.cookie) {
     return;
@@ -916,10 +911,10 @@ function normalizeApplicationRepliesWithAdminAvatars(applications) {
         || ""
       );
       const authorName = authorNameRaw.toLowerCase();
-      const resolvedAvatar = existingAvatar
-        || (authorAdminId ? adminAvatarById.get(authorAdminId) : "")
+      const resolvedAvatar = (authorAdminId ? adminAvatarById.get(authorAdminId) : "")
         || (authorName ? adminAvatarByUsername.get(authorName) : "")
-        || buildStaffFallbackAvatarUrl(authorNameRaw || "Staff");
+        || existingAvatar
+        || "";
 
       return {
         ...reply,
@@ -2079,7 +2074,7 @@ app.post("/api/admin/change-username", requireAdminSession, (req, res) => {
 });
 
 app.post("/api/admin/avatar", requireAdminSession, (req, res) => {
-  const nextAvatar = normalizeAvatarValue(req.body?.avatar || req.body?.avatarUrl || "", { maxBytes: 1024 * 1024 });
+  const nextAvatar = normalizeAvatarValue(req.body?.avatar || req.body?.avatarUrl || "", { maxBytes: 5 * 1024 * 1024 });
   if (!nextAvatar) {
     res.status(400).json({ error: "A valid image is required." });
     return;
