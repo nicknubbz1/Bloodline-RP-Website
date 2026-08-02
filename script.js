@@ -1228,10 +1228,10 @@ function mergeAccountState(nextPartialState) {
   }
 
   if (hasExistingSteam && hasExistingDiscord) {
-    const incomingDiscordId = String(nextPartialState?.discordId ?? currentState?.discordId ?? "").trim();
-    const incomingDiscordName = String(nextPartialState?.discordName ?? currentState?.discordName ?? "").trim();
-    const incomingDiscordUsername = String(nextPartialState?.discordUsername ?? currentState?.discordUsername ?? "").trim();
-    const incomingDiscordAvatar = String(nextPartialState?.discordAvatar ?? currentState?.discordAvatar ?? "").trim();
+    const incomingDiscordId = String(nextPartialState?.discordId ?? "").trim();
+    const incomingDiscordName = String(nextPartialState?.discordName ?? "").trim();
+    const incomingDiscordUsername = String(nextPartialState?.discordUsername ?? "").trim();
+    const incomingDiscordAvatar = String(nextPartialState?.discordAvatar ?? "").trim();
     const shouldPreserveDiscord = !incomingDiscordId && !incomingDiscordName && !incomingDiscordUsername && !incomingDiscordAvatar;
 
     if (shouldPreserveDiscord) {
@@ -1378,7 +1378,7 @@ function renderAccountState() {
   const steamIdentityLabel = formatSteamIdentityLabel(state);
   const discordName = state.discordName || "Not Connected";
   const hasSteam = hasLinkedSteamAccount(state);
-  const hasDiscord = Boolean(state.discordName);
+  const hasDiscord = Boolean(state.discordId || state.discordName || state.discordUsername);
 
   if (hasSteam) {
     closeSteamLoginModal();
@@ -2302,7 +2302,7 @@ async function initAccountDashboardPage() {
 
         const author = String(reply?.authorName || "Staff").trim() || "Staff";
         const created = formatDashboardApplicationDate(reply?.createdAt);
-        const avatarUrl = String(reply?.authorAvatar || "").trim();
+        const avatarUrl = String(reply?.authorAvatar || reply?.authorAvatarUrl || reply?.avatar || "").trim();
 
         const avatar = document.createElement("span");
         avatar.className = "dashboard-application-comment-avatar";

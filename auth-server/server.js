@@ -629,6 +629,8 @@ function normalizeAccountLink(entry) {
 
   return {
     steamId,
+    steamName: cleanText(entry.steamName || "", 120),
+    steamAvatar: cleanText(entry.steamAvatar || "", 500),
     discordId,
     discordName: cleanText(entry.discordName || "", 120),
     discordUsername: cleanText(entry.discordUsername || "", 120),
@@ -681,24 +683,105 @@ function hydrateSessionAccountFromLink(req) {
     return false;
   }
 
-  if (sessionAccount.discordId) {
-    return false;
-  }
-
   const linked = findAccountLinkBySteamId(sessionAccount.steamId);
   if (!linked) {
     return false;
   }
 
-  req.session.account = {
+  const nextAccount = {
     ...sessionAccount,
-    discordId: linked.discordId,
-    discordName: linked.discordName,
-    discordUsername: linked.discordUsername,
-    discordAvatar: linked.discordAvatar,
+    steamName: cleanText(sessionAccount.steamName || linked.steamName || "", 120),
+    steamAvatar: cleanText(sessionAccount.steamAvatar || linked.steamAvatar || "", 500),
+    discordId: cleanText(sessionAccount.discordId || linked.discordId || "", 80),
+    discordName: cleanText(sessionAccount.discordName || linked.discordName || "", 120),
+    discordUsername: cleanText(sessionAccount.discordUsername || linked.discordUsername || "", 120),
+    discordAvatar: cleanText(sessionAccount.discordAvatar || linked.discordAvatar || "", 500),
+  };
+
+  const changed = JSON.stringify(nextAccount) !== JSON.stringify(sessionAccount);
+  if (!changed) {
+    return false;
+  }
+
+  req.session.account = {
+    ...nextAccount,
   };
   applyAccountSessionLifetime(req);
   return true;
+}
+
+async function resolveApplicantSteamIdentity(account) {
+  const steamId = cleanText(account?.steamId || "", 80);
+  let steamName = cleanText(account?.steamName || "", 120);
+  let steamAvatar = cleanText(account?.steamAvatar || "", 500);
+
+  if (!steamId) {
+    return {
+      steamId: "",
+      steamName: "Unknown Steam User",
+      steamAvatar: "",
+    };
+  }
+
+  const linked = findAccountLinkBySteamId(steamId);
+  if (!steamName) {
+    steamName = cleanText(linked?.steamName || "", 120);
+  }
+  if (!steamAvatar) {
+    steamAvatar = cleanText(linked?.steamAvatar || "", 500);
+  }
+
+  if (!steamName || !steamAvatar) {
+    const fetchedProfile = await fetchSteamProfileFallback(steamId);
+    if (!steamName) {
+      steamName = cleanText(fetchedProfile?.displayName || "", 120);
+    }
+    if (!steamAvatar) {
+      steamAvatar = cleanText(fetchedProfile?.avatar || "", 500);
+    }
+  }
+
+  return {
+    steamId,
+    steamName: steamName || "Unknown Steam User",
+    steamAvatar,
+  };
+}
+
+async function hydrateApplicationApplicantIdentity(application) {
+  const normalized = application && typeof application === "object" ? { ...application } : null;
+  if (!normalized) {
+    return null;
+  }
+
+  const applicant = normalized.applicant && typeof normalized.applicant === "object"
+    ? { ...normalized.applicant }
+    : {};
+  const steamId = cleanText(applicant.steamId || "", 80);
+  if (!steamId) {
+    normalized.applicant = applicant;
+    return normalized;
+  }
+
+  const linked = findAccountLinkBySteamId(steamId);
+  if (!cleanText(applicant.steamName || "", 120)) {
+    applicant.steamName = cleanText(linked?.steamName || "", 120) || applicant.steamName || "Unknown Steam User";
+  }
+  if (!cleanText(applicant.steamAvatar || "", 500)) {
+    applicant.steamAvatar = cleanText(linked?.steamAvatar || "", 500) || applicant.steamAvatar || "";
+  }
+  if (!cleanText(applicant.discordId || "", 80)) {
+    applicant.discordId = cleanText(linked?.discordId || "", 80) || applicant.discordId || "";
+  }
+  if (!cleanText(applicant.discordName || "", 120)) {
+    applicant.discordName = cleanText(linked?.discordName || "", 120) || applicant.discordName || "Unknown Discord User";
+  }
+  if (!cleanText(applicant.discordUsername || "", 120)) {
+    applicant.discordUsername = cleanText(linked?.discordUsername || "", 120) || applicant.discordUsername || "";
+  }
+
+  normalized.applicant = applicant;
+  return normalized;
 }
 
 function hydrateSessionAccountFromAuthUser(req) {
@@ -1555,7 +1638,7 @@ app.get("/api/discord/stats", async (_req, res) => {
   }
 });
 
-app.post("/api/applications", requireLinkedAccount, (req, res) => {
+app.post("/api/applications", requireLinkedAccount, async (req, res) => {
   console.log("[applications] submit request", {
     formKey: cleanText(req.body.formKey, 80),
     type: cleanText(req.body.type, 40).toLowerCase(),
@@ -1587,6 +1670,15 @@ app.post("/api/applications", requireLinkedAccount, (req, res) => {
   const matchedType = applicationTypes.find((entry) => entry.key === type);
   const title = requestedTitle || matchedType?.label || "Application";
   const createdAt = nowIso();
+  const steamIdentity = await resolveApplicantSteamIdentity(req.session.account || {});
+  req.session.account = {
+    ...(req.session.account || {}),
+    steamId: steamIdentity.steamId || req.session.account?.steamId,
+    steamName: steamIdentity.steamName || req.session.account?.steamName,
+    steamAvatar: steamIdentity.steamAvatar || req.session.account?.steamAvatar,
+  };
+  upsertAccountLinkFromAccount(req.session.account);
+
   const nextApplication = {
     id: crypto.randomUUID(),
     type,
@@ -1597,9 +1689,12 @@ app.post("/api/applications", requireLinkedAccount, (req, res) => {
     responses,
     applicant: {
       steamId: req.session.account.steamId,
-      steamName: req.session.account.steamName || "Unknown Steam User",
+      steamName: steamIdentity.steamName || req.session.account.steamName || "Unknown Steam User",
+      steamAvatar: steamIdentity.steamAvatar || req.session.account.steamAvatar || "",
       discordId: req.session.account.discordId,
       discordName: req.session.account.discordName || req.session.account.discordUsername || "Unknown Discord User",
+      discordUsername: req.session.account.discordUsername || "",
+      discordAvatar: req.session.account.discordAvatar || "",
     },
     replies: [],
     createdAt,
@@ -1644,9 +1739,17 @@ app.get("/api/my-applications", requireLinkedAccount, (req, res) => {
     return Date.parse(right?.createdAt || 0) - Date.parse(left?.createdAt || 0);
   });
 
-  res.json({
-    applications: myApplications,
-  });
+  Promise.all(myApplications.map((application) => hydrateApplicationApplicantIdentity(application)))
+    .then((hydratedApplications) => {
+      res.json({
+        applications: hydratedApplications.filter(Boolean),
+      });
+    })
+    .catch(() => {
+      res.json({
+        applications: myApplications,
+      });
+    });
 });
 
 app.patch("/api/my-applications/:id", requireLinkedAccount, (req, res) => {
@@ -2068,18 +2171,36 @@ app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("
 
   applications.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
 
-  console.log("[applications] admin list", {
-    admin: req.adminUser?.username || "unknown",
-    source: source === "archived" ? "archived" : "active",
-    search,
-    count: applications.length,
-  });
+  Promise.all(applications.map((application) => hydrateApplicationApplicantIdentity(application)))
+    .then((hydratedApplications) => {
+      const finalizedApplications = hydratedApplications.filter(Boolean);
+      console.log("[applications] admin list", {
+        admin: req.adminUser?.username || "unknown",
+        source: source === "archived" ? "archived" : "active",
+        search,
+        count: finalizedApplications.length,
+      });
 
-  res.json({
-    applications,
-    types: applicationTypes,
-    source: source === "archived" ? "archived" : "active",
-  });
+      res.json({
+        applications: finalizedApplications,
+        types: applicationTypes,
+        source: source === "archived" ? "archived" : "active",
+      });
+    })
+    .catch(() => {
+      console.log("[applications] admin list", {
+        admin: req.adminUser?.username || "unknown",
+        source: source === "archived" ? "archived" : "active",
+        search,
+        count: applications.length,
+      });
+
+      res.json({
+        applications,
+        types: applicationTypes,
+        source: source === "archived" ? "archived" : "active",
+      });
+    });
 });
 
 app.post("/api/admin/applications/:id/replies", requireAdminSession, requireAdminPermission("applications"), (req, res) => {
