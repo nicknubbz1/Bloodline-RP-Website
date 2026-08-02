@@ -1499,7 +1499,9 @@
 
   async function loadSession() {
     const sessionAdmin = resolveLocalAdminFromSession();
-    const cachedAdmin = shouldAllowLocalAdminFallback()
+    const adminApiToken = readAdminApiToken();
+    const canUseHostedCachedAdmin = Boolean(adminApiToken) && !shouldAllowLocalAdminFallback();
+    const cachedAdmin = (shouldAllowLocalAdminFallback() || canUseHostedCachedAdmin)
       ? resolveCachedAdminFromAuthState()
       : null;
     const optimisticAdmin = sessionAdmin || cachedAdmin;
@@ -1531,6 +1533,13 @@
       if (sessionAdmin && shouldAllowLocalAdminFallback()) {
         state.admin = sessionAdmin;
         state.localMode = true;
+        renderAdminMeta();
+        return;
+      }
+
+      if (cachedAdmin && canUseHostedCachedAdmin) {
+        state.admin = cachedAdmin;
+        state.localMode = false;
         renderAdminMeta();
         return;
       }
