@@ -2224,14 +2224,33 @@ app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("
   const activeStore = readApplicationStore();
   const archivedStore = readArchivedApplicationStore();
   const isClosedStatus = (value) => {
-    const normalized = String(value || "").toLowerCase();
+    const normalized = String(value || "").trim().toLowerCase();
     return normalized === "accepted" || normalized === "denied";
+  };
+  const shouldAppearInArchivedView = (application) => {
+    if (!application || typeof application !== "object") {
+      return false;
+    }
+
+    if (isClosedStatus(application.status)) {
+      return true;
+    }
+
+    const archivedAt = cleanText(application.archivedAt || "", 80);
+    if (archivedAt) {
+      return true;
+    }
+
+    const reviewedBy = application.reviewedBy && typeof application.reviewedBy === "object"
+      ? application.reviewedBy
+      : null;
+    return Boolean(cleanText(reviewedBy?.reviewedAt || "", 80));
   };
 
   let applications = source === "archived"
     ? (() => {
       const mergedById = new Map();
-      [...archivedStore.applications, ...activeStore.applications.filter((entry) => isClosedStatus(entry?.status))]
+      [...archivedStore.applications, ...activeStore.applications.filter((entry) => shouldAppearInArchivedView(entry))]
         .forEach((entry) => {
           const id = cleanText(entry?.id || "", 120);
           if (!id || mergedById.has(id)) {
