@@ -931,6 +931,34 @@ function normalizeApplicationRepliesWithAdminAvatars(applications) {
   });
 }
 
+function persistReplyAvatarsFromAdminProfiles() {
+  const syncStoreReplies = (readStore, writeStore) => {
+    const store = readStore();
+    const currentApplications = Array.isArray(store?.applications) ? store.applications : [];
+    const normalizedApplications = normalizeApplicationRepliesWithAdminAvatars(currentApplications);
+
+    const before = JSON.stringify(currentApplications);
+    const after = JSON.stringify(normalizedApplications);
+    if (before === after) {
+      return 0;
+    }
+
+    writeStore({
+      ...store,
+      applications: normalizedApplications,
+    });
+    return 1;
+  };
+
+  const updatedStores =
+    syncStoreReplies(readApplicationStore, writeApplicationStore)
+    + syncStoreReplies(readArchivedApplicationStore, writeArchivedApplicationStore);
+
+  if (updatedStores > 0) {
+    console.log(`[avatars] normalized reply avatars in ${updatedStores} store(s)`);
+  }
+}
+
 function hydrateSessionAccountFromAuthUser(req) {
   if (!req || !req.session) {
     return false;
@@ -2090,6 +2118,7 @@ app.post("/api/admin/avatar", requireAdminSession, (req, res) => {
   target.avatar = nextAvatar;
   target.updatedAt = nowIso();
   writeAdminUsersStore(store);
+  persistReplyAvatarsFromAdminProfiles();
 
   req.session.adminUser = { id: target.id };
   res.json({ ok: true, admin: sanitizeAdminUser(target) });
@@ -2650,6 +2679,7 @@ ensureJsonFile(adminSettingsStorePath, {
 });
 console.log(`[storage] data root: ${dataRootPath}`);
 ensureAdminBootstrapUser();
+persistReplyAvatarsFromAdminProfiles();
 
 app.listen(port, () => {
   console.log(`Bloodline auth server listening on ${backendBaseUrl}`);
