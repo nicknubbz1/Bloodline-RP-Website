@@ -1297,6 +1297,25 @@ function getStaffCommentInitials(name) {
   return letterInitials || "ST";
 }
 
+function buildStaffFallbackAvatarUrl(name) {
+  const seed = String(name || "Staff").trim() || "Staff";
+  return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(seed)}`;
+}
+
+function resolveStaffReplyAvatarUrl(reply, authorName) {
+  const avatarUrl = String(
+    reply?.authorAvatar
+    || reply?.authorAvatarUrl
+    || reply?.avatar
+    || reply?.author?.avatar
+    || reply?.author?.avatarUrl
+    || reply?.authorProfile?.avatar
+    || ""
+  ).trim();
+
+  return avatarUrl || buildStaffFallbackAvatarUrl(authorName);
+}
+
 function renderHeaderAccountTrigger(state) {
   const hasSteam = hasLinkedSteamAccount(state);
 
@@ -2329,27 +2348,16 @@ async function initAccountDashboardPage() {
 
         const author = String(reply?.authorName || "Staff").trim() || "Staff";
         const created = formatDashboardApplicationDate(reply?.createdAt);
-        const avatarUrl = String(
-          reply?.authorAvatar
-          || reply?.authorAvatarUrl
-          || reply?.avatar
-          || reply?.author?.avatar
-          || reply?.author?.avatarUrl
-          || reply?.authorProfile?.avatar
-          || ""
-        ).trim();
+        const avatarUrl = resolveStaffReplyAvatarUrl(reply, author);
 
         const avatar = document.createElement("span");
         avatar.className = "dashboard-application-comment-avatar";
-        if (avatarUrl) {
-          const avatarImage = document.createElement("img");
-          avatarImage.src = avatarUrl;
-          avatarImage.alt = "";
-          avatarImage.loading = "lazy";
-          avatar.appendChild(avatarImage);
-        } else {
-          avatar.textContent = getStaffCommentInitials(author);
-        }
+        const avatarImage = document.createElement("img");
+        avatarImage.src = avatarUrl;
+        avatarImage.alt = "";
+        avatarImage.loading = "lazy";
+        avatarImage.referrerPolicy = "no-referrer";
+        avatar.appendChild(avatarImage);
 
         const content = document.createElement("div");
         content.className = "dashboard-application-comment-content";
