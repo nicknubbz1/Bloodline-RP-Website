@@ -250,6 +250,11 @@ function cleanUsername(value) {
   return cleanText(value, 40).toLowerCase();
 }
 
+function buildStaffFallbackAvatarUrl(name) {
+  const seed = cleanText(name || "staff", 120) || "staff";
+  return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(seed)}`;
+}
+
 function applyAccountSessionLifetime(req) {
   if (!req || !req.session || !req.session.cookie) {
     return;
@@ -914,7 +919,7 @@ function normalizeApplicationRepliesWithAdminAvatars(applications) {
       const resolvedAvatar = existingAvatar
         || (authorAdminId ? adminAvatarById.get(authorAdminId) : "")
         || (authorName ? adminAvatarByUsername.get(authorName) : "")
-        || "";
+        || buildStaffFallbackAvatarUrl(authorNameRaw || "Staff");
 
       return {
         ...reply,
