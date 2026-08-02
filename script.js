@@ -1308,7 +1308,9 @@ function resolveStaffReplyAvatarUrl(reply) {
     || ""
   ).trim();
 
-  return avatarUrl;
+  const isValidDataImage = /^data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,/i.test(avatarUrl);
+  const isValidHttpImage = /^https?:\/\//i.test(avatarUrl);
+  return (isValidDataImage || isValidHttpImage) ? avatarUrl : "";
 }
 
 function renderHeaderAccountTrigger(state) {
@@ -2347,12 +2349,16 @@ async function initAccountDashboardPage() {
 
         const avatar = document.createElement("span");
         avatar.className = "dashboard-application-comment-avatar";
-        const avatarImage = document.createElement("img");
-        avatarImage.src = avatarUrl;
-        avatarImage.alt = "";
-        avatarImage.loading = "lazy";
-        avatarImage.referrerPolicy = "no-referrer";
-        avatar.appendChild(avatarImage);
+        if (avatarUrl) {
+          const avatarImage = document.createElement("img");
+          avatarImage.src = avatarUrl;
+          avatarImage.alt = "";
+          avatarImage.loading = "lazy";
+          avatarImage.referrerPolicy = "no-referrer";
+          avatar.appendChild(avatarImage);
+        } else {
+          avatar.textContent = getStaffCommentInitials(author);
+        }
 
         const content = document.createElement("div");
         content.className = "dashboard-application-comment-content";
