@@ -1298,7 +1298,7 @@ function getStaffCommentInitials(name) {
 }
 
 function resolveStaffReplyAvatarUrl(reply) {
-  const avatarUrl = String(
+  return String(
     reply?.authorAvatar
     || reply?.authorAvatarUrl
     || reply?.avatar
@@ -1307,10 +1307,6 @@ function resolveStaffReplyAvatarUrl(reply) {
     || reply?.authorProfile?.avatar
     || ""
   ).trim();
-
-  const isValidDataImage = /^data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,/i.test(avatarUrl);
-  const isValidHttpImage = /^https?:\/\//i.test(avatarUrl);
-  return (isValidDataImage || isValidHttpImage) ? avatarUrl : "";
 }
 
 function renderHeaderAccountTrigger(state) {
@@ -2194,11 +2190,17 @@ async function initAccountDashboardPage() {
     const closedApplications = visibleApplications.filter((entry) => isDashboardApplicationClosed(entry));
 
     renderDashboardApplicationList(pendingListEl, pendingApplications, "No pending applications.", {
-      onView: (application) => renderApplicationPopup(application, "view"),
-      onEdit: (application) => renderApplicationPopup(application, "edit"),
+      onView: (application) => {
+        openApplicationFromLiveData(application, "view");
+      },
+      onEdit: (application) => {
+        openApplicationFromLiveData(application, "edit");
+      },
     });
     renderDashboardApplicationList(closedListEl, closedApplications, "No closed applications.", {
-      onView: (application) => renderApplicationPopup(application, "view"),
+      onView: (application) => {
+        openApplicationFromLiveData(application, "view");
+      },
     });
   };
 
@@ -2216,6 +2218,31 @@ async function initAccountDashboardPage() {
     }
     detailPopupEl.hidden = false;
     document.body.classList.add("modal-open");
+  };
+
+  const openApplicationFromLiveData = async (application, mode) => {
+    const applicationId = String(application?.id || "").trim();
+    if (!applicationId) {
+      renderApplicationPopup(application, mode);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/my-applications`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        renderApplicationPopup(application, mode);
+        return;
+      }
+
+      const payload = await response.json();
+      const latestApplications = Array.isArray(payload?.applications) ? payload.applications : [];
+      const liveApplication = latestApplications.find((entry) => String(entry?.id || "").trim() === applicationId);
+      renderApplicationPopup(liveApplication || application, mode);
+    } catch {
+      renderApplicationPopup(application, mode);
+    }
   };
 
   if (detailPopupCloseEl) {
@@ -2355,6 +2382,10 @@ async function initAccountDashboardPage() {
           avatarImage.alt = "";
           avatarImage.loading = "lazy";
           avatarImage.referrerPolicy = "no-referrer";
+          avatarImage.addEventListener("error", () => {
+            avatar.replaceChildren();
+            avatar.textContent = getStaffCommentInitials(author);
+          }, { once: true });
           avatar.appendChild(avatarImage);
         } else {
           avatar.textContent = getStaffCommentInitials(author);
