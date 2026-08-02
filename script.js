@@ -1281,6 +1281,22 @@ function getInitialsFromName(name) {
   return initials || value.slice(0, 2).toUpperCase();
 }
 
+function getStaffCommentInitials(name) {
+  const value = String(name || "").trim();
+  if (!value) {
+    return "ST";
+  }
+
+  const letterInitials = value
+    .split(/\s+/)
+    .map((part) => (part.match(/[A-Za-z]/) || [""])[0].toUpperCase())
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("");
+
+  return letterInitials || "ST";
+}
+
 function renderHeaderAccountTrigger(state) {
   const hasSteam = hasLinkedSteamAccount(state);
 
@@ -2313,7 +2329,15 @@ async function initAccountDashboardPage() {
 
         const author = String(reply?.authorName || "Staff").trim() || "Staff";
         const created = formatDashboardApplicationDate(reply?.createdAt);
-        const avatarUrl = String(reply?.authorAvatar || reply?.authorAvatarUrl || reply?.avatar || "").trim();
+        const avatarUrl = String(
+          reply?.authorAvatar
+          || reply?.authorAvatarUrl
+          || reply?.avatar
+          || reply?.author?.avatar
+          || reply?.author?.avatarUrl
+          || reply?.authorProfile?.avatar
+          || ""
+        ).trim();
 
         const avatar = document.createElement("span");
         avatar.className = "dashboard-application-comment-avatar";
@@ -2324,7 +2348,7 @@ async function initAccountDashboardPage() {
           avatarImage.loading = "lazy";
           avatar.appendChild(avatarImage);
         } else {
-          avatar.textContent = getInitialsFromName(author);
+          avatar.textContent = getStaffCommentInitials(author);
         }
 
         const content = document.createElement("div");

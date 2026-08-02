@@ -896,6 +896,10 @@ function normalizeApplicationRepliesWithAdminAvatars(applications) {
         reply?.authorAvatar
         || reply?.authorAvatarUrl
         || reply?.avatar
+        || reply?.author?.avatar
+        || reply?.author?.avatarUrl
+        || reply?.authorProfile?.avatar
+        || reply?.profile?.avatar
         || ""
       );
       const authorAdminId = cleanText(reply?.authorAdminId || reply?.adminId || reply?.staffId, 120);
