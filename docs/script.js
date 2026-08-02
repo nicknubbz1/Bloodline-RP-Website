@@ -2141,6 +2141,15 @@ async function initAccountDashboardPage() {
     return applications;
   };
 
+  const readCachedApplications = () => {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(accountApplicationsCacheKey) || "[]");
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
   const renderApplicationsWithCounts = (applications, stateText) => {
     if (stateEl) {
       stateEl.textContent = stateText;
@@ -2476,8 +2485,6 @@ async function initAccountDashboardPage() {
     return;
   }
 
-  clearCachedApplications();
-
   if (stateEl) {
     stateEl.textContent = "Loading application data...";
   }
@@ -2489,6 +2496,16 @@ async function initAccountDashboardPage() {
 
     if (!response.ok) {
       const isAuthFailure = response.status === 401 || response.status === 403;
+      const cachedApplications = readCachedApplications().filter((entry) => !isDashboardApplicationHidden(entry));
+      if (cachedApplications.length) {
+        renderApplicationsWithCounts(
+          cachedApplications,
+          isAuthFailure
+            ? "Session expired. Showing last loaded applications."
+            : "Could not refresh right now. Showing last loaded applications."
+        );
+        return;
+      }
       if (stateEl) {
         stateEl.textContent = isAuthFailure
           ? "Session expired. Log in again to load your applications."
@@ -2511,6 +2528,11 @@ async function initAccountDashboardPage() {
     const mergedApplications = writeCachedApplications(applications);
     renderApplicationsWithCounts(mergedApplications, "Application data is up to date.");
   } catch {
+    const cachedApplications = readCachedApplications().filter((entry) => !isDashboardApplicationHidden(entry));
+    if (cachedApplications.length) {
+      renderApplicationsWithCounts(cachedApplications, "Could not refresh right now. Showing last loaded applications.");
+      return;
+    }
     if (stateEl) {
       stateEl.textContent = "Could not load applications right now.";
     }

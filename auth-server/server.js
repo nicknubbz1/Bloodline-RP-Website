@@ -63,6 +63,30 @@ const allowedFrontendOrigins = new Set([
   "https://nicknubbz1.github.io",
 ]);
 
+function canUseWritableDirectory(targetPath) {
+  try {
+    fs.mkdirSync(targetPath, { recursive: true });
+    fs.accessSync(targetPath, fs.constants.W_OK);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function resolveDataRootPath() {
+  const configuredPath = String(process.env.BLOODLINE_DATA_DIR || "").trim();
+  if (configuredPath && canUseWritableDirectory(configuredPath)) {
+    return configuredPath;
+  }
+
+  const renderDiskPath = "/var/data/bloodline-auth";
+  if (canUseWritableDirectory(renderDiskPath)) {
+    return renderDiskPath;
+  }
+
+  return path.join(__dirname, "data");
+}
+
 const applicationTypes = [
   { key: "server", label: "Server Applications" },
   { key: "public-safety", label: "Public Safety" },
@@ -70,12 +94,13 @@ const applicationTypes = [
   { key: "business-gang", label: "Business And Gang Applications" },
 ];
 const validApplicationTypeKeys = new Set(applicationTypes.map((entry) => entry.key));
-const applicationStorePath = path.join(__dirname, "data", "applications.json");
-const archivedApplicationStorePath = path.join(__dirname, "data", "applications-archived.json");
-const adminUsersStorePath = path.join(__dirname, "data", "admin-users.json");
-const adminSettingsStorePath = path.join(__dirname, "data", "admin-settings.json");
-const subscriptionsStorePath = path.join(__dirname, "data", "subscriptions.json");
-const accountLinksStorePath = path.join(__dirname, "data", "account-links.json");
+const dataRootPath = resolveDataRootPath();
+const applicationStorePath = path.join(dataRootPath, "applications.json");
+const archivedApplicationStorePath = path.join(dataRootPath, "applications-archived.json");
+const adminUsersStorePath = path.join(dataRootPath, "admin-users.json");
+const adminSettingsStorePath = path.join(dataRootPath, "admin-settings.json");
+const subscriptionsStorePath = path.join(dataRootPath, "subscriptions.json");
+const accountLinksStorePath = path.join(dataRootPath, "account-links.json");
 const defaultMainAdminUsername = process.env.MAIN_ADMIN_USERNAME || "1234";
 const defaultMainAdminPassword = process.env.MAIN_ADMIN_PASSWORD || "1234";
 const adminSessionDays = Number(process.env.ADMIN_SESSION_DAYS || 30);
@@ -85,7 +110,7 @@ const rememberCookieName = process.env.REMEMBER_COOKIE_NAME || "bloodline_rememb
 const rememberTokenSecret = process.env.REMEMBER_TOKEN_SECRET || sessionSecret;
 const adminApiTokenSecret = process.env.ADMIN_API_TOKEN_SECRET || sessionSecret;
 const adminApiTokenDays = Number(process.env.ADMIN_API_TOKEN_DAYS || adminSessionDays || 30);
-const sessionDataPath = path.join(__dirname, "data", "sessions");
+const sessionDataPath = path.join(dataRootPath, "sessions");
 
 function cleanText(value, maxLength) {
   if (typeof value !== "string") {
@@ -782,6 +807,66 @@ async function hydrateApplicationApplicantIdentity(application) {
 
   normalized.applicant = applicant;
   return normalized;
+}
+
+function normalizeApplicationRepliesWithAdminAvatars(applications) {
+  const adminUsers = readAdminUsersStore().users || [];
+  const adminAvatarById = new Map();
+  const adminAvatarByUsername = new Map();
+
+  adminUsers.forEach((adminUser) => {
+    const avatar = normalizeAvatarValue(adminUser?.avatar || "");
+    if (!avatar) {
+      return;
+    }
+
+    const adminId = cleanText(adminUser?.id, 120);
+    if (adminId) {
+      adminAvatarById.set(adminId, avatar);
+    }
+
+    const username = cleanUsername(adminUser?.username || "").toLowerCase();
+    if (username) {
+      adminAvatarByUsername.set(username, avatar);
+    }
+  });
+
+  return (Array.isArray(applications) ? applications : []).map((application) => {
+    const replies = Array.isArray(application?.replies) ? application.replies : [];
+    const nextReplies = replies.map((reply) => {
+      const existingAvatar = normalizeAvatarValue(
+        reply?.authorAvatar
+        || reply?.authorAvatarUrl
+        || reply?.avatar
+        || ""
+      );
+      const authorAdminId = cleanText(reply?.authorAdminId || reply?.adminId || reply?.staffId, 120);
+      const authorNameRaw = cleanUsername(
+        reply?.authorName
+        || reply?.author
+        || reply?.username
+        || reply?.staffName
+        || ""
+      );
+      const authorName = authorNameRaw.toLowerCase();
+      const resolvedAvatar = existingAvatar
+        || (authorAdminId ? adminAvatarById.get(authorAdminId) : "")
+        || (authorName ? adminAvatarByUsername.get(authorName) : "")
+        || "";
+
+      return {
+        ...reply,
+        authorAdminId,
+        authorName: authorNameRaw || "Staff",
+        authorAvatar: resolvedAvatar,
+      };
+    });
+
+    return {
+      ...application,
+      replies: nextReplies,
+    };
+  });
 }
 
 function hydrateSessionAccountFromAuthUser(req) {
@@ -1735,9 +1820,11 @@ app.get("/api/my-applications", requireLinkedAccount, (req, res) => {
       mergedById.set(id, application);
     });
 
-  const myApplications = Array.from(mergedById.values()).sort((left, right) => {
+  let myApplications = Array.from(mergedById.values()).sort((left, right) => {
     return Date.parse(right?.createdAt || 0) - Date.parse(left?.createdAt || 0);
   });
+
+  myApplications = normalizeApplicationRepliesWithAdminAvatars(myApplications);
 
   Promise.all(myApplications.map((application) => hydrateApplicationApplicantIdentity(application)))
     .then((hydratedApplications) => {
@@ -2112,62 +2199,7 @@ app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("
     });
   }
 
-  const adminUsers = readAdminUsersStore().users || [];
-  const adminAvatarById = new Map();
-  const adminAvatarByUsername = new Map();
-  adminUsers.forEach((adminUser) => {
-    const avatar = normalizeAvatarValue(adminUser?.avatar || "");
-    if (!avatar) {
-      return;
-    }
-
-    const adminId = cleanText(adminUser?.id, 120);
-    if (adminId) {
-      adminAvatarById.set(adminId, avatar);
-    }
-
-    const username = cleanUsername(adminUser?.username || "").toLowerCase();
-    if (username) {
-      adminAvatarByUsername.set(username, avatar);
-    }
-  });
-
-  applications = applications.map((application) => {
-    const replies = Array.isArray(application?.replies) ? application.replies : [];
-    const nextReplies = replies.map((reply) => {
-      const existingAvatar = normalizeAvatarValue(
-        reply?.authorAvatar
-        || reply?.authorAvatarUrl
-        || reply?.avatar
-        || ""
-      );
-      const authorAdminId = cleanText(reply?.authorAdminId || reply?.adminId || reply?.staffId, 120);
-      const authorNameRaw = cleanUsername(
-        reply?.authorName
-        || reply?.author
-        || reply?.username
-        || reply?.staffName
-        || ""
-      );
-      const authorName = authorNameRaw.toLowerCase();
-      const resolvedAvatar = existingAvatar
-        || (authorAdminId ? adminAvatarById.get(authorAdminId) : "")
-        || (authorName ? adminAvatarByUsername.get(authorName) : "")
-        || "";
-
-      return {
-        ...reply,
-        authorAdminId,
-        authorName: authorNameRaw || "Staff",
-        authorAvatar: resolvedAvatar,
-      };
-    });
-
-    return {
-      ...application,
-      replies: nextReplies,
-    };
-  });
+  applications = normalizeApplicationRepliesWithAdminAvatars(applications);
 
   applications.sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
 
@@ -2534,6 +2566,7 @@ ensureJsonFile(adminSettingsStorePath, {
   updatedAt: nowIso(),
   updatedBy: "system",
 });
+console.log(`[storage] data root: ${dataRootPath}`);
 ensureAdminBootstrapUser();
 
 app.listen(port, () => {
