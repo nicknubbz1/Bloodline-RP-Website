@@ -32,6 +32,7 @@
   const localAdminSettingsKey = "bloodline-local-admin-settings";
   const localSubscriptionsKey = "bloodline-local-subscriptions";
   const localApplicationAvailabilityKey = "bloodline-application-form-availability";
+  const adminApplicationSourceKey = "bloodline-admin-application-source";
   const applicationForms = Array.isArray(window.BLOODLINE_APPLICATION_FORMS) ? window.BLOODLINE_APPLICATION_FORMS : [];
 
   const tabs = Array.from(document.querySelectorAll("[data-admin-tab]"));
@@ -68,7 +69,13 @@
     subscriptions: { current: [], ended: [] },
     giftCandidates: [],
     settings: { maintenanceMode: false },
-    source: "active",
+    source: (() => {
+      try {
+        return localStorage.getItem(adminApplicationSourceKey) === "archived" ? "archived" : "active";
+      } catch {
+        return "active";
+      }
+    })(),
     applicationLoadError: "",
     applicationLoadNotice: "",
     localMode: false,
@@ -2421,8 +2428,14 @@
   }
 
   if (applicationSourceEl) {
+    applicationSourceEl.value = state.source;
     applicationSourceEl.addEventListener("change", async function () {
       state.source = applicationSourceEl.value === "archived" ? "archived" : "active";
+      try {
+        localStorage.setItem(adminApplicationSourceKey, state.source);
+      } catch {
+        // Ignore storage write failures.
+      }
       await loadApplications();
     });
   }

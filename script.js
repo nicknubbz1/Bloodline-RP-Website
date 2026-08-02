@@ -2545,7 +2545,11 @@ async function initAccountDashboardPage() {
     if (stateEl) {
       stateEl.textContent = "Sign in with Steam on the account page to load application data.";
     }
-    clearCachedApplications();
+    const cachedApplications = readCachedApplications().filter((entry) => !isDashboardApplicationHidden(entry));
+    if (cachedApplications.length) {
+      renderApplicationsWithCounts(cachedApplications, "Session not ready. Showing last loaded applications.");
+      return;
+    }
     renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
     renderDashboardApplicationList(closedListEl, [], "No closed applications.");
     return;
@@ -2577,7 +2581,6 @@ async function initAccountDashboardPage() {
           ? "Session expired. Log in again to load your applications."
           : "Could not load applications right now.";
       }
-      clearCachedApplications();
       renderDashboardApplicationList(pendingListEl, [], "No pending applications.");
       renderDashboardApplicationList(closedListEl, [], "No closed applications.");
       return;
@@ -2586,7 +2589,11 @@ async function initAccountDashboardPage() {
     const payload = await response.json();
     const applications = Array.isArray(payload.applications) ? payload.applications.filter((entry) => !isDashboardApplicationHidden(entry)) : [];
     if (applications.length === 0) {
-      clearCachedApplications();
+      const cachedApplications = readCachedApplications().filter((entry) => !isDashboardApplicationHidden(entry));
+      if (cachedApplications.length) {
+        renderApplicationsWithCounts(cachedApplications, "Live response was empty. Showing last loaded applications.");
+        return;
+      }
       renderApplicationsWithCounts([], "Application data is up to date.");
       return;
     }
