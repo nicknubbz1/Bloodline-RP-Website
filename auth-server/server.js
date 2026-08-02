@@ -2347,6 +2347,7 @@ app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("
 
 app.post("/api/admin/applications/:id/replies", requireAdminSession, requireAdminPermission("applications"), (req, res) => {
   const message = cleanText(req.body.message, 2000);
+  const requestedAvatar = normalizeAvatarValue(req.body?.authorAvatar || req.body?.avatar || "", { maxBytes: 5 * 1024 * 1024 });
   if (!message) {
     res.status(400).json({ error: "Reply message is required." });
     return;
@@ -2364,10 +2365,21 @@ app.post("/api/admin/applications/:id/replies", requireAdminSession, requireAdmi
     id: crypto.randomUUID(),
     authorAdminId: req.adminUser.id,
     authorName: req.adminUser.username,
-    authorAvatar: normalizeAvatarValue(req.adminUser.avatar || ""),
+    authorAvatar: normalizeAvatarValue(req.adminUser.avatar || "") || requestedAvatar,
     message,
     createdAt: nowIso(),
   };
+
+  if (!normalizeAvatarValue(req.adminUser.avatar || "") && requestedAvatar) {
+    const adminStore = readAdminUsersStore();
+    const targetAdmin = adminStore.users.find((entry) => entry.id === req.adminUser.id);
+    if (targetAdmin) {
+      targetAdmin.avatar = requestedAvatar;
+      targetAdmin.updatedAt = nowIso();
+      writeAdminUsersStore(adminStore);
+      persistReplyAvatarsFromAdminProfiles();
+    }
+  }
 
   application.replies = Array.isArray(application.replies) ? application.replies : [];
   application.replies.push(reply);

@@ -507,10 +507,19 @@
         }
 
         try {
+          const currentAdminAvatar = String(
+            state.admin?.avatar
+            || getCachedAdminAvatar(state.admin, state.admin?.username)
+            || ""
+          ).trim();
+
           await requestJson(`${apiBaseUrl}/admin/applications/${encodeURIComponent(app.id)}/replies`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ message }),
+            body: JSON.stringify({
+              message,
+              authorAvatar: currentAdminAvatar,
+            }),
           });
           await loadApplications();
           openApplicationPopupModal(app.id);
