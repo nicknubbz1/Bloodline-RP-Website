@@ -1723,11 +1723,17 @@ app.post("/api/admin/login", (req, res) => {
 
   const token = signAdminApiToken(adminUser.id, staySignedIn);
 
-  res.json({
-    ok: true,
-    admin: sanitizeAdminUser(adminUser),
-    token,
-  });
+  saveSession(req)
+    .then(() => {
+      res.json({
+        ok: true,
+        admin: sanitizeAdminUser(adminUser),
+        token,
+      });
+    })
+    .catch(() => {
+      res.status(500).json({ error: "Admin session could not be created." });
+    });
 });
 
 app.post("/api/admin/logout", (req, res) => {

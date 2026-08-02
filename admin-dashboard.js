@@ -1233,9 +1233,6 @@
           headers: retryHeaders,
           signal: controller.signal,
         });
-        if (response.ok) {
-          clearAdminApiToken();
-        }
       }
     } catch (error) {
       if (error && error.name === "AbortError") {
@@ -1515,7 +1512,9 @@
 
   async function loadSession() {
     const sessionAdmin = resolveLocalAdminFromSession();
-    const cachedAdmin = resolveCachedAdminFromAuthState();
+    const cachedAdmin = shouldAllowLocalAdminFallback()
+      ? resolveCachedAdminFromAuthState()
+      : null;
     const optimisticAdmin = sessionAdmin || cachedAdmin;
 
     if (optimisticAdmin) {
