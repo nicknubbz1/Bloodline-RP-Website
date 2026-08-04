@@ -739,6 +739,74 @@ function findAccountLinkBySteamId(steamId) {
   return null;
 }
 
+function findRecoveredDiscordIdentityBySteamId(steamId) {
+  const normalizedSteamId = cleanText(steamId || "", 80);
+  if (!normalizedSteamId) {
+    return null;
+  }
+
+  const candidates = [];
+  const pushCandidate = (rawIdentity, timestampValue) => {
+    const discordId = cleanText(rawIdentity?.discordId || "", 80);
+    if (!discordId) {
+      return;
+    }
+
+    const reviewedAt = Date.parse(String(timestampValue || ""));
+    candidates.push({
+      discordId,
+      discordName: cleanText(rawIdentity?.discordName || "", 120),
+      discordUsername: cleanText(rawIdentity?.discordUsername || "", 120),
+      discordAvatar: cleanText(rawIdentity?.discordAvatar || "", 500),
+      timestamp: Number.isFinite(reviewedAt) ? reviewedAt : 0,
+    });
+  };
+
+  const collectFromApplications = (applications) => {
+    (Array.isArray(applications) ? applications : []).forEach((application) => {
+      const applicant = application?.applicant && typeof application.applicant === "object"
+        ? application.applicant
+        : null;
+      if (!applicant) {
+        return;
+      }
+
+      const applicantSteamId = cleanText(applicant.steamId || "", 80);
+      if (applicantSteamId !== normalizedSteamId) {
+        return;
+      }
+
+      pushCandidate(applicant, application?.updatedAt || application?.createdAt);
+    });
+  };
+
+  collectFromApplications(readApplicationStore().applications);
+  collectFromApplications(readArchivedApplicationStore().applications);
+
+  const subscriptions = readSubscriptionsStore();
+  [...(subscriptions.current || []), ...(subscriptions.ended || [])].forEach((entry) => {
+    const entrySteamId = cleanText(entry?.steamId || "", 80);
+    if (entrySteamId !== normalizedSteamId) {
+      return;
+    }
+
+    pushCandidate(entry, entry?.updatedAt || entry?.endedAt || entry?.renewsAt || entry?.giftedAt || entry?.createdAt);
+  });
+
+  if (!candidates.length) {
+    return null;
+  }
+
+  candidates.sort((left, right) => right.timestamp - left.timestamp);
+  const best = candidates[0];
+  return {
+    discordId: best.discordId,
+    discordName: best.discordName,
+    discordUsername: best.discordUsername,
+    discordAvatar: best.discordAvatar,
+  };
+}
+
 function upsertAccountLinkFromAccount(account) {
   const normalized = normalizeAccountLink(account);
   if (!normalized) {
@@ -766,7 +834,8 @@ function hydrateSessionAccountFromLink(req) {
     return false;
   }
 
-  const linked = findAccountLinkBySteamId(sessionAccount.steamId);
+  const linked = findAccountLinkBySteamId(sessionAccount.steamId)
+    || findRecoveredDiscordIdentityBySteamId(sessionAccount.steamId);
   if (!linked) {
     return false;
   }
@@ -789,6 +858,7 @@ function hydrateSessionAccountFromLink(req) {
   req.session.account = {
     ...nextAccount,
   };
+  upsertAccountLinkFromAccount(nextAccount);
   applyAccountSessionLifetime(req);
   return true;
 }
