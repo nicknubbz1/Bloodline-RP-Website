@@ -1193,23 +1193,17 @@ function pickPreferredApplicationRecord(existing, incoming) {
 function findApplicationRecordById(id) {
   const activeStore = readApplicationStore();
   const activeApplication = getApplicationById(activeStore.applications, id);
-  if (activeApplication) {
-    return {
-      source: "active",
-      application: activeApplication,
-      activeStore,
-      archivedStore: null,
-    };
-  }
-
   const archivedStore = readArchivedApplicationStore();
   const archivedApplication = getApplicationById(archivedStore.applications, id);
-  if (archivedApplication) {
+  const application = pickPreferredApplicationRecord(activeApplication, archivedApplication);
+  if (application) {
     return {
-      source: "archived",
-      application: archivedApplication,
-      activeStore: null,
+      source: application === archivedApplication ? "archived" : "active",
+      application,
+      activeStore,
       archivedStore,
+      activeApplication,
+      archivedApplication,
     };
   }
 
@@ -2537,8 +2531,8 @@ app.post("/api/admin/applications/:id/decision", requireAdminSession, requireAdm
     return;
   }
 
-  const activeStore = readApplicationStore();
-  const application = getApplicationById(activeStore.applications, req.params.id);
+  const record = findApplicationRecordById(req.params.id);
+  const application = record?.application || null;
 
   if (!application) {
     res.status(404).json({ error: "Application not found." });
@@ -2557,15 +2551,26 @@ app.post("/api/admin/applications/:id/decision", requireAdminSession, requireAdm
   if (decision === "accepted" || decision === "denied") {
     const archivedStore = readArchivedApplicationStore();
     const archivedApplication = buildArchivedApplicationCopy(application, req.adminUser.username);
-    const nextActiveStore = removeApplicationFromStore(activeStore, application.id);
-    const nextArchivedStore = upsertApplicationInStore(archivedStore, archivedApplication);
+    const nextActiveStore = record.activeApplication
+      ? removeApplicationFromStore(record.activeStore, application.id)
+      : record.activeStore;
+    const nextArchivedStore = upsertApplicationInStore(record.archivedStore || archivedStore, archivedApplication);
 
     try {
-      writeArchivedApplicationStore(nextArchivedStore);
-      writeApplicationStore(nextActiveStore);
+      if (record.archivedApplication || decision === "accepted" || decision === "denied") {
+        writeArchivedApplicationStore(nextArchivedStore);
+      }
+      if (record.activeApplication) {
+        writeApplicationStore(nextActiveStore);
+      }
     } catch (error) {
       try {
-        writeArchivedApplicationStore(archivedStore);
+        if (record.archivedApplication || decision === "accepted" || decision === "denied") {
+          writeArchivedApplicationStore(record.archivedStore || archivedStore);
+        }
+        if (record.activeApplication) {
+          writeApplicationStore(record.activeStore);
+        }
       } catch {
         // Ignore rollback failures; preserve original error response.
       }
@@ -2591,7 +2596,12 @@ app.post("/api/admin/applications/:id/decision", requireAdminSession, requireAdm
     return;
   }
 
-  writeApplicationStore(activeStore);
+  if (record.activeApplication) {
+    writeApplicationStore(upsertApplicationInStore(record.activeStore, application));
+  }
+  if (record.archivedApplication) {
+    writeArchivedApplicationStore(removeApplicationFromStore(record.archivedStore, application.id));
+  }
 
   const sendResponse = () => {
     res.json({
