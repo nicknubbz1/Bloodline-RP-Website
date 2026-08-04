@@ -1712,7 +1712,7 @@
         ? payload.applications.map(function (entry) {
           return {
             ...entry,
-            _storeSource: normalizedSource,
+            _storeSource: entry?._storeSource || payload?.source || normalizedSource,
           };
         })
         : [];
@@ -1810,14 +1810,10 @@
 
     const hasSession = await loadSessionWithRetry(3);
     if (!hasSession) {
-      if (sessionMetaEl) {
-        sessionMetaEl.textContent = "Admin session not found. Log in again to continue.";
-      }
-
-      if (typeof window.openAdminLoginModal === "function") {
-        window.openAdminLoginModal();
-      }
-
+      clearLocalAdminSession();
+      clearAdminApiToken();
+      persistAdminAuthSnapshot(null);
+      window.location.href = "index.html";
       return;
     }
 
@@ -2084,6 +2080,7 @@
           ...state.admin,
           username: nextUsername,
         };
+        persistAdminAuthSnapshot(state.admin);
         renderAdminMeta();
         await loadUsers();
         await showAlert("Username changed.", "Success");

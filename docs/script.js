@@ -2696,15 +2696,14 @@ async function syncAccountFromBackend() {
     }
 
     const currentState = readAccountState();
-    writeAccountState({
-      ...currentState,
-      steamId: payload.account.steamId || "",
-      steamName: payload.account.steamName || "",
-      steamAvatar: payload.account.steamAvatar || "",
-      discordId: payload.account.discordId || "",
-      discordName: payload.account.discordName || "",
-      discordUsername: payload.account.discordUsername || "",
-      discordAvatar: payload.account.discordAvatar || "",
+    mergeAccountState({
+      steamId: payload.account.steamId || currentState.steamId || "",
+      steamName: payload.account.steamName || currentState.steamName || "",
+      steamAvatar: payload.account.steamAvatar || currentState.steamAvatar || "",
+      discordId: payload.account.discordId || currentState.discordId || "",
+      discordName: payload.account.discordName || currentState.discordName || "",
+      discordUsername: payload.account.discordUsername || currentState.discordUsername || "",
+      discordAvatar: payload.account.discordAvatar || currentState.discordAvatar || "",
     });
     renderAccountState();
     updateAccountDropdownDetails();

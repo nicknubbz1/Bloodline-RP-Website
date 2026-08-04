@@ -2398,11 +2398,17 @@ app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("
             return;
           }
           const existing = mergedById.get(id) || null;
-          mergedById.set(id, pickPreferredApplicationRecord(existing, entry));
+          mergedById.set(id, pickPreferredApplicationRecord(existing, {
+            ...entry,
+            _storeSource: archivedStore.applications.includes(entry) ? "archived" : "active",
+          }));
         });
       return Array.from(mergedById.values());
     })()
-    : [...activeStore.applications];
+    : activeStore.applications.map((entry) => ({
+      ...entry,
+      _storeSource: "active",
+    }));
 
   if (type && type !== "all") {
     applications = applications.filter((application) => application.type === type);
