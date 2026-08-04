@@ -1138,6 +1138,58 @@ function getApplicationById(applications, id) {
   return applications.find((application) => application.id === id) || null;
 }
 
+function parseApplicationTimestamp(application) {
+  const candidateValues = [
+    application?.updatedAt,
+    application?.reviewedBy?.reviewedAt,
+    application?.archivedAt,
+    application?.createdAt,
+  ];
+
+  for (const value of candidateValues) {
+    const parsed = Date.parse(String(value || ""));
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return 0;
+}
+
+function isClosedApplicationStatus(statusValue) {
+  const normalized = String(statusValue || "").trim().toLowerCase();
+  return normalized === "accepted" || normalized === "denied";
+}
+
+function pickPreferredApplicationRecord(existing, incoming) {
+  if (!existing) {
+    return incoming;
+  }
+  if (!incoming) {
+    return existing;
+  }
+
+  const existingClosed = isClosedApplicationStatus(existing?.status);
+  const incomingClosed = isClosedApplicationStatus(incoming?.status);
+  if (incomingClosed !== existingClosed) {
+    return incomingClosed ? incoming : existing;
+  }
+
+  const existingTimestamp = parseApplicationTimestamp(existing);
+  const incomingTimestamp = parseApplicationTimestamp(incoming);
+  if (incomingTimestamp !== existingTimestamp) {
+    return incomingTimestamp > existingTimestamp ? incoming : existing;
+  }
+
+  const existingReplyCount = Array.isArray(existing?.replies) ? existing.replies.length : 0;
+  const incomingReplyCount = Array.isArray(incoming?.replies) ? incoming.replies.length : 0;
+  if (incomingReplyCount !== existingReplyCount) {
+    return incomingReplyCount > existingReplyCount ? incoming : existing;
+  }
+
+  return incoming;
+}
+
 function findApplicationRecordById(id) {
   const activeStore = readApplicationStore();
   const activeApplication = getApplicationById(activeStore.applications, id);
@@ -1977,7 +2029,8 @@ app.get("/api/my-applications", requireLinkedAccount, (req, res) => {
       if (!id) {
         return;
       }
-      mergedById.set(id, application);
+      const existing = mergedById.get(id) || null;
+      mergedById.set(id, pickPreferredApplicationRecord(existing, application));
     });
 
   let myApplications = Array.from(mergedById.values()).sort((left, right) => {
@@ -2347,10 +2400,11 @@ app.get("/api/admin/applications", requireAdminSession, requireAdminPermission("
       [...archivedStore.applications, ...activeStore.applications.filter((entry) => shouldAppearInArchivedView(entry))]
         .forEach((entry) => {
           const id = cleanText(entry?.id || "", 120);
-          if (!id || mergedById.has(id)) {
+          if (!id) {
             return;
           }
-          mergedById.set(id, entry);
+          const existing = mergedById.get(id) || null;
+          mergedById.set(id, pickPreferredApplicationRecord(existing, entry));
         });
       return Array.from(mergedById.values());
     })()
